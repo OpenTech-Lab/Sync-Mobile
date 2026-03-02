@@ -57,6 +57,31 @@ class AuthService {
     return AuthTokens(accessToken: accessToken, refreshToken: refreshToken);
   }
 
+  Future<AuthTokens> refresh({
+    required String baseUrl,
+    required String refreshToken,
+  }) async {
+    final response = await _postAuth(
+      baseUrl: baseUrl,
+      path: 'refresh',
+      body: {'refresh_token': refreshToken},
+    );
+
+    if (response.statusCode != 200) {
+      throw StateError('Token refresh failed (${response.statusCode}).');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final accessToken = json['access_token'] as String?;
+    final newRefreshToken = json['refresh_token'] as String?;
+
+    if (accessToken == null || newRefreshToken == null) {
+      throw const FormatException('Invalid refresh response.');
+    }
+
+    return AuthTokens(accessToken: accessToken, refreshToken: newRefreshToken);
+  }
+
   String _normalizeBaseUrl(String raw) {
     final trimmed = raw.trim();
     if (trimmed.endsWith('/')) {

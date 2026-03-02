@@ -137,16 +137,38 @@ class _LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.sync,
-                size: 48,
-                color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
+              width: 180,
+              child: LinearProgressIndicator(
+                minHeight: 6,
+                borderRadius: BorderRadius.all(Radius.circular(999)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'SYNC',
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
+            ),
           ],
         ),
       ),

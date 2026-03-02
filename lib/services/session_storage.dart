@@ -12,6 +12,10 @@ class SessionStorage {
     return _storage.read(key: _accessTokenKey);
   }
 
+  Future<String?> readRefreshToken() {
+    return _storage.read(key: _refreshTokenKey);
+  }
+
   Future<void> writeTokens({
     required String accessToken,
     required String refreshToken,

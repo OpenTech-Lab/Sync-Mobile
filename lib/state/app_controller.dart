@@ -84,7 +84,33 @@ class AppController extends AsyncNotifier<AppState> {
   @override
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
-    final accessToken = await _sessionStorage.readAccessToken();
+    var accessToken = await _sessionStorage.readAccessToken();
+
+    // Proactively refresh an expired (or nearly-expired) access token so that
+    // the rest of the startup flow has a valid token to work with.
+    if (accessToken != null &&
+        accessToken.isNotEmpty &&
+        serverUrl != null &&
+        serverUrl.isNotEmpty &&
+        _jwtService.isExpiredOrExpiringSoon(accessToken)) {
+      try {
+        final storedRefresh = await _sessionStorage.readRefreshToken();
+        if (storedRefresh != null && storedRefresh.isNotEmpty) {
+          final tokens = await _authService.refresh(
+            baseUrl: serverUrl,
+            refreshToken: storedRefresh,
+          );
+          await _sessionStorage.writeTokens(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+          );
+          accessToken = tokens.accessToken;
+        }
+      } catch (_) {
+        // Refresh failed — continue with the stale token; routes will 401.
+      }
+    }
+
     final currentUserId = accessToken == null
         ? null
         : _jwtService.tryReadUserId(accessToken);
@@ -371,6 +397,41 @@ class AppController extends AsyncNotifier<AppState> {
       return trimmed.substring(0, trimmed.length - 1);
     }
     return trimmed;
+  }
+
+  /// Returns a valid (non-expired) access token.
+  /// If the current token is expired or expiring within 60 s, it silently
+  /// exchanges the stored refresh token for a fresh pair and updates AppState.
+  /// Falls back to the existing token if refresh fails.
+  Future<String?> ensureFreshAccessToken() async {
+    final current = state.value;
+    final token = current?.accessToken;
+    if (token == null || token.isEmpty) return token;
+
+    if (!_jwtService.isExpiredOrExpiringSoon(token)) return token;
+
+    final serverUrl = current?.serverUrl;
+    if (serverUrl == null || serverUrl.isEmpty) return token;
+
+    try {
+      final storedRefresh = await _sessionStorage.readRefreshToken();
+      if (storedRefresh == null || storedRefresh.isEmpty) return token;
+
+      final tokens = await _authService.refresh(
+        baseUrl: serverUrl,
+        refreshToken: storedRefresh,
+      );
+
+      await _sessionStorage.writeTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+
+      state = AsyncData(current!.copyWith(accessToken: tokens.accessToken));
+      return tokens.accessToken;
+    } catch (_) {
+      return token; // best-effort: return stale token, caller handles 401
+    }
   }
 
   void setCurrentUsername(String username) {

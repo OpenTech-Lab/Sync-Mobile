@@ -5,11 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../models/realtime_event.dart';
 import '../state/app_controller.dart';
-import '../state/notification_controller.dart';
-import '../state/realtime_sync_controller.dart';
-import '../state/sticker_controller.dart';
 import '../state/unread_counts_controller.dart';
 import '../state/user_profile_controller.dart';
 
@@ -34,21 +30,13 @@ class HomeTab extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
-    final notifState = ref.watch(notificationControllerProvider).value;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final stickers = ref.watch(stickerControllerProvider).value ?? [];
-
-    final isConnected =
-        realtimeState?.status == RealtimeConnectionStatus.connected;
     final totalUnread = unreadCounts.values.fold(0, (sum, count) => sum + count);
     final friendIds = unreadCounts.keys.toList();
 
     String shortId(String uuid) => uuid.length >= 8 ? uuid.substring(0, 8) : uuid;
     String initials(String uuid) => uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
-
-    final host = Uri.tryParse(serverUrl)?.host ?? serverUrl;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,16 +52,6 @@ class HomeTab extends ConsumerWidget {
             accessToken: accessToken,
             currentUserId: currentUserId,
             currentUsername: currentUsername,
-            isConnected: isConnected,
-            notifActive: notifState?.initialized == true,
-          ),
-          const SizedBox(height: 20),
-          const _SectionLabel('My Planet'),
-          _PlanetCard(
-            host: host,
-            serverUrl: serverUrl,
-            stickerCount: stickers.length,
-            memberCount: friendIds.length,
           ),
           const SizedBox(height: 20),
           if (totalUnread > 0) ...[
@@ -252,16 +230,12 @@ class _ProfileCard extends ConsumerWidget {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
-    required this.isConnected,
-    required this.notifActive,
   });
 
   final String serverUrl;
   final String accessToken;
   final String currentUserId;
   final String? currentUsername;
-  final bool isConnected;
-  final bool notifActive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -273,33 +247,10 @@ class _ProfileCard extends ConsumerWidget {
         : currentUsername!.trim();
 
     Future<void> saveUsername() async {
-      final controller = TextEditingController(text: displayName);
       final result = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Edit username'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Username (3-32, a-zA-Z0-9._-)',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (value) => Navigator.of(dialogContext).pop(value.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+        builder: (dialogContext) => _UsernameEditDialog(initialValue: displayName),
       );
-      controller.dispose();
 
       if (result == null || result.isEmpty) {
         return;
@@ -315,10 +266,14 @@ class _ProfileCard extends ConsumerWidget {
       }
 
       try {
+        final freshToken = await ref
+                .read(appControllerProvider.notifier)
+                .ensureFreshAccessToken() ??
+            accessToken;
         final remote = ref.read(remoteUserProfileServiceProvider);
         final profile = await remote.updateMyProfile(
           baseUrl: serverUrl,
-          accessToken: accessToken,
+          accessToken: freshToken,
           username: result,
         );
         await ref.read(userProfilePreferencesProvider).writeDisplayName(
@@ -384,10 +339,14 @@ class _ProfileCard extends ConsumerWidget {
               }
 
               try {
+                final freshToken = await ref
+                        .read(appControllerProvider.notifier)
+                        .ensureFreshAccessToken() ??
+                    accessToken;
                 final remote = ref.read(remoteUserProfileServiceProvider);
                 final profile = await remote.updateMyProfile(
                   baseUrl: serverUrl,
-                  accessToken: accessToken,
+                  accessToken: freshToken,
                   avatarBase64: base64Encode(bytes),
                 );
                 await ref.read(userProfilePreferencesProvider).writeAvatarBase64(
@@ -511,166 +470,62 @@ class _ProfileCard extends ConsumerWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _StatusDot(active: isConnected, label: isConnected ? 'Online' : 'Offline'),
-              const SizedBox(height: 6),
-              _StatusDot(active: notifActive, label: notifActive ? 'Notifs on' : 'Notifs off'),
-            ],
-          ),
         ],
       ),
     );
   }
 }
 
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.active, required this.label});
-  final bool active;
-  final String label;
+// ---------------------------------------------------------------------------
+// Dedicated dialog widget — owns its TextEditingController lifecycle so that
+// dispose() is never called while the exit animation still uses the TextField.
+// ---------------------------------------------------------------------------
+class _UsernameEditDialog extends StatefulWidget {
+  const _UsernameEditDialog({required this.initialValue});
+  final String initialValue;
+
+  @override
+  State<_UsernameEditDialog> createState() => _UsernameEditDialogState();
+}
+
+class _UsernameEditDialogState extends State<_UsernameEditDialog> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Colors.green.shade500 : Colors.grey.shade400;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return AlertDialog(
+      title: const Text('Edit username'),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Username (3-32, a-zA-Z0-9._-)',
+          border: OutlineInputBorder(),
         ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+          child: const Text('Save'),
         ),
       ],
-    );
-  }
-}
-
-class _PlanetCard extends StatelessWidget {
-  const _PlanetCard({
-    required this.host,
-    required this.serverUrl,
-    required this.stickerCount,
-    required this.memberCount,
-  });
-
-  final String host;
-  final String serverUrl;
-  final int stickerCount;
-  final int memberCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.public, size: 22, color: cs.onPrimaryContainer),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(host, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      serverUrl,
-                      style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _PlanetStat(icon: Icons.people_outline, value: '$memberCount', label: 'Residents'),
-              const SizedBox(width: 12),
-              _PlanetStat(
-                icon: Icons.emoji_emotions_outlined,
-                value: '$stickerCount',
-                label: 'Stickers',
-              ),
-              const SizedBox(width: 12),
-              _PlanetStat(
-                icon: Icons.lock_outline,
-                value: 'E2EE',
-                label: 'Encrypted',
-                highlight: true,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanetStat extends StatelessWidget {
-  const _PlanetStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.highlight = false,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final bool highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final color = highlight ? cs.primary : cs.onSurface;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: highlight ? cs.primaryContainer.withValues(alpha: .4) : cs.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: highlight ? cs.primary.withValues(alpha: .3) : cs.outlineVariant,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
-            ),
-            Text(label, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
-          ],
-        ),
-      ),
     );
   }
 }

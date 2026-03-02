@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/realtime_event.dart';
 import '../state/backup_controller.dart';
 import '../state/conversation_messages_controller.dart';
+import '../state/notification_controller.dart';
+import '../state/realtime_sync_controller.dart';
+import '../state/sticker_controller.dart';
+import '../state/unread_counts_controller.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({
@@ -26,6 +31,15 @@ class SettingsTab extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final backupAsync = ref.watch(backupControllerProvider);
     final backupState = backupAsync.value;
+    final stickers = ref.watch(stickerControllerProvider).value ?? const [];
+    final unreadCounts =
+      ref.watch(unreadCountsProvider).value ?? const <String, int>{};
+    final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
+    final notifState = ref.watch(notificationControllerProvider).value;
+    final isConnected =
+      realtimeState?.status == RealtimeConnectionStatus.connected;
+    final notifActive = notifState?.initialized == true;
+    final host = Uri.tryParse(serverUrl)?.host ?? serverUrl;
 
     return Scaffold(
       appBar: AppBar(
@@ -54,6 +68,17 @@ class SettingsTab extends ConsumerWidget {
                 icon: Icons.dns_outlined,
                 title: 'Server',
                 subtitle: serverUrl,
+              ),
+              const SizedBox(height: 20),
+
+              _SectionHeader(label: 'My Planet'),
+              _PlanetCard(
+                host: host,
+                serverUrl: serverUrl,
+                stickerCount: stickers.length,
+                memberCount: unreadCounts.keys.length,
+                isConnected: isConnected,
+                notifActive: notifActive,
               ),
               const SizedBox(height: 20),
 
@@ -261,6 +286,168 @@ class _BackupButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanetCard extends StatelessWidget {
+  const _PlanetCard({
+    required this.host,
+    required this.serverUrl,
+    required this.stickerCount,
+    required this.memberCount,
+    required this.isConnected,
+    required this.notifActive,
+  });
+
+  final String host;
+  final String serverUrl;
+  final int stickerCount;
+  final int memberCount;
+  final bool isConnected;
+  final bool notifActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.public, size: 22, color: cs.onPrimaryContainer),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(host, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      serverUrl,
+                      style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _StatusDot(active: isConnected, label: isConnected ? 'Online' : 'Offline'),
+              const SizedBox(width: 12),
+              _StatusDot(active: notifActive, label: notifActive ? 'Notifs on' : 'Notifs off'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _PlanetStat(icon: Icons.people_outline, value: '$memberCount', label: 'Residents'),
+              const SizedBox(width: 12),
+              _PlanetStat(
+                icon: Icons.emoji_emotions_outlined,
+                value: '$stickerCount',
+                label: 'Stickers',
+              ),
+              const SizedBox(width: 12),
+              _PlanetStat(
+                icon: Icons.lock_outline,
+                value: 'E2EE',
+                label: 'Encrypted',
+                highlight: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.active, required this.label});
+  final bool active;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? Colors.green.shade500 : Colors.grey.shade400;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlanetStat extends StatelessWidget {
+  const _PlanetStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.highlight = false,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = highlight ? cs.primary : cs.onSurface;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: highlight ? cs.primaryContainer.withValues(alpha: .4) : cs.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: highlight ? cs.primary.withValues(alpha: .3) : cs.outlineVariant,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
+            ),
+            Text(label, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+          ],
         ),
       ),
     );
