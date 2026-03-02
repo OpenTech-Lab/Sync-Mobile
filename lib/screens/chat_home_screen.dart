@@ -1,14 +1,17 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/local_chat_message.dart';
+import '../models/sticker.dart';
 import '../state/backup_controller.dart';
 import '../state/conversation_messages_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
+import '../state/sticker_controller.dart';
 import '../state/unread_counts_controller.dart';
 
 class ChatHomeScreen extends ConsumerStatefulWidget {
@@ -44,6 +47,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _refreshUnreadCounts();
+      await ref.read(stickerControllerProvider.notifier).sync(
+        baseUrl: widget.serverUrl,
+        accessToken: widget.accessToken,
+          );
       await ref.read(notificationControllerProvider.notifier).initialize(
             baseUrl: widget.serverUrl,
             accessToken: widget.accessToken,
@@ -114,6 +121,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final stickers = ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final backupAsync = ref.watch(backupControllerProvider);
     final backupState = backupAsync.value;
     final notificationState = ref.watch(notificationControllerProvider).value;
@@ -404,6 +412,66 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         onPressed: _pickMedia,
                         icon: const Icon(Icons.attach_file),
                         tooltip: 'Attach image',
+                      ),
+                      IconButton(
+                        onPressed: () async {
+                          final selected = await showModalBottomSheet<Sticker>(
+                            context: context,
+                            builder: (context) {
+                              if (stickers.isEmpty) {
+                                return const SizedBox(
+                                  height: 160,
+                                  child: Center(
+                                    child: Text('No cached stickers yet.'),
+                                  ),
+                                );
+                              }
+
+                              return GridView.builder(
+                                padding: const EdgeInsets.all(12),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 4,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemCount: stickers.length,
+                                itemBuilder: (context, index) {
+                                  final sticker = stickers[index];
+                                  Uint8List bytes;
+                                  try {
+                                    bytes = base64Decode(sticker.contentBase64);
+                                  } catch (_) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return InkWell(
+                                    onTap: () => Navigator.of(context).pop(sticker),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.memory(bytes, fit: BoxFit.cover),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+
+                          if (selected != null && _activePartnerId != null) {
+                            await ref
+                                .read(
+                                  conversationMessagesProvider(_activePartnerId!)
+                                      .notifier,
+                                )
+                                .sendMessage(
+                                  baseUrl: widget.serverUrl,
+                                  accessToken: widget.accessToken,
+                                  body: '[sticker:${selected.id}:${selected.name}]',
+                                );
+                          }
+                        },
+                        icon: const Icon(Icons.emoji_emotions_outlined),
+                        tooltip: 'Stickers',
                       ),
                       Expanded(
                         child: TextField(
