@@ -84,6 +84,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     final tabs = [
       HomeTab(
         serverUrl: widget.serverUrl,
+        accessToken: widget.accessToken,
         currentUserId: widget.currentUserId,
         currentUsername: widget.currentUsername,
         onOpenChat: (friendId) {

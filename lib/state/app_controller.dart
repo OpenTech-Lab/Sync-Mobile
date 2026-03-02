@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
 import '../services/jwt_service.dart';
+import '../services/remote_user_profile_service.dart';
 import '../services/server_health_service.dart';
 import '../services/server_preferences.dart';
 import '../services/session_storage.dart';
@@ -78,6 +79,7 @@ class AppController extends AsyncNotifier<AppState> {
   final _authService = AuthService();
   final _jwtService = const JwtService();
   final _userProfilePreferences = UserProfilePreferences();
+  final _remoteUserProfileService = RemoteUserProfileService();
 
   @override
   Future<AppState> build() async {
@@ -92,13 +94,36 @@ class AppController extends AsyncNotifier<AppState> {
     final storedDisplayName = currentUserId == null
         ? null
         : await _userProfilePreferences.readDisplayName(currentUserId);
-    final currentUsername = tokenDisplayName ?? storedDisplayName;
+    var currentUsername = tokenDisplayName ?? storedDisplayName;
 
     if (currentUserId != null && tokenDisplayName != null) {
       await _userProfilePreferences.writeDisplayName(
         currentUserId,
         tokenDisplayName,
       );
+    }
+
+    if (serverUrl != null &&
+        serverUrl.isNotEmpty &&
+        accessToken != null &&
+        currentUserId != null) {
+      try {
+        final profile = await _remoteUserProfileService.getMyProfile(
+          baseUrl: serverUrl,
+          accessToken: accessToken,
+        );
+        currentUsername = profile.username.trim().isEmpty
+            ? currentUsername
+            : profile.username.trim();
+        await _userProfilePreferences.writeDisplayName(
+          currentUserId,
+          currentUsername,
+        );
+        await _userProfilePreferences.writeAvatarBase64(
+          currentUserId,
+          profile.avatarBase64,
+        );
+      } catch (_) {}
     }
 
     return AppState(
@@ -187,18 +212,32 @@ class AppController extends AsyncNotifier<AppState> {
         refreshToken: tokens.refreshToken,
       );
 
+      final userId = _jwtService.tryReadUserId(tokens.accessToken);
+      var username = _jwtService.tryReadDisplayName(tokens.accessToken);
+      if (current.serverUrl != null && userId != null) {
+        try {
+          final profile = await _remoteUserProfileService.getMyProfile(
+            baseUrl: current.serverUrl!,
+            accessToken: tokens.accessToken,
+          );
+          username = profile.username.trim().isEmpty ? username : profile.username.trim();
+          await _userProfilePreferences.writeAvatarBase64(
+            userId,
+            profile.avatarBase64,
+          );
+        } catch (_) {}
+      }
+
       state = AsyncData(
         current.copyWith(
           accessToken: tokens.accessToken,
-          currentUserId: _jwtService.tryReadUserId(tokens.accessToken),
-          currentUsername: _jwtService.tryReadDisplayName(tokens.accessToken),
+          currentUserId: userId,
+          currentUsername: username,
           isSubmitting: false,
           clearAuthError: true,
         ),
       );
 
-      final userId = _jwtService.tryReadUserId(tokens.accessToken);
-      final username = _jwtService.tryReadDisplayName(tokens.accessToken);
       if (userId != null && username != null) {
         await _userProfilePreferences.writeDisplayName(userId, username);
       }
@@ -246,20 +285,34 @@ class AppController extends AsyncNotifier<AppState> {
         refreshToken: tokens.refreshToken,
       );
 
+      final userId = _jwtService.tryReadUserId(tokens.accessToken);
+      var resolvedName =
+          _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim();
+      if (current.serverUrl != null && userId != null) {
+        try {
+          final profile = await _remoteUserProfileService.getMyProfile(
+            baseUrl: current.serverUrl!,
+            accessToken: tokens.accessToken,
+          );
+          resolvedName =
+              profile.username.trim().isEmpty ? resolvedName : profile.username.trim();
+          await _userProfilePreferences.writeAvatarBase64(
+            userId,
+            profile.avatarBase64,
+          );
+        } catch (_) {}
+      }
+
       state = AsyncData(
         current.copyWith(
           accessToken: tokens.accessToken,
-          currentUserId: _jwtService.tryReadUserId(tokens.accessToken),
-          currentUsername:
-              _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim(),
+          currentUserId: userId,
+          currentUsername: resolvedName,
           isSubmitting: false,
           clearAuthError: true,
         ),
       );
 
-      final userId = _jwtService.tryReadUserId(tokens.accessToken);
-      final resolvedName =
-          _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim();
       if (userId != null && resolvedName.isNotEmpty) {
         await _userProfilePreferences.writeDisplayName(userId, resolvedName);
       }
@@ -318,5 +371,14 @@ class AppController extends AsyncNotifier<AppState> {
       return trimmed.substring(0, trimmed.length - 1);
     }
     return trimmed;
+  }
+
+  void setCurrentUsername(String username) {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    final normalized = username.trim();
+    state = AsyncData(current.copyWith(currentUsername: normalized));
   }
 }

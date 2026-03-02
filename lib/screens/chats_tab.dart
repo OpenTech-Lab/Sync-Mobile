@@ -115,10 +115,27 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         _selectedMediaName = null;
       });
 
+  Future<void> _syncUserProfile(String userId) async {
+    try {
+      final remote = ref.read(remoteUserProfileServiceProvider);
+      final profile = await remote.getUserProfile(
+        baseUrl: widget.serverUrl,
+        accessToken: widget.accessToken,
+        userId: userId,
+      );
+      final prefs = ref.read(userProfilePreferencesProvider);
+      await prefs.writeDisplayName(userId, profile.username);
+      await prefs.writeAvatarBase64(userId, profile.avatarBase64);
+      ref.invalidate(userDisplayNameProvider(userId));
+      ref.invalidate(userAvatarBase64Provider(userId));
+    } catch (_) {}
+  }
+
   Future<void> _openPartner(String partnerId) async {
     setState(() => _activePartnerId = partnerId);
     _partnerController.text = partnerId;
     widget.onPartnerChanged(partnerId);
+    await _syncUserProfile(partnerId);
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .syncLatest(
@@ -246,17 +263,20 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final currentUserAvatarBase64 =
-      ref.watch(userAvatarBase64Provider(widget.currentUserId)).value;
+        ref.watch(userAvatarBase64Provider(widget.currentUserId)).value;
+    final partnerAvatarBase64 = _activePartnerId == null
+        ? null
+        : ref.watch(userAvatarBase64Provider(_activePartnerId!)).value;
     final conversationSummaries =
-      ref.watch(conversationSummariesProvider).value ??
-        const <ConversationSummary>[];
+        ref.watch(conversationSummariesProvider).value ??
+            const <ConversationSummary>[];
     final searchQuery = _partnerController.text.trim().toLowerCase();
     final filteredSummaries = searchQuery.isEmpty
-      ? conversationSummaries
-      : conversationSummaries.where((summary) {
-        return summary.conversationId.toLowerCase().contains(searchQuery) ||
-          summary.lastBody.toLowerCase().contains(searchQuery);
-        }).toList(growable: false);
+        ? conversationSummaries
+        : conversationSummaries.where((summary) {
+            return summary.conversationId.toLowerCase().contains(searchQuery) ||
+                summary.lastBody.toLowerCase().contains(searchQuery);
+          }).toList(growable: false);
     final activeUnread = _activePartnerId == null
         ? 0
         : (unreadCounts[_activePartnerId!] ?? 0);
@@ -428,6 +448,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                     currentUserId: widget.currentUserId,
                                     currentUserAvatarBase64:
                                         currentUserAvatarBase64,
+                                    partnerAvatarBase64: partnerAvatarBase64,
                                   ),
                                 ),
                         ),
@@ -901,19 +922,21 @@ class _MessageBubble extends StatelessWidget {
       {required this.message,
       required this.isMine,
       required this.currentUserId,
-      required this.currentUserAvatarBase64});
+  required this.currentUserAvatarBase64,
+  required this.partnerAvatarBase64});
 
   final LocalChatMessage message;
   final bool isMine;
   final String currentUserId;
   final String? currentUserAvatarBase64;
+  final String? partnerAvatarBase64;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     final avatarId = isMine ? currentUserId : message.senderId;
-    final avatarBase64 = isMine ? currentUserAvatarBase64 : null;
+    final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,

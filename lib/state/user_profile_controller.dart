@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/remote_user_profile_service.dart';
 import '../services/user_profile_preferences.dart';
 
 final userProfilePreferencesProvider = Provider<UserProfilePreferences>((ref) {
@@ -11,3 +12,14 @@ final userAvatarBase64Provider = FutureProvider.family<String?, String>(
     return ref.read(userProfilePreferencesProvider).readAvatarBase64(userId);
   },
 );
+
+final userDisplayNameProvider = FutureProvider.family<String?, String>(
+  (ref, userId) {
+    return ref.read(userProfilePreferencesProvider).readDisplayName(userId);
+  },
+);
+
+final remoteUserProfileServiceProvider =
+    Provider<RemoteUserProfileService>((ref) {
+  return RemoteUserProfileService();
+});
