@@ -5,6 +5,17 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../models/local_chat_message.dart';
 import 'encrypted_database.dart';
 
+class ConversationSummary {
+  const ConversationSummary({
+    required this.conversationId,
+    required this.lastBody,
+    required this.lastAt,
+  });
+  final String conversationId;
+  final String lastBody;
+  final DateTime lastAt;
+}
+
 abstract class ChatRepository {
   Future<List<LocalChatMessage>> listMessages({
     required String conversationId,
@@ -24,6 +35,8 @@ abstract class ChatRepository {
   Future<void> replaceAllMessages(List<LocalChatMessage> messages);
 
   Future<void> clearConversation(String conversationId);
+
+  Future<List<ConversationSummary>> listConversations();
 }
 
 // ── In-memory fallback for Flutter Web (sqflite_sqlcipher is native-only) ───
@@ -86,6 +99,23 @@ class InMemoryChatRepository implements ChatRepository {
   @override
   Future<void> clearConversation(String conversationId) async {
     _store.remove(conversationId);
+  }
+
+  @override
+  Future<List<ConversationSummary>> listConversations() async {
+    final summaries = <ConversationSummary>[];
+    for (final entry in _store.entries) {
+      if (entry.value.isEmpty) continue;
+      final sorted = [...entry.value]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      summaries.add(ConversationSummary(
+        conversationId: entry.key,
+        lastBody: sorted.first.body,
+        lastAt: sorted.first.createdAt,
+      ));
+    }
+    summaries.sort((a, b) => b.lastAt.compareTo(a.lastAt));
+    return summaries;
   }
 }
 
@@ -187,6 +217,39 @@ class LocalChatRepository implements ChatRepository {
         await txn.insert('local_messages', message.toMap());
       }
     });
+  }
+
+  @override
+  Future<List<ConversationSummary>> listConversations() async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'local_messages',
+      columns: ['conversation_id', 'body', 'created_at'],
+      orderBy: 'created_at DESC',
+      limit: 5000,
+    );
+
+    final summaries = <ConversationSummary>[];
+    final seenConversationIds = <String>{};
+
+    for (final row in rows) {
+      final map = Map<String, Object?>.from(row);
+      final conversationId = map['conversation_id'] as String;
+      if (seenConversationIds.contains(conversationId)) {
+        continue;
+      }
+
+      seenConversationIds.add(conversationId);
+      summaries.add(
+        ConversationSummary(
+          conversationId: conversationId,
+          lastBody: map['body'] as String,
+          lastAt: DateTime.parse(map['created_at'] as String).toUtc(),
+        ),
+      );
+    }
+
+    return summaries;
   }
 
   String _generateMessageId() {

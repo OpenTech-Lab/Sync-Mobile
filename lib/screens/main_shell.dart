@@ -95,6 +95,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         serverUrl: widget.serverUrl,
         accessToken: widget.accessToken,
         currentUserId: widget.currentUserId,
+        initialPartnerId: _activePartnerId,
         onPartnerChanged: (id) => setState(() => _activePartnerId = id),
       ),
       SettingsTab(

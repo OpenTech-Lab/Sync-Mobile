@@ -83,6 +83,7 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         await ref.read(chatRepositoryProvider).upsertMessages([event.message!]);
         final partnerId = event.message!.conversationId;
         ref.invalidate(conversationMessagesProvider(partnerId));
+        ref.invalidate(conversationSummariesProvider);
         await ref.read(unreadCountsProvider.notifier).refresh(
               baseUrl: baseUrl,
               accessToken: accessToken,

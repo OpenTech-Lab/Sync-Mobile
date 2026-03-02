@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/local_chat_message.dart';
 import '../models/sticker.dart';
+import '../services/local_chat_repository.dart';
 import '../state/conversation_messages_controller.dart';
 import '../state/sticker_controller.dart';
 import '../state/unread_counts_controller.dart';
@@ -17,12 +18,14 @@ class ChatsTab extends ConsumerStatefulWidget {
     required this.serverUrl,
     required this.accessToken,
     required this.currentUserId,
+    required this.initialPartnerId,
     required this.onPartnerChanged,
   });
 
   final String serverUrl;
   final String accessToken;
   final String currentUserId;
+  final String? initialPartnerId;
   final ValueChanged<String?> onPartnerChanged;
 
   @override
@@ -32,6 +35,7 @@ class ChatsTab extends ConsumerStatefulWidget {
 class _ChatsTabState extends ConsumerState<ChatsTab> {
   final _imagePicker = ImagePicker();
   final _partnerController = TextEditingController();
+  final _partnerFocusNode = FocusNode();
   final _messageController = TextEditingController();
   final _messageScrollController = ScrollController();
   String? _activePartnerId;
@@ -41,9 +45,43 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   String? _selectedMediaName;
 
   @override
+  void initState() {
+    super.initState();
+    _partnerController.addListener(_onSearchChanged);
+    if (widget.initialPartnerId != null && widget.initialPartnerId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openPartner(widget.initialPartnerId!);
+      });
+    }
+  }
+
+  void _onSearchChanged() {
+    if (!mounted || _activePartnerId != null) {
+      return;
+    }
+    setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextPartnerId = widget.initialPartnerId;
+    if (nextPartnerId != null &&
+        nextPartnerId.isNotEmpty &&
+        nextPartnerId != oldWidget.initialPartnerId &&
+        nextPartnerId != _activePartnerId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openPartner(nextPartnerId);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _typingTimer?.cancel();
+    _partnerController.removeListener(_onSearchChanged);
     _partnerController.dispose();
+    _partnerFocusNode.dispose();
     _messageController.dispose();
     _messageScrollController.dispose();
     super.dispose();
@@ -78,6 +116,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   Future<void> _openPartner(String partnerId) async {
     setState(() => _activePartnerId = partnerId);
+    _partnerController.text = partnerId;
     widget.onPartnerChanged(partnerId);
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
@@ -92,6 +131,83 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           accessToken: widget.accessToken,
         );
     ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+    ref.invalidate(conversationSummariesProvider);
+  }
+
+  Future<void> _startNewChat() async {
+    final partnerController = TextEditingController();
+    final partnerId = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Start new chat'),
+          content: TextField(
+            controller: partnerController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Friend user UUID',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(partnerController.text.trim()),
+              child: const Text('Start'),
+            ),
+          ],
+        );
+      },
+    );
+    partnerController.dispose();
+
+    if (!mounted || partnerId == null || partnerId.isEmpty) {
+      return;
+    }
+
+    await _openPartner(partnerId);
+  }
+
+  Future<void> _showAddFriendDialog() async {
+    final friendController = TextEditingController();
+    final friendId = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add friend'),
+          content: TextField(
+            controller: friendController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Friend user UUID',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(friendController.text.trim()),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+    friendController.dispose();
+
+    if (!mounted || friendId == null || friendId.isEmpty) {
+      return;
+    }
+
+    await _openPartner(friendId);
   }
 
   Future<void> _sendMessage() async {
@@ -128,6 +244,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
+    final conversationSummaries =
+      ref.watch(conversationSummariesProvider).value ??
+        const <ConversationSummary>[];
+    final searchQuery = _partnerController.text.trim().toLowerCase();
+    final filteredSummaries = searchQuery.isEmpty
+      ? conversationSummaries
+      : conversationSummaries.where((summary) {
+        return summary.conversationId.toLowerCase().contains(searchQuery) ||
+          summary.lastBody.toLowerCase().contains(searchQuery);
+        }).toList(growable: false);
     final activeUnread = _activePartnerId == null
         ? 0
         : (unreadCounts[_activePartnerId!] ?? 0);
@@ -164,6 +290,29 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             : null,
         automaticallyImplyLeading: false,
         actions: [
+          if (_activePartnerId == null)
+            PopupMenuButton<_ChatQuickAction>(
+              tooltip: 'New chat or add friend',
+              icon: const Icon(Icons.add),
+              onSelected: (action) {
+                switch (action) {
+                  case _ChatQuickAction.newChat:
+                    _startNewChat();
+                  case _ChatQuickAction.addFriend:
+                    _showAddFriendDialog();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<_ChatQuickAction>(
+                  value: _ChatQuickAction.newChat,
+                  child: Text('Start new chat'),
+                ),
+                PopupMenuItem<_ChatQuickAction>(
+                  value: _ChatQuickAction.addFriend,
+                  child: Text('Add friend'),
+                ),
+              ],
+            ),
           if (_activePartnerId != null && activeUnread > 0)
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -174,10 +323,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       body: _activePartnerId == null
           ? _ConversationStarter(
               controller: _partnerController,
+              focusNode: _partnerFocusNode,
               unreadCounts: unreadCounts,
-              onOpen: () async {
-                final id = _partnerController.text.trim();
-                if (id.isNotEmpty) await _openPartner(id);
+              summaries: filteredSummaries,
+              onOpenConversation: (id) async {
+                await _openPartner(id);
               },
               onRefresh: () => ref
                   .read(unreadCountsProvider.notifier)
@@ -185,6 +335,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     baseUrl: widget.serverUrl,
                     accessToken: widget.accessToken,
                   ),
+              onStartNewChat: _startNewChat,
+              onAddFriend: _showAddFriendDialog,
             )
           : Column(
               children: [
@@ -327,6 +479,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 }
 
+enum _ChatQuickAction { newChat, addFriend }
+
 // —————————————————————————————————————————————————————
 // Conversation starter (empty state)
 // —————————————————————————————————————————————————————
@@ -334,15 +488,23 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 class _ConversationStarter extends StatelessWidget {
   const _ConversationStarter({
     required this.controller,
+    required this.focusNode,
     required this.unreadCounts,
-    required this.onOpen,
+    required this.summaries,
+    required this.onOpenConversation,
     required this.onRefresh,
+    required this.onStartNewChat,
+    required this.onAddFriend,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final Map<String, int> unreadCounts;
-  final VoidCallback onOpen;
+  final List<ConversationSummary> summaries;
+  final ValueChanged<String> onOpenConversation;
   final VoidCallback onRefresh;
+  final VoidCallback onStartNewChat;
+  final VoidCallback onAddFriend;
 
   @override
   Widget build(BuildContext context) {
@@ -352,17 +514,13 @@ class _ConversationStarter extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        // Partner input
-        Text('Start or continue a chat',
-            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           autocorrect: false,
           decoration: InputDecoration(
-            hintText: 'Partner user UUID',
-            prefixIcon:
-                const Icon(Icons.person_search_outlined, size: 20),
+            hintText: 'Search chat history',
+            prefixIcon: const Icon(Icons.search, size: 20),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -371,19 +529,59 @@ class _ConversationStarter extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 44,
-          child: FilledButton.icon(
-            icon: const Icon(Icons.chat_outlined, size: 18),
-            label: const Text('Open conversation'),
-            onPressed: onOpen,
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        Text('Chat history',
+            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        if (summaries.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              'No matching chats yet.',
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+          )
+        else
+          ...summaries.map(
+            (summary) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: cs.secondaryContainer,
+                  radius: 18,
+                  child: Icon(Icons.chat_bubble_outline,
+                      size: 16, color: cs.onSecondaryContainer),
+                ),
+                title: Text(
+                  summary.conversationId,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13),
+                ),
+                subtitle: Text(
+                  summary.lastBody,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                trailing: Text(
+                  _timeLabel(summary.lastAt),
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+                onTap: () {
+                  onOpenConversation(summary.conversationId);
+                },
               ),
             ),
           ),
-        ),
 
         if (unreadCounts.isNotEmpty) ...[
           const SizedBox(height: 28),
@@ -425,7 +623,7 @@ class _ConversationStarter extends StatelessWidget {
                 trailing: _UnreadBadge(count: e.value),
                 onTap: () {
                   controller.text = e.key;
-                  onOpen();
+                  onOpenConversation(e.key);
                 },
               ),
             ),
@@ -434,6 +632,13 @@ class _ConversationStarter extends StatelessWidget {
       ],
     );
   }
+}
+
+String _timeLabel(DateTime dt) {
+  final local = dt.toLocal();
+  final h = local.hour.toString().padLeft(2, '0');
+  final m = local.minute.toString().padLeft(2, '0');
+  return '$h:$m';
 }
 
 // —————————————————————————————————————————————————————

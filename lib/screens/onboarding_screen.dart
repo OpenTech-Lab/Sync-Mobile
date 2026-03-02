@@ -53,15 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             // — Logo / hero
             Center(
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(Icons.sync, size: 40, color: cs.primary),
-              ),
+              child: Image.asset('assets/logo.png', width: 72, height: 72),
             ),
             const SizedBox(height: 24),
             Text(

@@ -22,6 +22,12 @@ final remoteChatServiceProvider = Provider<RemoteChatService>((ref) {
   return RemoteChatService();
 });
 
+final conversationSummariesProvider = FutureProvider<List<ConversationSummary>>(
+  (ref) {
+    return ref.read(chatRepositoryProvider).listConversations();
+  },
+);
+
 final conversationMessagesProvider = AsyncNotifierProviderFamily<
     ConversationMessagesController,
     List<LocalChatMessage>,
@@ -49,6 +55,7 @@ class ConversationMessagesController
     );
 
     await _repository.upsertMessages(latest);
+    ref.invalidate(conversationSummariesProvider);
     final local = await _repository.listMessages(conversationId: arg, limit: 200);
     state = AsyncData(local);
   }
@@ -73,6 +80,7 @@ class ConversationMessagesController
     );
 
     await _repository.upsertMessages(older);
+    ref.invalidate(conversationSummariesProvider);
     final local = await _repository.listMessages(conversationId: arg, limit: 200);
     state = AsyncData(local);
   }
@@ -95,6 +103,7 @@ class ConversationMessagesController
     );
 
     await _repository.upsertMessages([sent]);
+    ref.invalidate(conversationSummariesProvider);
     await _remoteChatService.markRead(
       baseUrl: baseUrl,
       accessToken: accessToken,

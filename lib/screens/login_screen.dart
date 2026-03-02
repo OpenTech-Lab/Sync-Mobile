@@ -86,15 +86,7 @@ class _LoginScreenState extends State<LoginScreen>
             // — Hero
             const SizedBox(height: 24),
             Center(
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Icons.sync, size: 32, color: cs.primary),
-              ),
+              child: Image.asset('assets/logo.png', width: 60, height: 60),
             ),
             const SizedBox(height: 12),
             Text('Sync', style: tt.titleLarge?.copyWith(
