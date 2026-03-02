@@ -8,6 +8,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/local_chat_message.dart';
+import 'backup_crypto_service.dart';
 
 class EncryptedBackupService {
   EncryptedBackupService([FlutterSecureStorage? storage])
@@ -17,7 +18,7 @@ class EncryptedBackupService {
   static const _backupFileName = 'sync_local_backup.enc';
 
   final FlutterSecureStorage _storage;
-  final _algorithm = AesGcm.with256bits();
+  final _crypto = BackupCryptoService();
 
   Future<String> backupMessages(List<LocalChatMessage> messages) async {
     final payload = jsonEncode({
@@ -27,17 +28,11 @@ class EncryptedBackupService {
 
     final secretKey = await _readOrCreateSecretKey();
     final nonce = _randomBytes(12);
-    final secretBox = await _algorithm.encrypt(
-      utf8.encode(payload),
+    final blob = await _crypto.encryptToJson(
+      clearBytes: utf8.encode(payload),
       secretKey: secretKey,
       nonce: nonce,
     );
-
-    final blob = jsonEncode({
-      'nonce': base64Encode(secretBox.nonce),
-      'cipherText': base64Encode(secretBox.cipherText),
-      'mac': base64Encode(secretBox.mac.bytes),
-    });
 
     final file = await _backupFile();
     await file.writeAsString(blob, flush: true);
@@ -51,16 +46,12 @@ class EncryptedBackupService {
     }
 
     final raw = await file.readAsString();
-    final encoded = jsonDecode(raw) as Map<String, dynamic>;
-
-    final nonce = base64Decode(encoded['nonce'] as String);
-    final cipherText = base64Decode(encoded['cipherText'] as String);
-    final macBytes = base64Decode(encoded['mac'] as String);
-
-    final box = SecretBox(cipherText, nonce: nonce, mac: Mac(macBytes));
     final secretKey = await _readOrCreateSecretKey();
 
-    final clearBytes = await _algorithm.decrypt(box, secretKey: secretKey);
+    final clearBytes = await _crypto.decryptFromJson(
+      payload: raw,
+      secretKey: secretKey,
+    );
     final payload = jsonDecode(utf8.decode(clearBytes)) as Map<String, dynamic>;
 
     final messages = payload['messages'] as List<dynamic>? ?? const [];
