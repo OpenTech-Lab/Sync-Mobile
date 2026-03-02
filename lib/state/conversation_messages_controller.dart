@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+  show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/local_chat_message.dart';
@@ -5,7 +7,15 @@ import '../services/local_chat_repository.dart';
 import '../services/remote_chat_service.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  return LocalChatRepository();
+  final supportsEncryptedLocalDb = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  // sqflite_sqlcipher is not available on web/linux/windows.
+  return supportsEncryptedLocalDb
+      ? LocalChatRepository()
+      : InMemoryChatRepository();
 });
 
 final remoteChatServiceProvider = Provider<RemoteChatService>((ref) {

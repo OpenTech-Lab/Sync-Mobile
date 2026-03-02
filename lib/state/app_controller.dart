@@ -184,6 +184,79 @@ class AppController extends AsyncNotifier<AppState> {
     }
   }
 
+  Future<void> signUp({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final current = state.value;
+    if (current == null || current.serverUrl == null) {
+      return;
+    }
+
+    state = AsyncData(
+      current.copyWith(
+        isSubmitting: true,
+        clearAuthError: true,
+      ),
+    );
+
+    try {
+      await _authService.register(
+        baseUrl: current.serverUrl!,
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+      final tokens = await _authService.login(
+        baseUrl: current.serverUrl!,
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+      await _sessionStorage.writeTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+
+      state = AsyncData(
+        current.copyWith(
+          accessToken: tokens.accessToken,
+          currentUserId: _jwtService.tryReadUserId(tokens.accessToken),
+          isSubmitting: false,
+          clearAuthError: true,
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          isSubmitting: false,
+          authError: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> resetServerUrl() async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+
+    await _sessionStorage.clearTokens();
+    await _serverPreferences.writeServerUrl('');
+
+    state = AsyncData(
+      current.copyWith(
+        serverUrl: '',
+        accessToken: '',
+        currentUserId: null,
+        connectionStatus: ConnectionStatus.idle,
+        clearConnectionError: true,
+        clearAuthError: true,
+      ),
+    );
+  }
+
   Future<void> logout() async {
     final current = state.value;
     if (current == null) {

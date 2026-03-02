@@ -47,8 +47,13 @@ class NotificationController extends AsyncNotifier<NotificationState> {
     required String baseUrl,
     required String accessToken,
   }) async {
-    final current = state.value;
-    if (current == null || current.initialized) {
+    final current = state.value ??
+        const NotificationState(
+          initialized: false,
+          deviceToken: null,
+          status: null,
+        );
+    if (current.initialized) {
       return;
     }
 

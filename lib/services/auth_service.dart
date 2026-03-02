@@ -10,20 +10,37 @@ class AuthTokens {
 }
 
 class AuthService {
+  Future<void> register({
+    required String baseUrl,
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final response = await _postAuth(
+      baseUrl: baseUrl,
+      path: 'register',
+      body: {
+        'username': username,
+        'email': email,
+        'password': password,
+      },
+    );
+
+    if (response.statusCode != 201) {
+      throw StateError('Sign up failed (${response.statusCode}).');
+    }
+  }
+
   Future<AuthTokens> login({
     required String baseUrl,
     required String email,
     required String password,
   }) async {
-    final normalized = _normalizeBaseUrl(baseUrl);
-    final uri = Uri.parse('$normalized/auth/login');
-    final response = await http
-        .post(
-          uri,
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'password': password}),
-        )
-        .timeout(const Duration(seconds: 8));
+    final response = await _postAuth(
+      baseUrl: baseUrl,
+      path: 'login',
+      body: {'email': email, 'password': password},
+    );
 
     if (response.statusCode != 200) {
       throw StateError('Login failed (${response.statusCode}).');
@@ -46,5 +63,43 @@ class AuthService {
       return trimmed.substring(0, trimmed.length - 1);
     }
     return trimmed;
+  }
+
+  String _stripApiSuffix(String baseUrl) {
+    if (baseUrl.endsWith('/api')) {
+      return baseUrl.substring(0, baseUrl.length - 4);
+    }
+    return baseUrl;
+  }
+
+  Future<http.Response> _postAuth({
+    required String baseUrl,
+    required String path,
+    required Map<String, String> body,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final firstUri = Uri.parse('$normalized/auth/$path');
+
+    var response = await http
+        .post(
+          firstUri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode == 404 && normalized.endsWith('/api')) {
+      final fallbackBase = _stripApiSuffix(normalized);
+      final fallbackUri = Uri.parse('$fallbackBase/auth/$path');
+      response = await http
+          .post(
+            fallbackUri,
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 8));
+    }
+
+    return response;
   }
 }

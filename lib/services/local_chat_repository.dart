@@ -26,6 +26,69 @@ abstract class ChatRepository {
   Future<void> clearConversation(String conversationId);
 }
 
+// ── In-memory fallback for Flutter Web (sqflite_sqlcipher is native-only) ───
+class InMemoryChatRepository implements ChatRepository {
+  final _store = <String, List<LocalChatMessage>>{};
+
+  @override
+  Future<List<LocalChatMessage>> listMessages({
+    required String conversationId,
+    int limit = 100,
+  }) async {
+    final msgs = (_store[conversationId] ?? []).reversed.take(limit).toList();
+    return msgs;
+  }
+
+  @override
+  Future<void> addMessage({
+    required String conversationId,
+    required String senderId,
+    required String body,
+  }) async {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) return;
+    final message = LocalChatMessage(
+      id: 'm_${DateTime.now().toUtc().microsecondsSinceEpoch}_${Random.secure().nextInt(1000000)}',
+      conversationId: conversationId,
+      senderId: senderId,
+      body: trimmed,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_store[conversationId] ??= []).add(message);
+  }
+
+  @override
+  Future<void> upsertMessages(List<LocalChatMessage> messages) async {
+    for (final m in messages) {
+      final list = _store[m.conversationId] ??= [];
+      final idx = list.indexWhere((e) => e.id == m.id);
+      if (idx == -1) {
+        list.add(m);
+      } else {
+        list[idx] = m;
+      }
+    }
+  }
+
+  @override
+  Future<List<LocalChatMessage>> listAllMessages() async {
+    return _store.values.expand((l) => l).toList();
+  }
+
+  @override
+  Future<void> replaceAllMessages(List<LocalChatMessage> messages) async {
+    _store.clear();
+    for (final m in messages) {
+      (_store[m.conversationId] ??= []).add(m);
+    }
+  }
+
+  @override
+  Future<void> clearConversation(String conversationId) async {
+    _store.remove(conversationId);
+  }
+}
+
 class LocalChatRepository implements ChatRepository {
   LocalChatRepository([EncryptedDatabase? encryptedDatabase])
       : _encryptedDatabase = encryptedDatabase ?? EncryptedDatabase();

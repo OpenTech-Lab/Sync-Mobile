@@ -18,7 +18,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Connect to your planet'), findsOneWidget);
-    expect(find.text('Validate connection'), findsOneWidget);
+    expect(find.text('Welcome to Sync'), findsOneWidget);
+    expect(find.text('Check connection'), findsOneWidget);
   });
 }

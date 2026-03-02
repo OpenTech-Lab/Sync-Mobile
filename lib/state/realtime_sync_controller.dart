@@ -54,10 +54,11 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required String accessToken,
     required String currentUserId,
   }) async {
-    final current = state.value;
-    if (current == null) {
-      return;
-    }
+    final current = state.value ??
+        const RealtimeSyncState(
+          status: RealtimeConnectionStatus.disconnected,
+          error: null,
+        );
 
     final service = ref.read(realtimeSyncServiceProvider);
 

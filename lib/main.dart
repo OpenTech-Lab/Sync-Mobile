@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/chat_home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
 import 'state/app_controller.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+  );
   runApp(const ProviderScope(child: SyncMobileApp()));
 }
 
@@ -18,10 +23,11 @@ class SyncMobileApp extends ConsumerWidget {
     final appStateAsync = ref.watch(appControllerProvider);
 
     return MaterialApp(
-      title: 'Sync Mobile',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-      ),
+      title: 'Sync',
+      debugShowCheckedModeBanner: false,
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
+      themeMode: ThemeMode.system,
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),
         error: (error, _) => _ErrorScreen(message: error.toString()),
@@ -44,21 +50,82 @@ class SyncMobileApp extends ConsumerWidget {
                 serverUrl: state.serverUrl!,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
-                onSubmit: (email, password) =>
+                onSignIn: (email, password) =>
                     ref.read(appControllerProvider.notifier).login(
                           email: email,
                           password: password,
                         ),
+                onSignUp: (username, email, password) =>
+                    ref.read(appControllerProvider.notifier).signUp(
+                          username: username,
+                          email: email,
+                          password: password,
+                        ),
+                onBackToUrl: () => ref
+                    .read(appControllerProvider.notifier)
+                    .resetServerUrl(),
               );
             case AppStage.home:
-              return ChatHomeScreen(
+              return MainShell(
                 serverUrl: state.serverUrl!,
                 accessToken: state.accessToken!,
                 currentUserId: state.currentUserId!,
-                onSignOut: ref.read(appControllerProvider.notifier).logout,
+                onSignOut:
+                    ref.read(appControllerProvider.notifier).logout,
               );
           }
         },
+      ),
+    );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final cs = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF4F46E5), // indigo-600
+      brightness: brightness,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: cs,
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: cs.surface,
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+        iconTheme: WidgetStateProperty.all(
+          const IconThemeData(size: 22),
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        titleTextStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: cs.onSurface,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 14),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }
@@ -69,15 +136,25 @@ class _LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class _ErrorScreen extends StatelessWidget {
   const _ErrorScreen({required this.message});
-
   final String message;
 
   @override
@@ -85,9 +162,9 @@ class _ErrorScreen extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
           child: Text(
-            'Failed to start app: $message',
+            'Failed to start: $message',
             textAlign: TextAlign.center,
           ),
         ),
