@@ -1,3 +1,6 @@
+# ios certificates and provisioning profiles
+scripts/ios
+
 # Miscellaneous
 *.class
 *.log

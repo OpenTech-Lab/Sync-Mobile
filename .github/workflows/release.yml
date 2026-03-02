@@ -1,0 +1,154 @@
+name: (Release)Deploy to TestFlight
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  deploy:
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate required TestFlight secrets
+        run: |
+          required=(
+            APPLE_API_ISSUER_ID
+            APPLE_API_KEY_ID
+            APPLE_API_PRIVATE_KEY_BASE64
+            IOS_TEAM_ID
+            IOS_DISTRIBUTION_CERTIFICATE_BASE64
+            IOS_DISTRIBUTION_CERTIFICATE_PASSWORD
+            IOS_PROVISIONING_PROFILE_BASE64
+            IOS_KEYCHAIN_PASSWORD
+          )
+
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required secret: $name"
+              exit 1
+            fi
+          done
+
+          echo "IOS_DISTRIBUTION_CERTIFICATE_BASE64 length=${#IOS_DISTRIBUTION_CERTIFICATE_BASE64}"
+          echo "IOS_PROVISIONING_PROFILE_BASE64 length=${#IOS_PROVISIONING_PROFILE_BASE64}"
+        env:
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+
+      - name: Install iOS signing certificate and provisioning profile
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/ios_distribution.p12"
+          CERT_PEM_PATH="$RUNNER_TEMP/ios_distribution.pem"
+          PROFILE_PATH="$RUNNER_TEMP/ios_app_store.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/ios_profile.plist"
+          KEYCHAIN_PATH="$RUNNER_TEMP/ios-build.keychain-db"
+
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 -d > "$CERT_PATH"
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH"
+
+          if [ ! -s "$CERT_PATH" ]; then
+            echo "Decoded certificate is empty. Verify IOS_DISTRIBUTION_CERTIFICATE_BASE64."
+            exit 1
+          fi
+
+          if [ ! -s "$PROFILE_PATH" ]; then
+            echo "Decoded provisioning profile is empty. Verify IOS_PROVISIONING_PROFILE_BASE64."
+            exit 1
+          fi
+
+          # Verify password by reading the p12.
+          if ! openssl pkcs12 -in "$CERT_PATH" -passin pass:"$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -nodes -out "$CERT_PEM_PATH" >/dev/null 2>&1; then
+            echo "Failed to read p12. Verify IOS_DISTRIBUTION_CERTIFICATE_PASSWORD and p12 content."
+            exit 1
+          fi
+
+          # The p12 was created with -legacy (RC2-40-CBC) on Linux and can be imported directly
+          # on macOS without re-exporting. macOS LibreSSL does not support -export -legacy.
+          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          /usr/bin/security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          echo "IOS_PROVISIONING_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "IOS_PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+
+      - name: Prepare Amplify outputs for mobile
+        env:
+          AMPLIFY_OUTPUTS_JSON: ${{ secrets.AMPLIFY_OUTPUTS_JSON }}
+        run: |
+          mkdir -p apps/mobile/assets
+
+          RAW_JSON=""
+          if [ -f "apps/mobile/assets/amplify_outputs.json" ]; then
+            echo "Using existing apps/mobile/assets/amplify_outputs.json"
+            RAW_JSON="$(cat apps/mobile/assets/amplify_outputs.json)"
+          elif [ -f "packages/backend/amplify_outputs.json" ]; then
+            echo "Found packages/backend/amplify_outputs.json"
+            RAW_JSON="$(cat packages/backend/amplify_outputs.json)"
+          elif [ -n "$AMPLIFY_OUTPUTS_JSON" ]; then
+            echo "Using secret AMPLIFY_OUTPUTS_JSON"
+            RAW_JSON="$AMPLIFY_OUTPUTS_JSON"
+          else
+            echo "Missing amplify_outputs.json. Provide one of:"
+            echo "1) Commit apps/mobile/assets/amplify_outputs.json"
+            echo "2) Commit packages/backend/amplify_outputs.json"
+            echo "3) Set GitHub secret AMPLIFY_OUTPUTS_JSON"
+            exit 1
+          fi
+
+          # Strip model_introspection: amplify_api 2.x crashes with LateInitializationError
+          # when model_introspection is present but AmplifyAPI() has no modelProvider.
+          printf '%s' "$RAW_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); r='model_introspection' in d.get('data',{}); d.get('data',{}).pop('model_introspection',None); sys.stderr.write('Stripped model_introspection\n') if r else None; print(json.dumps(d,indent=2),end='')" > apps/mobile/assets/amplify_outputs.json
+          echo "Written apps/mobile/assets/amplify_outputs.json"
+
+      - name: Setup Ruby and Fastlane
+        uses: ruby/setup-ruby@v1
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+
+      - name: Build and Upload
+        working-directory: apps/mobile/ios
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          GOOGLE_CLOUD_TRANSLATE_API_KEY: ${{ secrets.GOOGLE_CLOUD_TRANSLATE_API_KEY }}
+          IOS_BUILD_NUMBER: ${{ github.run_number }}
+        run: bundle exec fastlane release
