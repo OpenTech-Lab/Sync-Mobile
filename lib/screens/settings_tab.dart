@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/realtime_event.dart';
@@ -8,6 +7,7 @@ import '../state/conversation_messages_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
 import '../state/sticker_controller.dart';
+import '../state/theme_mode_controller.dart';
 import '../state/unread_counts_controller.dart';
 
 class SettingsTab extends ConsumerWidget {
@@ -15,20 +15,19 @@ class SettingsTab extends ConsumerWidget {
     super.key,
     required this.serverUrl,
     required this.currentUserId,
-    required this.currentUsername,
     required this.activePartnerId,
     required this.onSignOut,
   });
 
   final String serverUrl;
   final String currentUserId;
-  final String? currentUsername;
   final String? activePartnerId;
   final Future<void> Function() onSignOut;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
+    final themeMode = ref.watch(themeModeProvider);
     final backupAsync = ref.watch(backupControllerProvider);
     final backupState = backupAsync.value;
     final stickers = ref.watch(stickerControllerProvider).value ?? const [];
@@ -49,28 +48,6 @@ class SettingsTab extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-              // — Account section
-              _SectionHeader(label: 'Account'),
-              if (currentUsername != null && currentUsername!.trim().isNotEmpty)
-                _SettingsTile(
-                  icon: Icons.badge_outlined,
-                  title: 'Username',
-                  subtitle: currentUsername!,
-                ),
-              _SettingsTile(
-                icon: Icons.person_outline,
-                title: 'User ID',
-                subtitle: currentUserId,
-                mono: true,
-                canCopy: true,
-              ),
-              _SettingsTile(
-                icon: Icons.dns_outlined,
-                title: 'Server',
-                subtitle: serverUrl,
-              ),
-              const SizedBox(height: 20),
-
               _SectionHeader(label: 'My Planet'),
               _PlanetCard(
                 host: host,
@@ -79,6 +56,58 @@ class SettingsTab extends ConsumerWidget {
                 memberCount: unreadCounts.keys.length,
                 isConnected: isConnected,
                 notifActive: notifActive,
+              ),
+              const SizedBox(height: 20),
+
+              // — Appearance section
+              _SectionHeader(label: 'Appearance'),
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.brightness_6_outlined,
+                            size: 20, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 10),
+                        Text('Theme', style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          icon: Icon(Icons.light_mode_outlined, size: 16),
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_outlined, size: 16),
+                          label: Text('System'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          icon: Icon(Icons.dark_mode_outlined, size: 16),
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {themeMode},
+                      onSelectionChanged: (s) => ref
+                          .read(themeModeProvider.notifier)
+                          .setMode(s.first),
+                      style: SegmentedButton.styleFrom(
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -174,7 +203,33 @@ class SettingsTab extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: onSignOut,
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Sign out?'),
+                        content: const Text(
+                          'You will be signed out of this account. '
+                          'Local messages are kept on device.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: cs.error,
+                              foregroundColor: cs.onError,
+                            ),
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            child: const Text('Sign out'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) await onSignOut();
+                  },
                 ),
               ),
             ],
@@ -198,67 +253,6 @@ class _SectionHeader extends StatelessWidget {
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
             ),
-      ),
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.mono = false,
-    this.canCopy = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool mono;
-  final bool canCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: ListTile(
-        leading: Icon(icon, size: 20, color: cs.onSurfaceVariant),
-        title: Text(title, style: const TextStyle(fontSize: 13)),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 11,
-            fontFamily: mono ? 'monospace' : null,
-            color: cs.onSurfaceVariant,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: canCopy
-            ? IconButton(
-                icon: Icon(Icons.copy_outlined,
-                    size: 16, color: cs.onSurfaceVariant),
-                tooltip: 'Copy',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: subtitle));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Copied to clipboard'),
-                      duration: Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                      width: 180,
-                    ),
-                  );
-                },
-              )
-            : null,
       ),
     );
   }

@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/auth_service.dart';
 import 'state/app_controller.dart';
+import 'state/theme_mode_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +29,7 @@ class SyncMobileApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),
         error: (error, _) => _ErrorScreen(message: error.toString()),
@@ -48,6 +50,7 @@ class SyncMobileApp extends ConsumerWidget {
             case AppStage.login:
               return LoginScreen(
                 serverUrl: state.serverUrl!,
+                savedEmail: state.savedEmail,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
                 onSignIn: (email, password) =>
@@ -64,6 +67,10 @@ class SyncMobileApp extends ConsumerWidget {
                 onBackToUrl: () => ref
                     .read(appControllerProvider.notifier)
                     .resetServerUrl(),
+                onForgotPassword: (email) => AuthService().forgotPassword(
+                  baseUrl: state.serverUrl!,
+                  email: email,
+                ),
               );
             case AppStage.home:
               return MainShell(

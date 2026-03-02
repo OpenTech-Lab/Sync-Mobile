@@ -332,7 +332,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        toolbarHeight: 32,
         backgroundColor: inConversation ? Colors.transparent : cs.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

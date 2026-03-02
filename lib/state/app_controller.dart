@@ -18,6 +18,7 @@ class AppState {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
+    required this.savedEmail,
     required this.connectionStatus,
     required this.connectionError,
     required this.isSubmitting,
@@ -28,6 +29,7 @@ class AppState {
   final String? accessToken;
   final String? currentUserId;
   final String? currentUsername;
+  final String? savedEmail;
   final ConnectionStatus connectionStatus;
   final String? connectionError;
   final bool isSubmitting;
@@ -48,6 +50,8 @@ class AppState {
     String? accessToken,
     String? currentUserId,
     String? currentUsername,
+    String? savedEmail,
+    bool clearSavedEmail = false,
     ConnectionStatus? connectionStatus,
     String? connectionError,
     bool clearConnectionError = false,
@@ -60,6 +64,7 @@ class AppState {
       accessToken: accessToken ?? this.accessToken,
       currentUserId: currentUserId ?? this.currentUserId,
       currentUsername: currentUsername ?? this.currentUsername,
+      savedEmail: clearSavedEmail ? null : savedEmail ?? this.savedEmail,
       connectionStatus: connectionStatus ?? this.connectionStatus,
       connectionError:
           clearConnectionError ? null : connectionError ?? this.connectionError,
@@ -84,6 +89,9 @@ class AppController extends AsyncNotifier<AppState> {
   @override
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
+    final savedEmail = serverUrl != null && serverUrl.isNotEmpty
+        ? await _serverPreferences.readSavedEmail(serverUrl)
+        : null;
     var accessToken = await _sessionStorage.readAccessToken();
 
     // Proactively refresh an expired (or nearly-expired) access token so that
@@ -157,6 +165,7 @@ class AppController extends AsyncNotifier<AppState> {
       accessToken: accessToken,
       currentUserId: currentUserId,
       currentUsername: currentUsername,
+      savedEmail: savedEmail,
       connectionStatus: ConnectionStatus.idle,
       connectionError: null,
       isSubmitting: false,
@@ -254,11 +263,15 @@ class AppController extends AsyncNotifier<AppState> {
         } catch (_) {}
       }
 
+      final normalizedEmail = email.trim().toLowerCase();
+      await _serverPreferences.writeSavedEmail(current.serverUrl!, normalizedEmail);
+
       state = AsyncData(
         current.copyWith(
           accessToken: tokens.accessToken,
           currentUserId: userId,
           currentUsername: username,
+          savedEmail: normalizedEmail,
           isSubmitting: false,
           clearAuthError: true,
         ),
@@ -301,6 +314,10 @@ class AppController extends AsyncNotifier<AppState> {
         email: email.trim().toLowerCase(),
         password: password,
       );
+      await _serverPreferences.writeSavedEmail(
+        current.serverUrl!,
+        email.trim().toLowerCase(),
+      );
       final tokens = await _authService.login(
         baseUrl: current.serverUrl!,
         email: email.trim().toLowerCase(),
@@ -334,6 +351,7 @@ class AppController extends AsyncNotifier<AppState> {
           accessToken: tokens.accessToken,
           currentUserId: userId,
           currentUsername: resolvedName,
+          savedEmail: email.trim().toLowerCase(),
           isSubmitting: false,
           clearAuthError: true,
         ),

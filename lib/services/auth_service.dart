@@ -97,6 +97,24 @@ class AuthService {
     return baseUrl;
   }
 
+  Future<void> forgotPassword({
+    required String baseUrl,
+    required String email,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/auth/forgot-password');
+    final response = await http
+        .post(
+          uri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim().toLowerCase()}),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      throw StateError('Request failed (${response.statusCode}).');
+    }
+  }
+
   Future<http.Response> _postAuth({
     required String baseUrl,
     required String path,

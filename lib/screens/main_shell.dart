@@ -105,7 +105,6 @@ class _MainShellState extends ConsumerState<MainShell> {
       SettingsTab(
         serverUrl: widget.serverUrl,
         currentUserId: widget.currentUserId,
-        currentUsername: widget.currentUsername,
         activePartnerId: _activePartnerId,
         onSignOut: widget.onSignOut,
       ),

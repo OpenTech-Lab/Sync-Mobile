@@ -4,20 +4,24 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     required this.serverUrl,
+    this.savedEmail,
     required this.isSubmitting,
     required this.errorMessage,
     required this.onSignIn,
     required this.onSignUp,
     required this.onBackToUrl,
+    this.onForgotPassword,
   });
 
   final String serverUrl;
+  final String? savedEmail;
   final bool isSubmitting;
   final String? errorMessage;
   final Future<void> Function(String email, String password) onSignIn;
   final Future<void> Function(String username, String email, String password)
       onSignUp;
   final VoidCallback onBackToUrl;
+  final Future<void> Function(String email)? onForgotPassword;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -37,7 +41,11 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    final hasAccount = widget.savedEmail != null;
+    _tabs = TabController(length: hasAccount ? 1 : 2, vsync: this);
+    if (hasAccount) {
+      _signInEmail.text = widget.savedEmail!;
+    }
   }
 
   @override
@@ -55,6 +63,8 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+
+    final hasAccount = widget.savedEmail != null;
 
     return Scaffold(
       body: SafeArea(
@@ -99,32 +109,61 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 28),
 
-            // — Tabs
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 28),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TabBar(
-                controller: _tabs,
-                indicator: BoxDecoration(
-                  color: cs.primary,
-                  borderRadius: BorderRadius.circular(10),
+            // — Tabs (hidden when account exists for this server)
+            if (!hasAccount) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 28),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: cs.onPrimary,
-                unselectedLabelColor: cs.onSurfaceVariant,
-                labelStyle: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-                tabs: const [
-                  Tab(text: 'Sign in'),
-                  Tab(text: 'Sign up'),
-                ],
+                child: TabBar(
+                  controller: _tabs,
+                  indicator: BoxDecoration(
+                    color: cs.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelColor: cs.onPrimary,
+                  unselectedLabelColor: cs.onSurfaceVariant,
+                  labelStyle: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                  tabs: const [
+                    Tab(text: 'Sign in'),
+                    Tab(text: 'Sign up'),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ] else ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.account_circle_outlined,
+                          size: 16, color: cs.onPrimaryContainer),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Account found for this server',
+                        style: tt.labelSmall?.copyWith(
+                          color: cs.onPrimaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // — Error banner
             if (widget.errorMessage != null)
@@ -159,6 +198,7 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   _SignInForm(
                     emailController: _signInEmail,
+                    emailLocked: hasAccount,
                     passwordController: _signInPassword,
                     obscure: _obscureSignIn,
                     onToggleObscure: () =>
@@ -166,18 +206,20 @@ class _LoginScreenState extends State<LoginScreen>
                     isSubmitting: widget.isSubmitting,
                     onSubmit: () => widget.onSignIn(
                         _signInEmail.text, _signInPassword.text),
+                    onForgotPassword: widget.onForgotPassword,
                   ),
-                  _SignUpForm(
-                    usernameController: _signUpUsername,
-                    emailController: _signUpEmail,
-                    passwordController: _signUpPassword,
-                    obscure: _obscureSignUp,
-                    onToggleObscure: () =>
-                        setState(() => _obscureSignUp = !_obscureSignUp),
-                    isSubmitting: widget.isSubmitting,
-                    onSubmit: () => widget.onSignUp(_signUpUsername.text,
-                        _signUpEmail.text, _signUpPassword.text),
-                  ),
+                  if (!hasAccount)
+                    _SignUpForm(
+                      usernameController: _signUpUsername,
+                      emailController: _signUpEmail,
+                      passwordController: _signUpPassword,
+                      obscure: _obscureSignUp,
+                      onToggleObscure: () =>
+                          setState(() => _obscureSignUp = !_obscureSignUp),
+                      isSubmitting: widget.isSubmitting,
+                      onSubmit: () => widget.onSignUp(_signUpUsername.text,
+                          _signUpEmail.text, _signUpPassword.text),
+                    ),
                 ],
               ),
             ),
@@ -200,19 +242,105 @@ class _LoginScreenState extends State<LoginScreen>
 class _SignInForm extends StatelessWidget {
   const _SignInForm({
     required this.emailController,
+    required this.emailLocked,
     required this.passwordController,
     required this.obscure,
     required this.onToggleObscure,
     required this.isSubmitting,
     required this.onSubmit,
+    this.onForgotPassword,
   });
 
   final TextEditingController emailController;
+  final bool emailLocked;
   final TextEditingController passwordController;
   final bool obscure;
   final VoidCallback onToggleObscure;
   final bool isSubmitting;
   final VoidCallback onSubmit;
+  final Future<void> Function(String email)? onForgotPassword;
+
+  void _showForgotDialog(BuildContext context) {
+    final emailCtrl = TextEditingController(text: emailController.text);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        var sending = false;
+        var done = false;
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return AlertDialog(
+              title: const Text('Reset password'),
+              content: done
+                  ? const Text(
+                      'If that email is registered, a reset link was sent.',
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Enter your email address and we'll send you a reset link.',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email_outlined, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+              actions: done
+                  ? [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ]
+                  : [
+                      TextButton(
+                        onPressed: sending
+                            ? null
+                            : () => Navigator.of(ctx).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: sending
+                            ? null
+                            : () async {
+                                setState(() => sending = true);
+                                try {
+                                  await onForgotPassword!(
+                                      emailCtrl.text.trim());
+                                } catch (_) {
+                                  // Silently swallow — always show success
+                                  // to prevent email enumeration.
+                                }
+                                setState(() {
+                                  sending = false;
+                                  done = true;
+                                });
+                              },
+                        child: sending
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
+                              )
+                            : const Text('Send link'),
+                      ),
+                    ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +352,7 @@ class _SignInForm extends StatelessWidget {
           label: 'Email',
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+          readOnly: emailLocked,
         ),
         const SizedBox(height: 12),
         _AuthField(
@@ -233,6 +362,19 @@ class _SignInForm extends StatelessWidget {
           obscure: obscure,
           toggleObscure: onToggleObscure,
         ),
+        if (onForgotPassword != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => _showForgotDialog(context),
+              child: const Text(
+                'Forgot password?',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ),
         const SizedBox(height: 24),
         _SubmitButton(
           label: isSubmitting ? 'Signing in…' : 'Sign in',
@@ -303,6 +445,7 @@ class _AuthField extends StatelessWidget {
     required this.label,
     required this.icon,
     this.keyboardType,
+    this.readOnly = false,
     this.obscure = false,
     this.toggleObscure,
   });
@@ -311,19 +454,28 @@ class _AuthField extends StatelessWidget {
   final String label;
   final IconData icon;
   final TextInputType? keyboardType;
+  final bool readOnly;
   final bool obscure;
   final VoidCallback? toggleObscure;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final disabledColor = cs.onSurface.withValues(alpha: .38);
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      readOnly: readOnly,
       obscureText: obscure,
       autocorrect: false,
+      style: readOnly ? TextStyle(color: disabledColor) : null,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 20),
+        labelStyle: readOnly ? TextStyle(color: disabledColor) : null,
+        filled: readOnly,
+        fillColor: readOnly ? cs.onSurface.withValues(alpha: .06) : null,
+        prefixIcon: Icon(icon, size: 20,
+            color: readOnly ? disabledColor : null),
         suffixIcon: toggleObscure != null
             ? IconButton(
                 icon: Icon(
@@ -336,6 +488,14 @@ class _AuthField extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        enabledBorder: readOnly
+            ? OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: cs.onSurface.withValues(alpha: .18),
+                ),
+              )
+            : null,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16, vertical: 14),
       ),
