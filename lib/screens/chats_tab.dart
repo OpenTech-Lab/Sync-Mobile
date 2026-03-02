@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/local_chat_message.dart';
 import '../models/sticker.dart';
 import '../services/local_chat_repository.dart';
+import '../state/app_controller.dart';
 import '../state/conversation_messages_controller.dart';
 import '../state/sticker_controller.dart';
 import '../state/unread_counts_controller.dart';
@@ -44,6 +45,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   Timer? _typingTimer;
   Uint8List? _selectedMediaBytes;
   String? _selectedMediaName;
+  final Set<String> _profileSyncInFlight = <String>{};
+  final Set<String> _profileSyncedOnce = <String>{};
 
   @override
   void initState() {
@@ -115,38 +118,69 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         _selectedMediaName = null;
       });
 
-  Future<void> _syncUserProfile(String userId) async {
+  Future<String> _effectiveAccessToken() async {
+    final fresh = await ref
+        .read(appControllerProvider.notifier)
+        .ensureFreshAccessToken();
+    return (fresh == null || fresh.isEmpty) ? widget.accessToken : fresh;
+  }
+
+  Future<void> _syncUserProfile(String userId, {bool force = false}) async {
+    final normalized = userId.trim();
+    if (normalized.isEmpty) return;
+    if (!force && _profileSyncedOnce.contains(normalized)) return;
+    if (_profileSyncInFlight.contains(normalized)) return;
+
+    _profileSyncInFlight.add(normalized);
     try {
+      final accessToken = await _effectiveAccessToken();
       final remote = ref.read(remoteUserProfileServiceProvider);
       final profile = await remote.getUserProfile(
         baseUrl: widget.serverUrl,
-        accessToken: widget.accessToken,
-        userId: userId,
+        accessToken: accessToken,
+        userId: normalized,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
-      await prefs.writeDisplayName(userId, profile.username);
-      await prefs.writeAvatarBase64(userId, profile.avatarBase64);
-      ref.invalidate(userDisplayNameProvider(userId));
-      ref.invalidate(userAvatarBase64Provider(userId));
-    } catch (_) {}
+      await prefs.writeDisplayName(normalized, profile.username);
+      await prefs.writeAvatarBase64(normalized, profile.avatarBase64);
+      ref.invalidate(userDisplayNameProvider(normalized));
+      ref.invalidate(userAvatarBase64Provider(normalized));
+      _profileSyncedOnce.add(normalized);
+    } catch (_) {
+      // keep retry possible on later attempts
+    } finally {
+      _profileSyncInFlight.remove(normalized);
+    }
+  }
+
+  void _prefetchVisibleProfiles(Iterable<String> userIds) {
+    for (final userId in userIds) {
+      final trimmed = userId.trim();
+      if (trimmed.isEmpty || trimmed == widget.currentUserId) {
+        continue;
+      }
+      if (_profileSyncedOnce.contains(trimmed)) continue;
+      unawaited(_syncUserProfile(trimmed));
+    }
   }
 
   Future<void> _openPartner(String partnerId) async {
     setState(() => _activePartnerId = partnerId);
     _partnerController.text = partnerId;
     widget.onPartnerChanged(partnerId);
-    await _syncUserProfile(partnerId);
+    await _syncUserProfile(partnerId, force: true);
+    final accessToken = await _effectiveAccessToken();
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .syncLatest(
           baseUrl: widget.serverUrl,
-          accessToken: widget.accessToken,
+          accessToken: accessToken,
         );
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .markRead(
           baseUrl: widget.serverUrl,
-          accessToken: widget.accessToken,
+          accessToken: accessToken,
         );
     ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
     ref.invalidate(conversationSummariesProvider);
@@ -241,17 +275,19 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     _messageController.clear();
     setState(() => _isTyping = false);
 
+    final accessToken = await _effectiveAccessToken();
+
     await ref
         .read(conversationMessagesProvider(_activePartnerId!).notifier)
         .sendMessage(
           baseUrl: widget.serverUrl,
-          accessToken: widget.accessToken,
+          accessToken: accessToken,
           body: content,
         );
     _clearMedia();
     await ref.read(unreadCountsProvider.notifier).refresh(
           baseUrl: widget.serverUrl,
-          accessToken: widget.accessToken,
+          accessToken: accessToken,
         );
   }
 
@@ -277,30 +313,39 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             return summary.conversationId.toLowerCase().contains(searchQuery) ||
                 summary.lastBody.toLowerCase().contains(searchQuery);
           }).toList(growable: false);
+    final rowUserIds = <String>{
+      ...filteredSummaries.map((s) => s.conversationId),
+      ...unreadCounts.keys,
+    };
+    _prefetchVisibleProfiles(rowUserIds);
     final activeUnread = _activePartnerId == null
         ? 0
         : (unreadCounts[_activePartnerId!] ?? 0);
+    final inConversation = _activePartnerId != null;
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
+    final activePartnerName = _activePartnerId == null
+        ? null
+        : ref.watch(userDisplayNameProvider(_activePartnerId!)).value;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
+        toolbarHeight: 32,
+        backgroundColor: inConversation ? Colors.transparent : cs.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        forceMaterialTransparency: inConversation,
         title: _activePartnerId == null
             ? const Text('Chats')
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Conversation',
-                      style: TextStyle(fontSize: 16)),
-                  Text(
-                    _activePartnerId!,
-                    style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+            : Text(
+                (activePartnerName ?? '').trim().isEmpty
+                    ? 'Conversation'
+                    : activePartnerName!.trim(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
         leading: _activePartnerId != null
             ? IconButton(
@@ -352,49 +397,18 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               onOpenConversation: (id) async {
                 await _openPartner(id);
               },
-              onRefresh: () => ref
-                  .read(unreadCountsProvider.notifier)
-                  .refresh(
-                    baseUrl: widget.serverUrl,
-                    accessToken: widget.accessToken,
-                  ),
+              onRefresh: () async {
+                final accessToken = await _effectiveAccessToken();
+                await ref.read(unreadCountsProvider.notifier).refresh(
+                      baseUrl: widget.serverUrl,
+                      accessToken: accessToken,
+                    );
+              },
               onStartNewChat: _startNewChat,
               onAddFriend: _showAddFriendDialog,
             )
           : Column(
               children: [
-                // Load older bar
-                Material(
-                  elevation: 0,
-                  color: cs.surfaceContainerLow,
-                  child: InkWell(
-                    onTap: () => ref
-                        .read(
-                          conversationMessagesProvider(_activePartnerId!)
-                              .notifier,
-                        )
-                        .loadMore(
-                          baseUrl: widget.serverUrl,
-                          accessToken: widget.accessToken,
-                        ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.expand_less,
-                              size: 16, color: cs.primary),
-                          const SizedBox(width: 4),
-                          Text('Load older',
-                              style: TextStyle(
-                                  fontSize: 12, color: cs.primary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
                 // Messages list
                 Expanded(
                   child: messagesAsync == null
@@ -485,6 +499,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     onClearMedia: _clearMedia,
                     onStickerSelected: (sticker) async {
                       if (_activePartnerId == null) return;
+                        final accessToken = await _effectiveAccessToken();
                       await ref
                           .read(
                             conversationMessagesProvider(
@@ -493,7 +508,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                           )
                           .sendMessage(
                             baseUrl: widget.serverUrl,
-                            accessToken: widget.accessToken,
+                          accessToken: accessToken,
                             body:
                                 '[sticker:${sticker.id}:${sticker.name}]',
                           );
@@ -512,7 +527,7 @@ enum _ChatQuickAction { newChat, addFriend }
 // Conversation starter (empty state)
 // —————————————————————————————————————————————————————
 
-class _ConversationStarter extends StatelessWidget {
+class _ConversationStarter extends ConsumerWidget {
   const _ConversationStarter({
     required this.controller,
     required this.focusNode,
@@ -534,7 +549,7 @@ class _ConversationStarter extends StatelessWidget {
   final VoidCallback onAddFriend;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -574,21 +589,29 @@ class _ConversationStarter extends StatelessWidget {
           )
         else
           ...summaries.map(
-            (summary) => Container(
+            (summary) {
+              final userId = summary.conversationId;
+              final displayNameAsync =
+                  ref.watch(userDisplayNameProvider(userId));
+              final avatarBase64Async =
+                  ref.watch(userAvatarBase64Provider(userId));
+              final displayName =
+                  _displayNameOrFallback(userId, displayNameAsync.value);
+
+              return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: cs.secondaryContainer,
+                leading: _ProfileAvatar(
+                  userId: userId,
+                  avatarBase64: avatarBase64Async.value,
                   radius: 18,
-                  child: Icon(Icons.chat_bubble_outline,
-                      size: 16, color: cs.onSecondaryContainer),
                 ),
                 title: Text(
-                  summary.conversationId,
+                  displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 13),
@@ -604,10 +627,11 @@ class _ConversationStarter extends StatelessWidget {
                   style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                 ),
                 onTap: () {
-                  onOpenConversation(summary.conversationId);
+                  onOpenConversation(userId);
                 },
               ),
-            ),
+            );
+            },
           ),
 
         if (unreadCounts.isNotEmpty) ...[
@@ -628,35 +652,102 @@ class _ConversationStarter extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ...unreadCounts.entries.map(
-            (e) => Container(
+            (e) {
+              final userId = e.key;
+              final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
+              final avatarBase64Async =
+                  ref.watch(userAvatarBase64Provider(userId));
+              final displayName =
+                  _displayNameOrFallback(userId, displayNameAsync.value);
+
+              return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: cs.primary,
+                leading: _ProfileAvatar(
+                  userId: userId,
+                  avatarBase64: avatarBase64Async.value,
                   radius: 18,
-                  child: Icon(Icons.person,
-                      size: 16, color: cs.onPrimary),
                 ),
                 title: Text(
-                  e.key,
+                  displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 13),
                 ),
                 trailing: _UnreadBadge(count: e.value),
                 onTap: () {
-                  controller.text = e.key;
-                  onOpenConversation(e.key);
+                  controller.text = userId;
+                  onOpenConversation(userId);
                 },
               ),
-            ),
+            );
+            },
           ),
         ],
       ],
+    );
+  }
+}
+
+String _displayNameOrFallback(String userId, String? displayName) {
+  final normalized = (displayName ?? '').trim();
+  if (normalized.isNotEmpty) {
+    return normalized;
+  }
+  return userId.length >= 8 ? userId.substring(0, 8) : userId;
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.userId,
+    required this.avatarBase64,
+    required this.radius,
+  });
+
+  final String userId;
+  final String? avatarBase64;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final initials =
+        userId.length >= 2 ? userId.substring(0, 2).toUpperCase() : '?';
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: cs.secondaryContainer,
+      child: avatarBase64 == null
+          ? Text(
+              initials,
+              style: TextStyle(
+                color: cs.onSecondaryContainer,
+                fontSize: radius * 0.45,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : ClipOval(
+              child: SizedBox.expand(
+                child: Image.memory(
+                  base64Decode(avatarBase64!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Center(
+                    child: Text(
+                      initials,
+                      style: TextStyle(
+                        color: cs.onSecondaryContainer,
+                        fontSize: radius * 0.45,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }
@@ -931,51 +1022,79 @@ class _MessageBubble extends StatelessWidget {
   final String? currentUserAvatarBase64;
   final String? partnerAvatarBase64;
 
+  static const double _kMaxBubbleHeight = 180;
+
+  void _openDetail(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _MessageDetailScreen(message: message, isMine: isMine),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final bubbleColor = isMine ? cs.primary : cs.surfaceContainerHighest;
+    final onBubble = isMine ? cs.onPrimary : cs.onSurface;
 
     final avatarId = isMine ? currentUserId : message.senderId;
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
 
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
+    Widget bubble = Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.68,
+        maxHeight: _kMaxBubbleHeight,
+      ),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(isMine ? 18 : 4),
+          bottomRight: Radius.circular(isMine ? 4 : 18),
+        ),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
         children: [
-          if (!isMine) ...[
-            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
-            const SizedBox(width: 6),
-          ],
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.68,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
+            child: Text(
+              message.body,
+              maxLines: 7,
+              overflow: TextOverflow.fade,
+              softWrap: true,
+              textAlign: isMine ? TextAlign.right : TextAlign.left,
+              style: TextStyle(color: onBubble, fontSize: 14),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: isMine ? cs.primary : cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isMine ? 18 : 4),
-                bottomRight: Radius.circular(isMine ? 4 : 18),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment:
-                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message.body,
-                  style: TextStyle(
-                    color: isMine ? cs.onPrimary : cs.onSurface,
-                    fontSize: 14,
-                  ),
+          ),
+          // Bottom gradient + timestamp row — always pinned to bottom.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    bubbleColor.withValues(alpha: 0),
+                    bubbleColor,
+                  ],
+                  stops: const [0.0, 0.55],
                 ),
-                const SizedBox(height: 4),
-                Text(
+              ),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
+              child: Align(
+                alignment:
+                    isMine ? Alignment.centerRight : Alignment.centerLeft,
+                child: Text(
                   _timeLabel(message.createdAt),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.fade,
                   style: TextStyle(
                     fontSize: 10,
                     color: isMine
@@ -983,13 +1102,27 @@ class _MessageBubble extends StatelessWidget {
                         : cs.onSurfaceVariant,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-          if (isMine) ...[
-            const SizedBox(width: 6),
-            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
-          ],
+        ],
+      ),
+    );
+
+    bubble = GestureDetector(
+      onTap: () => _openDetail(context),
+      child: bubble,
+    );
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine) ...[_MessageAvatar(userId: avatarId, avatarBase64: avatarBase64), const SizedBox(width: 6)],
+          bubble,
+          if (isMine) ...[const SizedBox(width: 6), _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64)],
         ],
       ),
     );
@@ -1000,6 +1133,101 @@ class _MessageBubble extends StatelessWidget {
     final h = local.hour.toString().padLeft(2, '0');
     final m = local.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+// —————————————————————————————————————————————————————
+// Message detail screen
+// —————————————————————————————————————————————————————
+
+class _MessageDetailScreen extends StatelessWidget {
+  const _MessageDetailScreen({
+    required this.message,
+    required this.isMine,
+  });
+
+  final LocalChatMessage message;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final local = message.createdAt.toLocal();
+    final dateStr =
+        '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isMine ? 'Your message' : 'Message'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_outlined),
+            tooltip: 'Copy',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: message.body));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Copied to clipboard'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                  width: 200,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isMine ? cs.primaryContainer : cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: SelectableText(
+                message.body,
+                style: tt.bodyLarge?.copyWith(
+                  color: isMine ? cs.onPrimaryContainer : cs.onSurface,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text(dateStr,
+                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+              ],
+            ),
+            if (!isMine) ...[  
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.person_outline, size: 14, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      message.senderId,
+                      style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
