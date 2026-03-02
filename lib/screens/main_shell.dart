@@ -30,10 +30,14 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
   String? _activePartnerId;
+  // Cache the notifier so we can call disconnect() in dispose() without
+  // touching `ref` (which may already be invalid at that point).
+  late RealtimeSyncController _realtimeSyncNotifier;
 
   @override
   void initState() {
     super.initState();
+    _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Kick off all background services after first frame
       await Future.wait([
@@ -49,7 +53,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               baseUrl: widget.serverUrl,
               accessToken: widget.accessToken,
             ),
-        ref.read(realtimeSyncControllerProvider.notifier).connect(
+        _realtimeSyncNotifier.connect(
               baseUrl: widget.serverUrl,
               accessToken: widget.accessToken,
               currentUserId: widget.currentUserId,
@@ -60,7 +64,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   void dispose() {
-    ref.read(realtimeSyncControllerProvider.notifier).disconnect();
+    _realtimeSyncNotifier.disconnect();
     super.dispose();
   }
 
