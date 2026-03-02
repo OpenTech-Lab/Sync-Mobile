@@ -279,7 +279,7 @@ class _SignInForm extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          'Enter your email address and we'll send you a reset link.',
+                          "Enter your email address and we'll send you a reset link.",
                           style: TextStyle(fontSize: 13),
                         ),
                         const SizedBox(height: 16),
