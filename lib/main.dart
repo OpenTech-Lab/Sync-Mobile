@@ -70,6 +70,7 @@ class SyncMobileApp extends ConsumerWidget {
                 serverUrl: state.serverUrl!,
                 accessToken: state.accessToken!,
                 currentUserId: state.currentUserId!,
+                currentUsername: state.currentUsername,
                 onSignOut:
                     ref.read(appControllerProvider.notifier).logout,
               );

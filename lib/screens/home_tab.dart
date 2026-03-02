@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/realtime_event.dart';
+import '../state/user_profile_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
 import '../state/sticker_controller.dart';
@@ -13,11 +17,13 @@ class HomeTab extends ConsumerWidget {
     super.key,
     required this.serverUrl,
     required this.currentUserId,
+    required this.currentUsername,
     this.onOpenChat,
   });
 
   final String serverUrl;
   final String currentUserId;
+  final String? currentUsername;
   /// Called when user taps a friend to open chat
   final ValueChanged<String>? onOpenChat;
 
@@ -62,6 +68,7 @@ class HomeTab extends ConsumerWidget {
           _SectionLabel('My Profile'),
           _ProfileCard(
             currentUserId: currentUserId,
+            currentUsername: currentUsername,
             isConnected: isConnected,
             notifActive: notifState?.initialized == true,
           ),
@@ -251,24 +258,30 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ── My Profile card ─────────────────────────────────────────────────────────
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends ConsumerWidget {
   const _ProfileCard({
     required this.currentUserId,
+    required this.currentUsername,
     required this.isConnected,
     required this.notifActive,
   });
 
   final String currentUserId;
+  final String? currentUsername;
   final bool isConnected;
   final bool notifActive;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final short = currentUserId.length >= 8
-        ? currentUserId.substring(0, 8)
-        : currentUserId;
+    final avatarBase64 =
+        ref.watch(userAvatarBase64Provider(currentUserId)).value;
+    final displayName = (currentUsername ?? '').trim().isEmpty
+        ? (currentUserId.length >= 8
+            ? currentUserId.substring(0, 8)
+            : currentUserId)
+        : currentUsername!.trim();
 
     // Avatar color derived from user ID
     const palette = [
@@ -293,17 +306,55 @@ class _ProfileCard extends StatelessWidget {
       child: Row(
         children: [
           // Avatar
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: avatarColor,
-            child: Text(
-              currentUserId.length >= 2
-                  ? currentUserId.substring(0, 2).toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white),
+          InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: () async {
+              final picker = ImagePicker();
+              final image =
+                  await picker.pickImage(source: ImageSource.gallery);
+              if (image == null) {
+                return;
+              }
+
+              final bytes = await image.readAsBytes();
+              await ref
+                  .read(userProfilePreferencesProvider)
+                  .writeAvatarBase64(currentUserId, base64Encode(bytes));
+              ref.invalidate(userAvatarBase64Provider(currentUserId));
+
+              if (!context.mounted) {
+                return;
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Avatar updated'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                  width: 160,
+                ),
+              );
+            },
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: avatarColor,
+              child: avatarBase64 == null
+                  ? Text(
+                      currentUserId.length >= 2
+                          ? currentUserId.substring(0, 2).toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white),
+                    )
+                  : ClipOval(
+                      child: SizedBox.expand(
+                        child: Image.memory(
+                          base64Decode(avatarBase64),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 14),
@@ -313,9 +364,8 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  short,
+                  displayName,
                   style: tt.titleSmall?.copyWith(
-                      fontFamily: 'monospace',
                       fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),

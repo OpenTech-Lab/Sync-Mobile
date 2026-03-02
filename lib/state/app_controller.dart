@@ -5,6 +5,7 @@ import '../services/jwt_service.dart';
 import '../services/server_health_service.dart';
 import '../services/server_preferences.dart';
 import '../services/session_storage.dart';
+import '../services/user_profile_preferences.dart';
 
 enum AppStage { onboarding, login, home }
 
@@ -15,6 +16,7 @@ class AppState {
     required this.serverUrl,
     required this.accessToken,
     required this.currentUserId,
+    required this.currentUsername,
     required this.connectionStatus,
     required this.connectionError,
     required this.isSubmitting,
@@ -24,6 +26,7 @@ class AppState {
   final String? serverUrl;
   final String? accessToken;
   final String? currentUserId;
+  final String? currentUsername;
   final ConnectionStatus connectionStatus;
   final String? connectionError;
   final bool isSubmitting;
@@ -43,6 +46,7 @@ class AppState {
     String? serverUrl,
     String? accessToken,
     String? currentUserId,
+    String? currentUsername,
     ConnectionStatus? connectionStatus,
     String? connectionError,
     bool clearConnectionError = false,
@@ -54,6 +58,7 @@ class AppState {
       serverUrl: serverUrl ?? this.serverUrl,
       accessToken: accessToken ?? this.accessToken,
       currentUserId: currentUserId ?? this.currentUserId,
+      currentUsername: currentUsername ?? this.currentUsername,
       connectionStatus: connectionStatus ?? this.connectionStatus,
       connectionError:
           clearConnectionError ? null : connectionError ?? this.connectionError,
@@ -72,6 +77,7 @@ class AppController extends AsyncNotifier<AppState> {
   final _serverHealthService = ServerHealthService();
   final _authService = AuthService();
   final _jwtService = const JwtService();
+  final _userProfilePreferences = UserProfilePreferences();
 
   @override
   Future<AppState> build() async {
@@ -80,11 +86,26 @@ class AppController extends AsyncNotifier<AppState> {
     final currentUserId = accessToken == null
         ? null
         : _jwtService.tryReadUserId(accessToken);
+    final tokenDisplayName = accessToken == null
+        ? null
+        : _jwtService.tryReadDisplayName(accessToken);
+    final storedDisplayName = currentUserId == null
+        ? null
+        : await _userProfilePreferences.readDisplayName(currentUserId);
+    final currentUsername = tokenDisplayName ?? storedDisplayName;
+
+    if (currentUserId != null && tokenDisplayName != null) {
+      await _userProfilePreferences.writeDisplayName(
+        currentUserId,
+        tokenDisplayName,
+      );
+    }
 
     return AppState(
       serverUrl: serverUrl,
       accessToken: accessToken,
       currentUserId: currentUserId,
+      currentUsername: currentUsername,
       connectionStatus: ConnectionStatus.idle,
       connectionError: null,
       isSubmitting: false,
@@ -170,10 +191,17 @@ class AppController extends AsyncNotifier<AppState> {
         current.copyWith(
           accessToken: tokens.accessToken,
           currentUserId: _jwtService.tryReadUserId(tokens.accessToken),
+          currentUsername: _jwtService.tryReadDisplayName(tokens.accessToken),
           isSubmitting: false,
           clearAuthError: true,
         ),
       );
+
+      final userId = _jwtService.tryReadUserId(tokens.accessToken);
+      final username = _jwtService.tryReadDisplayName(tokens.accessToken);
+      if (userId != null && username != null) {
+        await _userProfilePreferences.writeDisplayName(userId, username);
+      }
     } catch (error) {
       state = AsyncData(
         current.copyWith(
@@ -222,10 +250,19 @@ class AppController extends AsyncNotifier<AppState> {
         current.copyWith(
           accessToken: tokens.accessToken,
           currentUserId: _jwtService.tryReadUserId(tokens.accessToken),
+          currentUsername:
+              _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim(),
           isSubmitting: false,
           clearAuthError: true,
         ),
       );
+
+      final userId = _jwtService.tryReadUserId(tokens.accessToken);
+      final resolvedName =
+          _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim();
+      if (userId != null && resolvedName.isNotEmpty) {
+        await _userProfilePreferences.writeDisplayName(userId, resolvedName);
+      }
     } catch (error) {
       state = AsyncData(
         current.copyWith(
@@ -250,6 +287,7 @@ class AppController extends AsyncNotifier<AppState> {
         serverUrl: '',
         accessToken: '',
         currentUserId: null,
+        currentUsername: null,
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
@@ -268,6 +306,7 @@ class AppController extends AsyncNotifier<AppState> {
       current.copyWith(
         accessToken: '',
         currentUserId: null,
+        currentUsername: null,
         clearAuthError: true,
       ),
     );

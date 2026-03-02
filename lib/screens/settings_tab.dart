@@ -10,12 +10,14 @@ class SettingsTab extends ConsumerWidget {
     super.key,
     required this.serverUrl,
     required this.currentUserId,
+    required this.currentUsername,
     required this.activePartnerId,
     required this.onSignOut,
   });
 
   final String serverUrl;
   final String currentUserId;
+  final String? currentUsername;
   final String? activePartnerId;
   final Future<void> Function() onSignOut;
 
@@ -35,6 +37,12 @@ class SettingsTab extends ConsumerWidget {
         children: [
               // — Account section
               _SectionHeader(label: 'Account'),
+              if (currentUsername != null && currentUsername!.trim().isNotEmpty)
+                _SettingsTile(
+                  icon: Icons.badge_outlined,
+                  title: 'Username',
+                  subtitle: currentUsername!,
+                ),
               _SettingsTile(
                 icon: Icons.person_outline,
                 title: 'User ID',

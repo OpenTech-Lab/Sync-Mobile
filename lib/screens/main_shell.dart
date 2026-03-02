@@ -15,12 +15,14 @@ class MainShell extends ConsumerStatefulWidget {
     required this.serverUrl,
     required this.accessToken,
     required this.currentUserId,
+    required this.currentUsername,
     required this.onSignOut,
   });
 
   final String serverUrl;
   final String accessToken;
   final String currentUserId;
+  final String? currentUsername;
   final Future<void> Function() onSignOut;
 
   @override
@@ -83,6 +85,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       HomeTab(
         serverUrl: widget.serverUrl,
         currentUserId: widget.currentUserId,
+        currentUsername: widget.currentUsername,
         onOpenChat: (friendId) {
           // Switch to Chats tab and pre-select the friend
           setState(() {
@@ -101,6 +104,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       SettingsTab(
         serverUrl: widget.serverUrl,
         currentUserId: widget.currentUserId,
+        currentUsername: widget.currentUsername,
         activePartnerId: _activePartnerId,
         onSignOut: widget.onSignOut,
       ),

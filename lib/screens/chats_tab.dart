@@ -11,6 +11,7 @@ import '../services/local_chat_repository.dart';
 import '../state/conversation_messages_controller.dart';
 import '../state/sticker_controller.dart';
 import '../state/unread_counts_controller.dart';
+import '../state/user_profile_controller.dart';
 
 class ChatsTab extends ConsumerStatefulWidget {
   const ChatsTab({
@@ -244,6 +245,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
+    final currentUserAvatarBase64 =
+      ref.watch(userAvatarBase64Provider(widget.currentUserId)).value;
     final conversationSummaries =
       ref.watch(conversationSummariesProvider).value ??
         const <ConversationSummary>[];
@@ -422,6 +425,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                     message: messages[i],
                                     isMine: messages[i].senderId ==
                                         widget.currentUserId,
+                                    currentUserId: widget.currentUserId,
+                                    currentUserAvatarBase64:
+                                        currentUserAvatarBase64,
                                   ),
                                 ),
                         ),
@@ -892,57 +898,76 @@ class _StickerPicker extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble(
-      {required this.message, required this.isMine});
+      {required this.message,
+      required this.isMine,
+      required this.currentUserId,
+      required this.currentUserAvatarBase64});
 
   final LocalChatMessage message;
   final bool isMine;
+  final String currentUserId;
+  final String? currentUserAvatarBase64;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    final avatarId = isMine ? currentUserId : message.senderId;
+    final avatarBase64 = isMine ? currentUserAvatarBase64 : null;
+
     return Align(
-      alignment:
-          isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMine ? cs.primary : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(isMine ? 18 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 18),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: isMine
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          children: [
-            Text(
-              message.body,
-              style: TextStyle(
-                color: isMine ? cs.onPrimary : cs.onSurface,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _timeLabel(message.createdAt),
-              style: TextStyle(
-                fontSize: 10,
-                color: isMine
-                    ? cs.onPrimary.withValues(alpha: .7)
-                    : cs.onSurfaceVariant,
-              ),
-            ),
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine) ...[
+            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+            const SizedBox(width: 6),
           ],
-        ),
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.68,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMine ? cs.primary : cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(isMine ? 18 : 4),
+                bottomRight: Radius.circular(isMine ? 4 : 18),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment:
+                  isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message.body,
+                  style: TextStyle(
+                    color: isMine ? cs.onPrimary : cs.onSurface,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _timeLabel(message.createdAt),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMine
+                        ? cs.onPrimary.withValues(alpha: .7)
+                        : cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isMine) ...[
+            const SizedBox(width: 6),
+            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+          ],
+        ],
       ),
     );
   }
@@ -952,6 +977,41 @@ class _MessageBubble extends StatelessWidget {
     final h = local.hour.toString().padLeft(2, '0');
     final m = local.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+class _MessageAvatar extends StatelessWidget {
+  const _MessageAvatar({required this.userId, required this.avatarBase64});
+
+  final String userId;
+  final String? avatarBase64;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final initials = userId.length >= 2 ? userId.substring(0, 2).toUpperCase() : '?';
+
+    return CircleAvatar(
+      radius: 13,
+      backgroundColor: cs.secondaryContainer,
+      child: avatarBase64 == null
+          ? Text(
+              initials,
+              style: TextStyle(
+                color: cs.onSecondaryContainer,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : ClipOval(
+              child: SizedBox.expand(
+                child: Image.memory(
+                  base64Decode(avatarBase64!),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+    );
   }
 }
 
