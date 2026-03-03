@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:meta/meta.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/local_chat_message.dart';
@@ -189,18 +190,32 @@ class RealtimeSyncService {
     return RealtimeEvent.message(message);
   }
 
+  @visibleForTesting
+  Uri buildWebSocketUri({
+    required String baseUrl,
+    required String accessToken,
+  }) {
+    return _wsUri(baseUrl, accessToken);
+  }
+
   Uri _wsUri(String baseUrl, String accessToken) {
-    final httpUri = Uri.parse(baseUrl.trim());
+    final httpUri = Uri.parse(baseUrl.trim().replaceFirst(RegExp(r'#.*$'), ''));
     final scheme = httpUri.scheme == 'https' ? 'wss' : 'ws';
+    final defaultPort = httpUri.scheme == 'https' ? 443 : 80;
+    final port = (httpUri.hasPort && httpUri.port > 0)
+        ? httpUri.port
+        : defaultPort;
     final wsPath = httpUri.path.endsWith('/')
         ? '${httpUri.path}ws'
         : '${httpUri.path}/ws';
+    final normalizedPath = wsPath.replaceAll('//', '/');
+    final token = Uri.encodeQueryComponent(accessToken);
     return Uri(
       scheme: scheme,
       host: httpUri.host,
-      port: httpUri.hasPort ? httpUri.port : null,
-      path: wsPath.replaceAll('//', '/'),
-      queryParameters: {'token': accessToken},
+      port: port,
+      path: normalizedPath,
+      query: 'token=$token',
     );
   }
 }
