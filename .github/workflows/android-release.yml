@@ -1,0 +1,4 @@
+name: android-release
+
+on:
+  workflow_dispatch:

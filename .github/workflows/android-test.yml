@@ -1,0 +1,4 @@
+name: android-test
+
+on:
+  workflow_dispatch:
