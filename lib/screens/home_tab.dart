@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
-import '../state/app_controller.dart';
+import 'my_profile_screen.dart';
 import '../state/unread_counts_controller.dart';
 import '../state/user_profile_controller.dart';
 
@@ -107,7 +106,7 @@ class HomeTab extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: friendIds.length,
                 separatorBuilder: (_, _) =>
-                    Divider(height: 1, indent: 60, color: cs.outlineVariant),
+                    Divider(height: 1, indent: 60, color: cs.outlineVariant.withValues(alpha: .45)),
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
                   final unread = unreadCounts[id] ?? 0;
@@ -210,15 +209,27 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            text.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.1,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: cs.outlineVariant.withValues(alpha: .45),
+          ),
+        ],
       ),
     );
   }
@@ -246,53 +257,6 @@ class _ProfileCard extends ConsumerWidget {
         ? (currentUserId.length >= 8 ? currentUserId.substring(0, 8) : currentUserId)
         : currentUsername!.trim();
 
-    Future<void> saveUsername() async {
-      final result = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => _UsernameEditDialog(initialValue: displayName),
-      );
-
-      if (result == null || result.isEmpty) {
-        return;
-      }
-
-      final usernamePattern = RegExp(r'^[a-zA-Z0-9._-]{3,32}$');
-      if (!usernamePattern.hasMatch(result)) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Username must be 3-32 chars: a-zA-Z0-9._-')),
-        );
-        return;
-      }
-
-      try {
-        final freshToken = await ref
-                .read(appControllerProvider.notifier)
-                .ensureFreshAccessToken() ??
-            accessToken;
-        final remote = ref.read(remoteUserProfileServiceProvider);
-        final profile = await remote.updateMyProfile(
-          baseUrl: serverUrl,
-          accessToken: freshToken,
-          username: result,
-        );
-        await ref.read(userProfilePreferencesProvider).writeDisplayName(
-              currentUserId,
-              profile.username,
-            );
-        ref.invalidate(userDisplayNameProvider(currentUserId));
-        ref.read(appControllerProvider.notifier).setCurrentUsername(profile.username);
-
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Username updated')));
-      } catch (_) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Failed to update username')));
-      }
-    }
-
     const palette = [
       Color(0xFF6366F1),
       Color(0xFF0EA5E9),
@@ -304,174 +268,105 @@ class _ProfileCard extends ConsumerWidget {
     final hash = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarColor = palette[hash.abs() % palette.length];
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: () async {
-              final picker = ImagePicker();
-              final image = await picker.pickImage(
-                source: ImageSource.gallery,
-                maxWidth: 512,
-                maxHeight: 512,
-                imageQuality: 85,
-              );
-              if (image == null) {
-                return;
-              }
-
-              final bytes = await image.readAsBytes();
-              if (bytes.length > 256 * 1024) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Avatar too large (max 256KB). Choose a smaller image.'),
+    return Row(
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(28),
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MyProfileScreen(
+                  serverUrl: serverUrl,
+                  accessToken: accessToken,
+                  currentUserId: currentUserId,
+                  currentUsername: currentUsername,
+                ),
+              ),
+            );
+            ref.invalidate(userAvatarBase64Provider(currentUserId));
+            ref.invalidate(userDisplayNameProvider(currentUserId));
+          },
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: avatarColor,
+            child: avatarBase64 == null
+                ? Text(
+                    currentUserId.length >= 2
+                        ? currentUserId.substring(0, 2).toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  )
+                : ClipOval(
+                    child: SizedBox.expand(
+                      child: Image.memory(
+                        base64Decode(avatarBase64),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
-                );
-                return;
-              }
-
-              try {
-                final freshToken = await ref
-                        .read(appControllerProvider.notifier)
-                        .ensureFreshAccessToken() ??
-                    accessToken;
-                final remote = ref.read(remoteUserProfileServiceProvider);
-                final profile = await remote.updateMyProfile(
-                  baseUrl: serverUrl,
-                  accessToken: freshToken,
-                  avatarBase64: base64Encode(bytes),
-                );
-                await ref.read(userProfilePreferencesProvider).writeAvatarBase64(
-                      currentUserId,
-                      profile.avatarBase64,
-                    );
-                await ref.read(userProfilePreferencesProvider).writeDisplayName(
-                      currentUserId,
-                      profile.username,
-                    );
-                ref.invalidate(userAvatarBase64Provider(currentUserId));
-                ref.invalidate(userDisplayNameProvider(currentUserId));
-                ref.read(appControllerProvider.notifier).setCurrentUsername(profile.username);
-              } catch (_) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to upload avatar')),
-                );
-                return;
-              }
-
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Avatar updated'),
-                  duration: Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                  width: 160,
-                ),
-              );
-            },
-            child: CircleAvatar(
-              radius: 28,
-              backgroundColor: avatarColor,
-              child: avatarBase64 == null
-                  ? Text(
-                      currentUserId.length >= 2
-                          ? currentUserId.substring(0, 2).toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    )
-                  : ClipOval(
-                      child: SizedBox.expand(
-                        child: Image.memory(
-                          base64Decode(avatarBase64),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-            ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        displayName,
-                        style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayName,
+                      style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(Icons.edit_outlined,
-                            size: 13, color: cs.onSurfaceVariant),
-                        tooltip: 'Edit username',
-                        onPressed: saveUsername,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      currentUserId,
+                      style: tt.labelSmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: cs.onSurfaceVariant,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        currentUserId,
-                        style: tt.labelSmall?.copyWith(
-                          fontFamily: 'monospace',
-                          color: cs.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  ),
+                  SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(Icons.copy_outlined, size: 13, color: cs.onSurfaceVariant),
+                      tooltip: 'Copy ID',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: currentUserId));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Your ID copied'),
+                            duration: Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                            width: 160,
+                          ),
+                        );
+                      },
                     ),
-                    SizedBox(
-                      width: 26,
-                      height: 26,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(Icons.copy_outlined,
-                            size: 13, color: cs.onSurfaceVariant),
-                        tooltip: 'Copy ID',
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: currentUserId));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Your ID copied'),
-                              duration: Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                              width: 160,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

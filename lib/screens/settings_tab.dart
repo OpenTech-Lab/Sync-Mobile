@@ -226,7 +226,7 @@ class _SectionHeader extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: cs.outlineVariant,
+            color: cs.outlineVariant.withValues(alpha: .45),
           ),
         ],
       ),
