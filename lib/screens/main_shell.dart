@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/app_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
 import '../state/sticker_controller.dart';
@@ -29,7 +30,8 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   String? _activePartnerId;
   // Cache the notifier so we can call disconnect() in dispose() without
@@ -39,33 +41,71 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Kick off all background services after first frame
       await Future.wait([
-        ref.read(unreadCountsProvider.notifier).refresh(
+        ref
+            .read(unreadCountsProvider.notifier)
+            .refresh(
               baseUrl: widget.serverUrl,
               accessToken: widget.accessToken,
             ),
-        ref.read(stickerControllerProvider.notifier).sync(
-              baseUrl: widget.serverUrl,
-              accessToken: widget.accessToken,
-            ),
-        ref.read(notificationControllerProvider.notifier).initialize(
+        ref
+            .read(stickerControllerProvider.notifier)
+            .sync(baseUrl: widget.serverUrl, accessToken: widget.accessToken),
+        ref
+            .read(notificationControllerProvider.notifier)
+            .initialize(
               baseUrl: widget.serverUrl,
               accessToken: widget.accessToken,
             ),
         _realtimeSyncNotifier.connect(
-              baseUrl: widget.serverUrl,
-              accessToken: widget.accessToken,
-              currentUserId: widget.currentUserId,
-            ),
+          baseUrl: widget.serverUrl,
+          accessTokenProvider: _effectiveAccessToken,
+          currentUserId: widget.currentUserId,
+        ),
       ]);
     });
   }
 
+  Future<String?> _effectiveAccessToken() async {
+    final fresh = await ref
+        .read(appControllerProvider.notifier)
+        .ensureFreshAccessToken();
+    if (fresh != null && fresh.isNotEmpty) {
+      return fresh;
+    }
+    final appState = ref.read(appControllerProvider).value;
+    final current = appState?.accessToken;
+    if (current != null && current.isNotEmpty) {
+      return current;
+    }
+    return widget.accessToken;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _realtimeSyncNotifier.connect(
+        baseUrl: widget.serverUrl,
+        accessTokenProvider: _effectiveAccessToken,
+        currentUserId: widget.currentUserId,
+      );
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _realtimeSyncNotifier.disconnect();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _realtimeSyncNotifier.disconnect();
     super.dispose();
   }
@@ -78,8 +118,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     final hideTabs = _selectedIndex == 1 && _activePartnerId != null;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final totalUnread =
-        unreadCounts.values.fold(0, (s, v) => s + v);
+    final totalUnread = unreadCounts.values.fold(0, (s, v) => s + v);
 
     final tabs = [
       HomeTab(
@@ -111,17 +150,13 @@ class _MainShellState extends ConsumerState<MainShell> {
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: tabs,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: tabs),
       bottomNavigationBar: hideTabs
           ? null
           : NavigationBar(
               selectedIndex: _selectedIndex,
               onDestinationSelected: _onTabTapped,
-              labelBehavior:
-                  NavigationDestinationLabelBehavior.alwaysShow,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               height: 60,
               indicatorColor: cs.primaryContainer,
               backgroundColor: cs.surface,

@@ -8,10 +8,7 @@ import 'conversation_messages_controller.dart';
 import 'unread_counts_controller.dart';
 
 class RealtimeSyncState {
-  const RealtimeSyncState({
-    required this.status,
-    required this.error,
-  });
+  const RealtimeSyncState({required this.status, required this.error});
 
   final RealtimeConnectionStatus status;
   final String? error;
@@ -20,10 +17,7 @@ class RealtimeSyncState {
     RealtimeConnectionStatus? status,
     String? error,
   }) {
-    return RealtimeSyncState(
-      status: status ?? this.status,
-      error: error,
-    );
+    return RealtimeSyncState(status: status ?? this.status, error: error);
   }
 }
 
@@ -35,8 +29,8 @@ final realtimeSyncServiceProvider = Provider<RealtimeSyncService>((ref) {
 
 final realtimeSyncControllerProvider =
     AsyncNotifierProvider<RealtimeSyncController, RealtimeSyncState>(
-  RealtimeSyncController.new,
-);
+      RealtimeSyncController.new,
+    );
 
 class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
   StreamSubscription<RealtimeEvent>? _subscription;
@@ -51,10 +45,11 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
 
   Future<void> connect({
     required String baseUrl,
-    required String accessToken,
+    required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
   }) async {
-    final current = state.value ??
+    final current =
+        state.value ??
         const RealtimeSyncState(
           status: RealtimeConnectionStatus.disconnected,
           error: null,
@@ -84,16 +79,19 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         final partnerId = event.message!.conversationId;
         ref.invalidate(conversationMessagesProvider(partnerId));
         ref.invalidate(conversationSummariesProvider);
-        await ref.read(unreadCountsProvider.notifier).refresh(
-              baseUrl: baseUrl,
-              accessToken: accessToken,
-            );
+        final accessToken = await accessTokenProvider();
+        if (accessToken == null || accessToken.isEmpty) {
+          return;
+        }
+        await ref
+            .read(unreadCountsProvider.notifier)
+            .refresh(baseUrl: baseUrl, accessToken: accessToken);
       }
     });
 
     await service.connect(
       baseUrl: baseUrl,
-      accessToken: accessToken,
+      accessTokenProvider: accessTokenProvider,
       currentUserId: currentUserId,
     );
   }
@@ -105,7 +103,10 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     final current = state.value;
     if (current != null) {
       state = AsyncData(
-        current.copyWith(status: RealtimeConnectionStatus.disconnected, error: null),
+        current.copyWith(
+          status: RealtimeConnectionStatus.disconnected,
+          error: null,
+        ),
       );
     }
   }

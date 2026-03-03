@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/local_chat_message.dart';
@@ -25,14 +25,15 @@ class RealtimeSyncService {
 
   Future<void> connect({
     required String baseUrl,
-    required String accessToken,
+    required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
   }) async {
     _closedByUser = false;
     _attempt = 0;
+    await _closeChannel();
     await _open(
       baseUrl: baseUrl,
-      accessToken: accessToken,
+      accessTokenProvider: accessTokenProvider,
       currentUserId: currentUserId,
       initial: true,
     );
@@ -41,10 +42,7 @@ class RealtimeSyncService {
   Future<void> disconnect() async {
     _closedByUser = true;
     _reconnectTimer?.cancel();
-    _pingTimer?.cancel();
-    await _channelSubscription?.cancel();
-    await _channel?.sink.close();
-    _channel = null;
+    await _closeChannel();
     _events.add(
       RealtimeEvent.connection(RealtimeConnectionStatus.disconnected),
     );
@@ -57,7 +55,7 @@ class RealtimeSyncService {
 
   Future<void> _open({
     required String baseUrl,
-    required String accessToken,
+    required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
     required bool initial,
   }) async {
@@ -70,6 +68,16 @@ class RealtimeSyncService {
     );
 
     try {
+      final accessToken = await accessTokenProvider();
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        _events.add(RealtimeEvent.error('Missing access token for realtime.'));
+        _scheduleReconnect(
+          baseUrl: baseUrl,
+          accessTokenProvider: accessTokenProvider,
+          currentUserId: currentUserId,
+        );
+        return;
+      }
       final wsUri = _wsUri(baseUrl, accessToken);
       final channel = WebSocketChannel.connect(wsUri);
       _channel = channel;
@@ -96,14 +104,14 @@ class RealtimeSyncService {
           _events.add(RealtimeEvent.error(error.toString()));
           _scheduleReconnect(
             baseUrl: baseUrl,
-            accessToken: accessToken,
+            accessTokenProvider: accessTokenProvider,
             currentUserId: currentUserId,
           );
         },
         onDone: () {
           _scheduleReconnect(
             baseUrl: baseUrl,
-            accessToken: accessToken,
+            accessTokenProvider: accessTokenProvider,
             currentUserId: currentUserId,
           );
         },
@@ -113,7 +121,7 @@ class RealtimeSyncService {
       _events.add(RealtimeEvent.error(error.toString()));
       _scheduleReconnect(
         baseUrl: baseUrl,
-        accessToken: accessToken,
+        accessTokenProvider: accessTokenProvider,
         currentUserId: currentUserId,
       );
     }
@@ -121,7 +129,7 @@ class RealtimeSyncService {
 
   void _scheduleReconnect({
     required String baseUrl,
-    required String accessToken,
+    required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
   }) {
     if (_closedByUser) {
@@ -132,21 +140,28 @@ class RealtimeSyncService {
     final jitter = Random.secure().nextInt(400);
     final delayMs = min(1000 * _attempt, 8000) + jitter;
 
-    _pingTimer?.cancel();
-    _channelSubscription?.cancel();
-    _channel = null;
+    unawaited(_closeChannel());
 
-    _events.add(RealtimeEvent.connection(RealtimeConnectionStatus.reconnecting));
+    _events.add(
+      RealtimeEvent.connection(RealtimeConnectionStatus.reconnecting),
+    );
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
       _open(
         baseUrl: baseUrl,
-        accessToken: accessToken,
+        accessTokenProvider: accessTokenProvider,
         currentUserId: currentUserId,
         initial: false,
       );
     });
+  }
+
+  Future<void> _closeChannel() async {
+    _pingTimer?.cancel();
+    await _channelSubscription?.cancel();
+    await _channel?.sink.close();
+    _channel = null;
   }
 
   RealtimeEvent? _tryParseRealtimeEvent({
