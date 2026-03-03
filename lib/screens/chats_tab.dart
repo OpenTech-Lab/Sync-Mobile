@@ -409,6 +409,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ? 0
         : (unreadCounts[_activePartnerId!] ?? 0);
     final inConversation = _activePartnerId != null;
+    final activeDisplayName = _activePartnerId == null
+        ? null
+        : _displayNameOrFallback(
+            _activePartnerId!,
+            ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
+          );
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
@@ -422,6 +428,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               elevation: 0,
               scrolledUnderElevation: 0,
               forceMaterialTransparency: true,
+              centerTitle: true,
+              title: Text(
+                activeDisplayName ?? 'Chat',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
@@ -1158,6 +1170,7 @@ class _MessageBubble extends StatelessWidget {
 
     Widget bubble = Container(
       constraints: BoxConstraints(
+        minWidth: 84,
         maxWidth: MediaQuery.of(context).size.width * 0.68,
         maxHeight: _kMaxBubbleHeight,
       ),
