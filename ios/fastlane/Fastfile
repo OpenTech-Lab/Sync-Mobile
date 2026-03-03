@@ -49,6 +49,7 @@ platform :ios do
       xcargs: {
         "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
         "CODE_SIGN_STYLE"                => "Manual",
+        "PROVISIONING_PROFILE_SPECIFIER" => profile_name,
       },
       export_options: {
         method:               "app-store",
