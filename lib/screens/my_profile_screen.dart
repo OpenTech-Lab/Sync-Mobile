@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../models/friend_qr_payload.dart';
 import '../state/app_controller.dart';
 import '../state/user_profile_controller.dart';
 
@@ -26,15 +28,24 @@ class MyProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final avatarBase64 = ref.watch(userAvatarBase64Provider(currentUserId)).value;
+    final avatarBase64 = ref
+        .watch(userAvatarBase64Provider(currentUserId))
+        .value;
     final displayName = (currentUsername ?? '').trim().isEmpty
-        ? (currentUserId.length >= 8 ? currentUserId.substring(0, 8) : currentUserId)
+        ? (currentUserId.length >= 8
+              ? currentUserId.substring(0, 8)
+              : currentUserId)
         : currentUsername!.trim();
+    final myQrPayload = FriendQrPayload(
+      userId: currentUserId,
+      serverUrl: serverUrl,
+    ).encode();
 
     Future<void> saveUsername() async {
       final result = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => _UsernameEditDialog(initialValue: displayName),
+        builder: (dialogContext) =>
+            _UsernameEditDialog(initialValue: displayName),
       );
 
       if (result == null || result.isEmpty) {
@@ -45,35 +56,42 @@ class MyProfileScreen extends ConsumerWidget {
       if (!usernamePattern.hasMatch(result)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Username must be 3-32 chars: a-zA-Z0-9._-')),
+          const SnackBar(
+            content: Text('Username must be 3-32 chars: a-zA-Z0-9._-'),
+          ),
         );
         return;
       }
 
       try {
         final freshToken =
-            await ref.read(appControllerProvider.notifier).ensureFreshAccessToken() ??
-                accessToken;
+            await ref
+                .read(appControllerProvider.notifier)
+                .ensureFreshAccessToken() ??
+            accessToken;
         final remote = ref.read(remoteUserProfileServiceProvider);
         final profile = await remote.updateMyProfile(
           baseUrl: serverUrl,
           accessToken: freshToken,
           username: result,
         );
-        await ref.read(userProfilePreferencesProvider).writeDisplayName(
-              currentUserId,
-              profile.username,
-            );
+        await ref
+            .read(userProfilePreferencesProvider)
+            .writeDisplayName(currentUserId, profile.username);
         ref.invalidate(userDisplayNameProvider(currentUserId));
-        ref.read(appControllerProvider.notifier).setCurrentUsername(profile.username);
+        ref
+            .read(appControllerProvider.notifier)
+            .setCurrentUsername(profile.username);
 
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Username updated')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Username updated')));
       } catch (_) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Failed to update username')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update username')),
+        );
       }
     }
 
@@ -105,14 +123,19 @@ class MyProfileScreen extends ConsumerWidget {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Avatar too large (max 256KB). Choose a smaller image.'),
+            content: Text(
+              'Avatar too large (max 256KB). Choose a smaller image.',
+            ),
           ),
         );
         return;
       }
 
       try {
-        final freshToken = await ref.read(appControllerProvider.notifier).ensureFreshAccessToken() ??
+        final freshToken =
+            await ref
+                .read(appControllerProvider.notifier)
+                .ensureFreshAccessToken() ??
             accessToken;
         final remote = ref.read(remoteUserProfileServiceProvider);
         final profile = await remote.updateMyProfile(
@@ -120,19 +143,17 @@ class MyProfileScreen extends ConsumerWidget {
           accessToken: freshToken,
           avatarBase64: base64Encode(bytes),
         );
-        await ref.read(userProfilePreferencesProvider).writeAvatarBase64(
-              currentUserId,
-              profile.avatarBase64,
-            );
-        await ref.read(userProfilePreferencesProvider).writeDisplayName(
-              currentUserId,
-              profile.username,
-            );
+        await ref
+            .read(userProfilePreferencesProvider)
+            .writeAvatarBase64(currentUserId, profile.avatarBase64);
+        await ref
+            .read(userProfilePreferencesProvider)
+            .writeDisplayName(currentUserId, profile.username);
         ref.invalidate(userAvatarBase64Provider(currentUserId));
         ref.invalidate(userDisplayNameProvider(currentUserId));
-        ref.read(appControllerProvider.notifier).setCurrentUsername(
-              profile.username,
-            );
+        ref
+            .read(appControllerProvider.notifier)
+            .setCurrentUsername(profile.username);
       } catch (_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -153,9 +174,7 @@ class MyProfileScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-      ),
+      appBar: AppBar(title: const Text('My Profile')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
@@ -195,7 +214,9 @@ class MyProfileScreen extends ConsumerWidget {
                             height: 20,
                             width: double.infinity,
                             alignment: Alignment.center,
-                            color: cs.surfaceContainerHighest.withValues(alpha: .88),
+                            color: cs.surfaceContainerHighest.withValues(
+                              alpha: .88,
+                            ),
                             child: Text(
                               'Edit',
                               style: tt.labelSmall?.copyWith(
@@ -220,7 +241,9 @@ class MyProfileScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             displayName,
-                            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                            style: tt.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -230,7 +253,11 @@ class MyProfileScreen extends ConsumerWidget {
                           height: 26,
                           child: IconButton(
                             padding: EdgeInsets.zero,
-                            icon: Icon(Icons.edit_outlined, size: 15, color: cs.onSurfaceVariant),
+                            icon: Icon(
+                              Icons.edit_outlined,
+                              size: 15,
+                              color: cs.onSurfaceVariant,
+                            ),
                             tooltip: 'Edit username',
                             onPressed: saveUsername,
                           ),
@@ -256,10 +283,16 @@ class MyProfileScreen extends ConsumerWidget {
                           height: 26,
                           child: IconButton(
                             padding: EdgeInsets.zero,
-                            icon: Icon(Icons.copy_outlined, size: 14, color: cs.onSurfaceVariant),
+                            icon: Icon(
+                              Icons.copy_outlined,
+                              size: 14,
+                              color: cs.onSurfaceVariant,
+                            ),
                             tooltip: 'Copy ID',
                             onPressed: () {
-                              Clipboard.setData(ClipboardData(text: currentUserId));
+                              Clipboard.setData(
+                                ClipboardData(text: currentUserId),
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Your ID copied'),
@@ -277,6 +310,63 @@ class MyProfileScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'My Friend QR',
+            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: .45),
+              ),
+            ),
+            child: Column(
+              children: [
+                Center(
+                  child: QrImageView(
+                    data: myQrPayload,
+                    version: QrVersions.auto,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Contains your server URL and ID',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: myQrPayload));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('QR payload copied'),
+                        duration: Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                        width: 180,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_outlined, size: 16),
+                  label: const Text('Copy QR payload'),
+                ),
+              ],
+            ),
           ),
         ],
       ),

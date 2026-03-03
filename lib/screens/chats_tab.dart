@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/local_chat_message.dart';
 import '../models/sticker.dart';
+import '../models/friend_qr_payload.dart';
+import 'friend_qr_scanner_screen.dart';
 import '../services/local_chat_repository.dart';
 import '../state/app_controller.dart';
 import '../state/conversation_messages_controller.dart';
@@ -296,6 +298,21 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await _openFromTarget(target);
   }
 
+  Future<void> _scanQrAndOpen() async {
+    final payload = await Navigator.of(context).push<FriendQrPayload>(
+      MaterialPageRoute<FriendQrPayload>(
+        builder: (_) => const FriendQrScannerScreen(),
+      ),
+    );
+    if (!mounted || payload == null) {
+      return;
+    }
+
+    await _openFromTarget(
+      _ChatTargetInput(friendId: payload.userId, serverUrl: payload.serverUrl),
+    );
+  }
+
   Future<void> _sendMessage() async {
     if (_activePartnerId == null) return;
     final text = _messageController.text.trim();
@@ -403,8 +420,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 switch (action) {
                   case _ChatQuickAction.newChat:
                     _startNewChat();
+                  case _ChatQuickAction.newChatQr:
+                    _scanQrAndOpen();
                   case _ChatQuickAction.addFriend:
                     _showAddFriendDialog();
+                  case _ChatQuickAction.addFriendQr:
+                    _scanQrAndOpen();
                 }
               },
               itemBuilder: (context) => const [
@@ -413,8 +434,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   child: Text('Start new chat'),
                 ),
                 PopupMenuItem<_ChatQuickAction>(
+                  value: _ChatQuickAction.newChatQr,
+                  child: Text('Start new chat (QR)'),
+                ),
+                PopupMenuItem<_ChatQuickAction>(
                   value: _ChatQuickAction.addFriend,
                   child: Text('Add friend'),
+                ),
+                PopupMenuItem<_ChatQuickAction>(
+                  value: _ChatQuickAction.addFriendQr,
+                  child: Text('Add friend (QR)'),
                 ),
               ],
             ),
@@ -562,7 +591,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 }
 
-enum _ChatQuickAction { newChat, addFriend }
+enum _ChatQuickAction { newChat, newChatQr, addFriend, addFriendQr }
 
 class _ChatTargetInput {
   const _ChatTargetInput({required this.friendId, required this.serverUrl});
