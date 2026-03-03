@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'dev_http_client.dart';
+
 class AuthTokens {
   const AuthTokens({required this.accessToken, required this.refreshToken});
 
@@ -10,6 +12,11 @@ class AuthTokens {
 }
 
 class AuthService {
+  AuthService([http.Client? httpClient])
+      : _httpClient = createDevHttpClient(httpClient);
+
+  final http.Client _httpClient;
+
   Future<void> register({
     required String baseUrl,
     required String username,
@@ -103,7 +110,7 @@ class AuthService {
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final uri = Uri.parse('$normalized/auth/forgot-password');
-    final response = await http
+    final response = await _httpClient
         .post(
           uri,
           headers: const {'Content-Type': 'application/json'},
@@ -123,7 +130,7 @@ class AuthService {
     final normalized = _normalizeBaseUrl(baseUrl);
     final firstUri = Uri.parse('$normalized/auth/$path');
 
-    var response = await http
+    var response = await _httpClient
         .post(
           firstUri,
           headers: const {'Content-Type': 'application/json'},
@@ -134,7 +141,7 @@ class AuthService {
     if (response.statusCode == 404 && normalized.endsWith('/api')) {
       final fallbackBase = _stripApiSuffix(normalized);
       final fallbackUri = Uri.parse('$fallbackBase/auth/$path');
-      response = await http
+      response = await _httpClient
           .post(
             fallbackUri,
             headers: const {'Content-Type': 'application/json'},

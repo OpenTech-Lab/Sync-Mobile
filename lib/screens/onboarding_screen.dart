@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../constants/planet_presets.dart';
@@ -79,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               autocorrect: false,
               decoration: InputDecoration(
                 labelText: 'Server URL',
-                hintText: 'https://sync.example.com',
+                hintText: 'https://localhost',
                 prefixIcon: const Icon(Icons.dns_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -147,30 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             // — Status feedback
             if (isSuccess) ...[
               const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green.shade700,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Connection successful',
-                      style: TextStyle(color: Colors.green.shade800),
-                    ),
-                  ],
-                ),
-              ),
               if (widget.planetInfo != null) ...[
-                const SizedBox(height: 10),
                 _PlanetInfoCard(info: widget.planetInfo!),
               ],
             ],
@@ -229,81 +209,171 @@ class _PlanetInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final checked = info.checkedAt.toLocal();
-    final hh = checked.hour.toString().padLeft(2, '0');
-    final mm = checked.minute.toString().padLeft(2, '0');
-    final ss = checked.second.toString().padLeft(2, '0');
+    final planetName = (info.instanceName ?? '').trim().isEmpty
+        ? info.host
+        : info.instanceName!.trim();
+    final planetImageBytes = _decodeImageDataUrl(info.instanceImageBase64);
+    final countryLabel = [
+      if ((info.countryName ?? '').isNotEmpty) info.countryName!,
+      if ((info.countryCode ?? '').isNotEmpty) info.countryCode!,
+    ].join(' • ');
+    final countryChipText = countryLabel.isEmpty
+        ? 'Country unavailable'
+        : countryLabel;
+    final isSecure = info.scheme.toLowerCase() == 'https';
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: .5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Planet Information',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: .35)),
           ),
-          const SizedBox(height: 10),
-          _InfoLine(label: 'Server', value: info.baseUrl),
-          if ((info.instanceName ?? '').isNotEmpty)
-            _InfoLine(label: 'Planet', value: info.instanceName!),
-          if ((info.instanceDomain ?? '').isNotEmpty)
-            _InfoLine(label: 'Domain', value: info.instanceDomain!),
-          _InfoLine(label: 'Host', value: info.host),
-          _InfoLine(label: 'Protocol', value: info.scheme.toUpperCase()),
-          if ((info.countryName ?? '').isNotEmpty ||
-              (info.countryCode ?? '').isNotEmpty)
-            _InfoLine(
-              label: 'Country',
-              value: [
-                if ((info.countryName ?? '').isNotEmpty) info.countryName!,
-                if ((info.countryCode ?? '').isNotEmpty)
-                  '(${info.countryCode!})',
-              ].join(' '),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: planetImageBytes == null
+                        ? Icon(
+                            Icons.public,
+                            color: cs.onPrimaryContainer,
+                            size: 20,
+                          )
+                        : Image.memory(planetImageBytes, fit: BoxFit.cover),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          planetName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          'Planet Information',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                        if ((info.instanceDescription ?? '').isNotEmpty)
+                          Text(
+                            info.instanceDescription!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: cs.onSurfaceVariant),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _InfoChip(icon: Icons.place_outlined, text: countryChipText),
+                  _InfoChip(
+                    icon: Icons.speed_outlined,
+                    text: '${info.latencyMs} ms',
+                  ),
+                  _InfoChip(
+                    icon: isSecure ? Icons.lock_outline : Icons.info_outline,
+                    text: isSecure ? 'Secure' : 'Standard',
+                  ),
+                ],
+              ),
+              if ((info.instanceDomain ?? '').isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  info.instanceDomain!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: Colors.green.shade500,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.shade200,
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          _InfoLine(label: 'Health', value: info.healthStatus),
-          _InfoLine(label: 'Latency', value: '${info.latencyMs} ms'),
-          _InfoLine(label: 'Checked', value: '$hh:$mm:$ss'),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.label, required this.value});
+Uint8List? _decodeImageDataUrl(String? dataUrl) {
+  if (dataUrl == null || dataUrl.trim().isEmpty) {
+    return null;
+  }
+  final value = dataUrl.trim();
+  final comma = value.indexOf(',');
+  if (comma <= 0 || comma >= value.length - 1) {
+    return null;
+  }
+  try {
+    return base64Decode(value.substring(comma + 1));
+  } catch (_) {
+    return null;
+  }
+}
 
-  final String label;
-  final String value;
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: .35)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 74,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value, style: TextStyle(color: cs.onSurface)),
-          ),
+          Icon(icon, size: 14, color: cs.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(text, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );

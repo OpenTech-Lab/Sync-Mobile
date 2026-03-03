@@ -7,5 +7,5 @@ class PlanetPreset {
 
 const officialPlanetPresets = <PlanetPreset>[
   PlanetPreset(name: 'SYNC', url: 'https://sync.icyanstudio.net'),
-  PlanetPreset(name: 'Local', url: 'http://localhost:8080'),
+  PlanetPreset(name: 'Local', url: 'https://localhost'),
 ];

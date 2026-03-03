@@ -2,11 +2,12 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'dev_http_client.dart';
 import '../models/sticker.dart';
 
 class StickerService {
   StickerService([http.Client? httpClient])
-      : _httpClient = httpClient ?? http.Client();
+      : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 

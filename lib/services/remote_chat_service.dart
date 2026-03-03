@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'dev_http_client.dart';
 import '../models/local_chat_message.dart';
 
 class ResolvedContact {
@@ -29,7 +30,7 @@ class ResolvedContact {
 
 class RemoteChatService {
   RemoteChatService([http.Client? httpClient])
-    : _httpClient = httpClient ?? http.Client();
+    : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 

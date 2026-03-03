@@ -3,12 +3,16 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'dev_http_client.dart';
+
 class PlanetInfo {
   const PlanetInfo({
     required this.baseUrl,
     required this.host,
     required this.scheme,
     required this.instanceName,
+    required this.instanceDescription,
+    required this.instanceImageBase64,
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
@@ -21,6 +25,8 @@ class PlanetInfo {
   final String host;
   final String scheme;
   final String? instanceName;
+  final String? instanceDescription;
+  final String? instanceImageBase64;
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
@@ -30,6 +36,11 @@ class PlanetInfo {
 }
 
 class ServerHealthService {
+  ServerHealthService([http.Client? httpClient])
+      : _httpClient = createDevHttpClient(httpClient);
+
+  final http.Client _httpClient;
+
   Future<PlanetInfo> validate(String baseUrl) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final parsedBase = Uri.tryParse(normalized);
@@ -42,7 +53,9 @@ class ServerHealthService {
     }
 
     final started = DateTime.now();
-    final response = await http.get(uri).timeout(const Duration(seconds: 5));
+    final response = await _httpClient
+        .get(uri)
+        .timeout(const Duration(seconds: 5));
     final latencyMs = DateTime.now().difference(started).inMilliseconds;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
@@ -52,6 +65,8 @@ class ServerHealthService {
 
     var healthStatus = 'ok';
     String? instanceName;
+    String? instanceDescription;
+    String? instanceImageBase64;
     String? instanceDomain;
     String? countryCode;
     String? countryName;
@@ -65,6 +80,16 @@ class ServerHealthService {
         final rawInstanceName = decoded['instance_name'];
         if (rawInstanceName is String && rawInstanceName.trim().isNotEmpty) {
           instanceName = rawInstanceName.trim();
+        }
+        final rawInstanceDescription = decoded['instance_description'];
+        if (rawInstanceDescription is String &&
+            rawInstanceDescription.trim().isNotEmpty) {
+          instanceDescription = rawInstanceDescription.trim();
+        }
+        final rawInstanceImageBase64 = decoded['instance_image_base64'];
+        if (rawInstanceImageBase64 is String &&
+            rawInstanceImageBase64.trim().isNotEmpty) {
+          instanceImageBase64 = rawInstanceImageBase64.trim();
         }
         final rawInstanceDomain = decoded['instance_domain'];
         if (rawInstanceDomain is String &&
@@ -89,6 +114,8 @@ class ServerHealthService {
       host: parsedBase.host,
       scheme: parsedBase.scheme,
       instanceName: instanceName,
+      instanceDescription: instanceDescription,
+      instanceImageBase64: instanceImageBase64,
       instanceDomain: instanceDomain,
       countryCode: countryCode,
       countryName: countryName,

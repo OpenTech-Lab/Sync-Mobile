@@ -6,14 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'dev_http_client.dart';
+
 class NotificationService {
-  NotificationService([FlutterSecureStorage? storage])
-    : _storage = storage ?? const FlutterSecureStorage();
+  NotificationService([FlutterSecureStorage? storage, http.Client? httpClient])
+    : _storage = storage ?? const FlutterSecureStorage(),
+      _httpClient = createDevHttpClient(httpClient);
 
   static const _deviceTokenKey = 'device_push_token';
   static const _channel = MethodChannel('sync.notifications');
 
   final FlutterSecureStorage _storage;
+  final http.Client _httpClient;
 
   Future<void> initialize() async {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -69,7 +73,7 @@ class NotificationService {
     }
 
     final uri = Uri.parse(baseUrl).replace(path: _pushPath(baseUrl));
-    final response = await http
+    final response = await _httpClient
         .post(
           uri,
           headers: {
