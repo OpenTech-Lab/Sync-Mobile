@@ -33,9 +33,6 @@ platform :ios do
     # --- Archive & export (manual signing; profile already installed by CI) ---
     # xcargs must be a Hash so fastlane shell-quotes each value individually.
     # Passing a joined String breaks when the profile name contains spaces.
-    # Use PROVISIONING_PROFILE_SPECIFIER with the UUID (never contains spaces)
-    # rather than the human-readable name.
-    profile_uuid = ENV.fetch("IOS_PROVISIONING_PROFILE_UUID")
     profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
 
     gym(
@@ -48,7 +45,6 @@ platform :ios do
       xcargs: {
         "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
         "CODE_SIGN_STYLE"                => "Manual",
-        "PROVISIONING_PROFILE_SPECIFIER" => profile_uuid,
       },
       export_options: {
         method:               "app-store",
