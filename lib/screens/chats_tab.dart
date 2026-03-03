@@ -440,33 +440,35 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             )
           : null,
       body: _activePartnerId == null
-          ? _ConversationStarter(
-              controller: _partnerController,
-              focusNode: _partnerFocusNode,
-              unreadCounts: unreadCounts,
-              summaries: filteredSummaries,
-              onQuickAction: (action) {
-                switch (action) {
-                  case _ChatQuickAction.newFriendOrChat:
-                    _openNewFriendOrChat();
-                  case _ChatQuickAction.scanFriendQr:
-                    _scanQrAndOpen();
-                }
-              },
-              onOpenConversation: (id) async {
-                await _openPartner(id);
-              },
-              onRefresh: () async {
-                final accessToken = await _effectiveAccessToken();
-                await ref
-                    .read(unreadCountsProvider.notifier)
-                    .refresh(
-                      baseUrl: widget.serverUrl,
-                      accessToken: accessToken,
-                    );
-              },
-              onStartNewChat: _openNewFriendOrChat,
-              onAddFriend: _openNewFriendOrChat,
+          ? SafeArea(
+              child: _ConversationStarter(
+                controller: _partnerController,
+                focusNode: _partnerFocusNode,
+                unreadCounts: unreadCounts,
+                summaries: filteredSummaries,
+                onQuickAction: (action) {
+                  switch (action) {
+                    case _ChatQuickAction.newFriendOrChat:
+                      _openNewFriendOrChat();
+                    case _ChatQuickAction.scanFriendQr:
+                      _scanQrAndOpen();
+                  }
+                },
+                onOpenConversation: (id) async {
+                  await _openPartner(id);
+                },
+                onRefresh: () async {
+                  final accessToken = await _effectiveAccessToken();
+                  await ref
+                      .read(unreadCountsProvider.notifier)
+                      .refresh(
+                        baseUrl: widget.serverUrl,
+                        accessToken: accessToken,
+                      );
+                },
+                onStartNewChat: _openNewFriendOrChat,
+                onAddFriend: _openNewFriendOrChat,
+              ),
             )
           : Column(
               children: [

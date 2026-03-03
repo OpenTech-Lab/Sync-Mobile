@@ -41,157 +41,159 @@ class SettingsTab extends ConsumerWidget {
     final host = Uri.tryParse(serverUrl)?.host ?? serverUrl;
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          _SectionHeader(label: 'My Planet'),
-          _PlanetCard(
-            host: host,
-            serverUrl: serverUrl,
-            stickerCount: stickers.length,
-            memberCount: unreadCounts.keys.length,
-            isConnected: isConnected,
-            notifActive: notifActive,
-          ),
-          const SizedBox(height: 20),
-          _SectionHeader(label: 'Appearance'),
-          Row(
-            children: [
-              Icon(
-                Icons.brightness_6_outlined,
-                size: 20,
-                color: cs.onSurfaceVariant,
-              ),
-              const SizedBox(width: 10),
-              Text('Theme', style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<ThemeMode>(
-            segments: const [
-              ButtonSegment(
-                value: ThemeMode.light,
-                icon: Icon(Icons.light_mode_outlined, size: 16),
-                label: Text('Light'),
-              ),
-              ButtonSegment(
-                value: ThemeMode.system,
-                icon: Icon(Icons.brightness_auto_outlined, size: 16),
-                label: Text('System'),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                icon: Icon(Icons.dark_mode_outlined, size: 16),
-                label: Text('Dark'),
-              ),
-            ],
-            selected: {themeMode},
-            onSelectionChanged: (s) =>
-                ref.read(themeModeProvider.notifier).setMode(s.first),
-            style: SegmentedButton.styleFrom(
-              textStyle: const TextStyle(fontSize: 12),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          children: [
+            _SectionHeader(label: 'My Planet'),
+            _PlanetCard(
+              host: host,
+              serverUrl: serverUrl,
+              stickerCount: stickers.length,
+              memberCount: unreadCounts.keys.length,
+              isConnected: isConnected,
+              notifActive: notifActive,
             ),
-          ),
-          const SizedBox(height: 20),
-          _SectionHeader(label: 'Encrypted backups'),
-          SwitchListTile(
-            secondary: const Icon(Icons.backup_outlined),
-            title: const Text('Enable backups'),
-            subtitle: const Text('Locally encrypted using AES-GCM'),
-            value: backupState?.enabled ?? false,
-            onChanged: (v) =>
-                ref.read(backupControllerProvider.notifier).setEnabled(v),
-          ),
-          if (backupState?.enabled == true) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _BackupButton(
-                      label: 'Create backup',
-                      icon: Icons.upload_outlined,
-                      busy: backupState?.isBusy == true,
-                      onPressed: () => ref
-                          .read(backupControllerProvider.notifier)
-                          .createBackup(),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _BackupButton(
-                      label: 'Restore',
-                      icon: Icons.download_outlined,
-                      busy: backupState?.isBusy == true,
-                      onPressed: () async {
-                        await ref
-                            .read(backupControllerProvider.notifier)
-                            .restoreBackup();
-                        if (activePartnerId != null) {
-                          ref.invalidate(
-                            conversationMessagesProvider(activePartnerId!),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 20),
+            _SectionHeader(label: 'Appearance'),
+            Row(
+              children: [
+                Icon(
+                  Icons.brightness_6_outlined,
+                  size: 20,
+                  color: cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Text('Theme', style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode_outlined, size: 16),
+                  label: Text('Light'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: Icon(Icons.brightness_auto_outlined, size: 16),
+                  label: Text('System'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode_outlined, size: 16),
+                  label: Text('Dark'),
+                ),
+              ],
+              selected: {themeMode},
+              onSelectionChanged: (s) =>
+                  ref.read(themeModeProvider.notifier).setMode(s.first),
+              style: SegmentedButton.styleFrom(
+                textStyle: const TextStyle(fontSize: 12),
               ),
             ),
-            if (backupState?.statusMessage != null)
+            const SizedBox(height: 20),
+            _SectionHeader(label: 'Encrypted backups'),
+            SwitchListTile(
+              secondary: const Icon(Icons.backup_outlined),
+              title: const Text('Enable backups'),
+              subtitle: const Text('Locally encrypted using AES-GCM'),
+              value: backupState?.enabled ?? false,
+              onChanged: (v) =>
+                  ref.read(backupControllerProvider.notifier).setEnabled(v),
+            ),
+            if (backupState?.enabled == true) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
-                child: Text(
-                  backupState!.statusMessage!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ),
-          ],
-          const SizedBox(height: 28),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.logout, size: 18),
-              label: const Text('Sign out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: cs.error,
-                side: BorderSide(color: cs.error.withValues(alpha: .5)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Sign out?'),
-                    content: const Text(
-                      'You will be signed out of this account. '
-                      'Local messages are kept on device.',
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _BackupButton(
+                        label: 'Create backup',
+                        icon: Icons.upload_outlined,
+                        busy: backupState?.isBusy == true,
+                        onPressed: () => ref
+                            .read(backupControllerProvider.notifier)
+                            .createBackup(),
+                      ),
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancel'),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _BackupButton(
+                        label: 'Restore',
+                        icon: Icons.download_outlined,
+                        busy: backupState?.isBusy == true,
+                        onPressed: () async {
+                          await ref
+                              .read(backupControllerProvider.notifier)
+                              .restoreBackup();
+                          if (activePartnerId != null) {
+                            ref.invalidate(
+                              conversationMessagesProvider(activePartnerId!),
+                            );
+                          }
+                        },
                       ),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: cs.error,
-                          foregroundColor: cs.onError,
-                        ),
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('Sign out'),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              if (backupState?.statusMessage != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  child: Text(
+                    backupState!.statusMessage!,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
-                );
-                if (confirmed == true) await onSignOut();
-              },
+                ),
+            ],
+            const SizedBox(height: 28),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.logout, size: 18),
+                label: const Text('Sign out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: cs.error,
+                  side: BorderSide(color: cs.error.withValues(alpha: .5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Sign out?'),
+                      content: const Text(
+                        'You will be signed out of this account. '
+                        'Local messages are kept on device.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: cs.error,
+                            foregroundColor: cs.onError,
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Sign out'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) await onSignOut();
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

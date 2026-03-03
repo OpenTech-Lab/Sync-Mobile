@@ -43,169 +43,178 @@ class HomeTab extends ConsumerWidget {
         uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          const _SectionLabel('My Profile'),
-          _ProfileCard(
-            serverUrl: serverUrl,
-            accessToken: accessToken,
-            currentUserId: currentUserId,
-            currentUsername: currentUsername,
-          ),
-          const SizedBox(height: 20),
-          if (totalUnread > 0) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.mark_chat_unread_outlined,
-                    size: 18,
-                    color: cs.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
-                    style: tt.bodySmall?.copyWith(
-                      color: cs.onPrimaryContainer,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            const _SectionLabel('My Profile'),
+            _ProfileCard(
+              serverUrl: serverUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
             ),
             const SizedBox(height: 20),
-          ],
-          _SectionLabel('Friends (${friendIds.length})'),
-          if (friendIds.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Column(
+            if (totalUnread > 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
                   children: [
                     Icon(
-                      Icons.people_outline,
-                      size: 40,
-                      color: cs.onSurfaceVariant,
+                      Icons.mark_chat_unread_outlined,
+                      size: 18,
+                      color: cs.onPrimaryContainer,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(width: 10),
                     Text(
-                      'No friends yet',
-                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                    Text(
-                      'Open Chats and start a conversation',
-                      style: tt.labelSmall?.copyWith(color: cs.outlineVariant),
+                      '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: cs.outlineVariant),
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: friendIds.length,
-                separatorBuilder: (_, _) => Divider(
-                  height: 1,
-                  indent: 60,
-                  color: cs.outlineVariant.withValues(alpha: .45),
-                ),
-                itemBuilder: (ctx, i) {
-                  final id = friendIds[i];
-                  final unread = unreadCounts[id] ?? 0;
-                  return ListTile(
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: _avatarColor(id, cs),
-                      child: Text(
-                        initials(id),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      shortId(id),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                    subtitle: Text(
-                      id,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontFamily: 'monospace',
+              const SizedBox(height: 20),
+            ],
+            _SectionLabel('Friends (${friendIds.length})'),
+            if (friendIds.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 40,
                         color: cs.onSurfaceVariant,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (unread > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.primary,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '$unread',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: cs.onPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        if (unread > 0) const SizedBox(width: 6),
-                        IconButton(
-                          icon: Icon(
-                            Icons.copy_outlined,
-                            size: 15,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          tooltip: 'Copy ID',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: id));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Friend ID copied'),
-                                duration: Duration(seconds: 1),
-                                behavior: SnackBarBehavior.floating,
-                                width: 160,
-                              ),
-                            );
-                          },
+                      const SizedBox(height: 8),
+                      Text(
+                        'No friends yet',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
-                      ],
-                    ),
-                    onTap: () => onOpenChat?.call(id),
-                  );
-                },
+                      ),
+                      Text(
+                        'Open Chats and start a conversation',
+                        style: tt.labelSmall?.copyWith(
+                          color: cs.outlineVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: friendIds.length,
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    indent: 60,
+                    color: cs.outlineVariant.withValues(alpha: .45),
+                  ),
+                  itemBuilder: (ctx, i) {
+                    final id = friendIds[i];
+                    final unread = unreadCounts[id] ?? 0;
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _avatarColor(id, cs),
+                        child: Text(
+                          initials(id),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        shortId(id),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      subtitle: Text(
+                        id,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontFamily: 'monospace',
+                          color: cs.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (unread > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: cs.primary,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: cs.onPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          if (unread > 0) const SizedBox(width: 6),
+                          IconButton(
+                            icon: Icon(
+                              Icons.copy_outlined,
+                              size: 15,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            tooltip: 'Copy ID',
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: id));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Friend ID copied'),
+                                  duration: Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
+                                  width: 160,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      onTap: () => onOpenChat?.call(id),
+                    );
+                  },
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
