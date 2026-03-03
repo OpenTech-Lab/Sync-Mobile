@@ -9,6 +9,7 @@ import '../models/local_chat_message.dart';
 import '../models/sticker.dart';
 import '../models/friend_qr_payload.dart';
 import 'friend_qr_scanner_screen.dart';
+import 'chat_target_profile_screen.dart';
 import '../services/local_chat_repository.dart';
 import '../state/app_controller.dart';
 import '../state/conversation_messages_controller.dart';
@@ -183,17 +184,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     ref.invalidate(conversationSummariesProvider);
   }
 
-  Future<_ChatTargetInput?> _promptForChatTarget({
-    required String title,
-    required String confirmLabel,
-  }) async {
+  Future<_ChatTargetInput?> _promptForChatTarget() async {
     final idController = TextEditingController();
-    final serverController = TextEditingController();
+    final serverController = TextEditingController(text: widget.serverUrl);
     final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(title),
+          title: const Text('New friend / start chat'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -204,13 +202,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   hintText: 'Friend ID',
                   border: OutlineInputBorder(),
                 ),
-                onSubmitted: (_) {},
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: serverController,
                 decoration: const InputDecoration(
-                  hintText: 'Friend server URL (required for other planet)',
+                  hintText: 'Friend server URL',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -228,7 +225,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   serverUrl: serverController.text.trim(),
                 ),
               ),
-              child: Text(confirmLabel),
+              child: const Text('Next'),
             ),
           ],
         );
@@ -239,31 +236,84 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     return result;
   }
 
-  Future<void> _openFromTarget(_ChatTargetInput target) async {
+  Future<_ResolvedTargetProfile?> _resolveTarget(
+    _ChatTargetInput target,
+  ) async {
     final friendId = target.friendId.trim();
-    if (friendId.isEmpty) {
-      return;
-    }
-
     final serverUrl = target.serverUrl.trim();
-    if (serverUrl.isEmpty) {
-      _partnerServerUrlOverrides.remove(friendId);
-      await _openPartner(friendId);
-      return;
+
+    if (friendId.isEmpty || serverUrl.isEmpty) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Friend ID and server URL are required')),
+      );
+      return null;
     }
 
+    final accessToken = await _effectiveAccessToken();
+    final remote = ref.read(remoteChatServiceProvider);
+    final resolved = await remote.resolveContact(
+      baseUrl: widget.serverUrl,
+      accessToken: accessToken,
+      recipientId: friendId,
+      recipientServerUrl: serverUrl,
+    );
+
+    String displayName = resolved.displayHandle;
+    String? avatarBase64;
     try {
-      final accessToken = await _effectiveAccessToken();
-      final remote = ref.read(remoteChatServiceProvider);
-      final resolved = await remote.resolveContact(
-        baseUrl: widget.serverUrl,
-        accessToken: accessToken,
-        recipientId: friendId,
-        recipientServerUrl: serverUrl,
+      final profile = await ref
+          .read(remoteUserProfileServiceProvider)
+          .getUserProfile(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            userId: resolved.partnerId,
+          );
+      if (profile.username.trim().isNotEmpty) {
+        displayName = profile.username.trim();
+      }
+      avatarBase64 = profile.avatarBase64;
+    } catch (_) {
+      // fallback to resolved handle only
+    }
+
+    return _ResolvedTargetProfile(
+      partnerId: resolved.partnerId,
+      recipientServerUrl: resolved.recipientServerUrl,
+      displayName: displayName,
+      displayHandle: resolved.displayHandle,
+      avatarBase64: avatarBase64,
+    );
+  }
+
+  Future<void> _openFromTarget(_ChatTargetInput target) async {
+    try {
+      final resolved = await _resolveTarget(target);
+      if (!mounted || resolved == null) {
+        return;
+      }
+
+      final action = await Navigator.of(context).push<ChatTargetProfileAction>(
+        MaterialPageRoute<ChatTargetProfileAction>(
+          builder: (_) => ChatTargetProfileScreen(
+            displayName: resolved.displayName,
+            displayHandle: resolved.displayHandle,
+            avatarBase64: resolved.avatarBase64,
+          ),
+        ),
       );
+      if (!mounted || action == null) {
+        return;
+      }
+
       _partnerServerUrlOverrides[resolved.partnerId] =
           resolved.recipientServerUrl;
       await _openPartner(resolved.partnerId);
+      if (action == ChatTargetProfileAction.addFriend && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Friend added')));
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -272,29 +322,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
   }
 
-  Future<void> _startNewChat() async {
-    final target = await _promptForChatTarget(
-      title: 'Start new chat',
-      confirmLabel: 'Start',
-    );
-
+  Future<void> _openNewFriendOrChat() async {
+    final target = await _promptForChatTarget();
     if (!mounted || target == null || target.friendId.isEmpty) {
       return;
     }
-
-    await _openFromTarget(target);
-  }
-
-  Future<void> _showAddFriendDialog() async {
-    final target = await _promptForChatTarget(
-      title: 'Add friend',
-      confirmLabel: 'Add',
-    );
-
-    if (!mounted || target == null || target.friendId.isEmpty) {
-      return;
-    }
-
     await _openFromTarget(target);
   }
 
@@ -418,32 +450,20 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               icon: const Icon(Icons.add),
               onSelected: (action) {
                 switch (action) {
-                  case _ChatQuickAction.newChat:
-                    _startNewChat();
-                  case _ChatQuickAction.newChatQr:
-                    _scanQrAndOpen();
-                  case _ChatQuickAction.addFriend:
-                    _showAddFriendDialog();
-                  case _ChatQuickAction.addFriendQr:
+                  case _ChatQuickAction.newFriendOrChat:
+                    _openNewFriendOrChat();
+                  case _ChatQuickAction.scanFriendQr:
                     _scanQrAndOpen();
                 }
               },
               itemBuilder: (context) => const [
                 PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.newChat,
-                  child: Text('Start new chat'),
+                  value: _ChatQuickAction.newFriendOrChat,
+                  child: Text('New friend / start chat'),
                 ),
                 PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.newChatQr,
-                  child: Text('Start new chat (QR)'),
-                ),
-                PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.addFriend,
-                  child: Text('Add friend'),
-                ),
-                PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.addFriendQr,
-                  child: Text('Add friend (QR)'),
+                  value: _ChatQuickAction.scanFriendQr,
+                  child: Text('Scan friend QR'),
                 ),
               ],
             ),
@@ -472,8 +492,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       accessToken: accessToken,
                     );
               },
-              onStartNewChat: _startNewChat,
-              onAddFriend: _showAddFriendDialog,
+              onStartNewChat: _openNewFriendOrChat,
+              onAddFriend: _openNewFriendOrChat,
             )
           : Column(
               children: [
@@ -591,13 +611,29 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 }
 
-enum _ChatQuickAction { newChat, newChatQr, addFriend, addFriendQr }
+enum _ChatQuickAction { newFriendOrChat, scanFriendQr }
 
 class _ChatTargetInput {
   const _ChatTargetInput({required this.friendId, required this.serverUrl});
 
   final String friendId;
   final String serverUrl;
+}
+
+class _ResolvedTargetProfile {
+  const _ResolvedTargetProfile({
+    required this.partnerId,
+    required this.recipientServerUrl,
+    required this.displayName,
+    required this.displayHandle,
+    required this.avatarBase64,
+  });
+
+  final String partnerId;
+  final String recipientServerUrl;
+  final String displayName;
+  final String displayHandle;
+  final String? avatarBase64;
 }
 
 // —————————————————————————————————————————————————————
