@@ -28,8 +28,8 @@ class NotificationState {
 
 final notificationControllerProvider =
     AsyncNotifierProvider<NotificationController, NotificationState>(
-  NotificationController.new,
-);
+      NotificationController.new,
+    );
 
 class NotificationController extends AsyncNotifier<NotificationState> {
   final _notificationService = NotificationService();
@@ -47,7 +47,8 @@ class NotificationController extends AsyncNotifier<NotificationState> {
     required String baseUrl,
     required String accessToken,
   }) async {
-    final current = state.value ??
+    final current =
+        state.value ??
         const NotificationState(
           initialized: false,
           deviceToken: null,
@@ -69,7 +70,9 @@ class NotificationController extends AsyncNotifier<NotificationState> {
         current.copyWith(
           initialized: true,
           deviceToken: token,
-          status: 'Push plumbing initialized.',
+          status: token == null || token.isEmpty
+              ? 'Push permission granted, token pending.'
+              : 'Push token synced.',
         ),
       );
     } catch (error) {

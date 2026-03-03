@@ -44,23 +44,19 @@ class _MainShellState extends ConsumerState<MainShell>
     WidgetsBinding.instance.addObserver(this);
     _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final effectiveToken =
+          await _effectiveAccessToken() ?? widget.accessToken;
       // Kick off all background services after first frame
       await Future.wait([
         ref
             .read(unreadCountsProvider.notifier)
-            .refresh(
-              baseUrl: widget.serverUrl,
-              accessToken: widget.accessToken,
-            ),
+            .refresh(baseUrl: widget.serverUrl, accessToken: effectiveToken),
         ref
             .read(stickerControllerProvider.notifier)
-            .sync(baseUrl: widget.serverUrl, accessToken: widget.accessToken),
+            .sync(baseUrl: widget.serverUrl, accessToken: effectiveToken),
         ref
             .read(notificationControllerProvider.notifier)
-            .initialize(
-              baseUrl: widget.serverUrl,
-              accessToken: widget.accessToken,
-            ),
+            .initialize(baseUrl: widget.serverUrl, accessToken: effectiveToken),
         _realtimeSyncNotifier.connect(
           baseUrl: widget.serverUrl,
           accessTokenProvider: _effectiveAccessToken,

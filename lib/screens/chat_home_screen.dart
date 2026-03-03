@@ -47,17 +47,20 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _refreshUnreadCounts();
-      await ref.read(stickerControllerProvider.notifier).sync(
-        baseUrl: widget.serverUrl,
-        accessToken: widget.accessToken,
-          );
-      await ref.read(notificationControllerProvider.notifier).initialize(
+      await ref
+          .read(stickerControllerProvider.notifier)
+          .sync(baseUrl: widget.serverUrl, accessToken: widget.accessToken);
+      await ref
+          .read(notificationControllerProvider.notifier)
+          .initialize(
             baseUrl: widget.serverUrl,
             accessToken: widget.accessToken,
           );
-      await ref.read(realtimeSyncControllerProvider.notifier).connect(
+      await ref
+          .read(realtimeSyncControllerProvider.notifier)
+          .connect(
             baseUrl: widget.serverUrl,
-            accessToken: widget.accessToken,
+            accessTokenProvider: () async => widget.accessToken,
             currentUserId: widget.currentUserId,
           );
     });
@@ -73,10 +76,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
   }
 
   Future<void> _refreshUnreadCounts() {
-    return ref.read(unreadCountsProvider.notifier).refresh(
-          baseUrl: widget.serverUrl,
-          accessToken: widget.accessToken,
-        );
+    return ref
+        .read(unreadCountsProvider.notifier)
+        .refresh(baseUrl: widget.serverUrl, accessToken: widget.accessToken);
   }
 
   void _onComposerChanged(String value) {
@@ -121,7 +123,8 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final stickers = ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
+    final stickers =
+        ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final backupAsync = ref.watch(backupControllerProvider);
     final backupState = backupAsync.value;
     final notificationState = ref.watch(notificationControllerProvider).value;
@@ -129,8 +132,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
 
     final unreadAsync = ref.watch(unreadCountsProvider);
     final unreadCounts = unreadAsync.value ?? const <String, int>{};
-    final activeUnread =
-        _activePartnerId == null ? 0 : (unreadCounts[_activePartnerId!] ?? 0);
+    final activeUnread = _activePartnerId == null
+        ? 0
+        : (unreadCounts[_activePartnerId!] ?? 0);
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
@@ -196,7 +200,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           _activePartnerId = partnerId;
                         });
                         await ref
-                            .read(conversationMessagesProvider(partnerId).notifier)
+                            .read(
+                              conversationMessagesProvider(partnerId).notifier,
+                            )
                             .syncLatest(
                               baseUrl: widget.serverUrl,
                               accessToken: widget.accessToken,
@@ -217,8 +223,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text('Open'),
-                          if (unreadCounts[_partnerController.text.trim()] != null &&
-                              unreadCounts[_partnerController.text.trim()]! > 0) ...[
+                          if (unreadCounts[_partnerController.text.trim()] !=
+                                  null &&
+                              unreadCounts[_partnerController.text.trim()]! >
+                                  0) ...[
                             const SizedBox(width: 8),
                             _UnreadBadge(
                               count:
@@ -263,8 +271,8 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         onPressed: backupState?.isBusy == true
                             ? null
                             : () => ref
-                                .read(backupControllerProvider.notifier)
-                                .createBackup(),
+                                  .read(backupControllerProvider.notifier)
+                                  .createBackup(),
                         child: const Text('Create backup'),
                       ),
                       const SizedBox(width: 8),
@@ -376,9 +384,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                       ),
                       child: Row(
                         children: [
@@ -431,10 +439,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                 padding: const EdgeInsets.all(12),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 4,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
+                                      crossAxisCount: 4,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                    ),
                                 itemCount: stickers.length,
                                 itemBuilder: (context, index) {
                                   final sticker = stickers[index];
@@ -446,10 +454,14 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                   }
 
                                   return InkWell(
-                                    onTap: () => Navigator.of(context).pop(sticker),
+                                    onTap: () =>
+                                        Navigator.of(context).pop(sticker),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.memory(bytes, fit: BoxFit.cover),
+                                      child: Image.memory(
+                                        bytes,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   );
                                 },
@@ -460,13 +472,15 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           if (selected != null && _activePartnerId != null) {
                             await ref
                                 .read(
-                                  conversationMessagesProvider(_activePartnerId!)
-                                      .notifier,
+                                  conversationMessagesProvider(
+                                    _activePartnerId!,
+                                  ).notifier,
                                 )
                                 .sendMessage(
                                   baseUrl: widget.serverUrl,
                                   accessToken: widget.accessToken,
-                                  body: '[sticker:${selected.id}:${selected.name}]',
+                                  body:
+                                      '[sticker:${selected.id}:${selected.name}]',
                                 );
                           }
                         },
@@ -494,9 +508,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           final mediaLabel = _selectedMediaName == null
                               ? ''
                               : '[media-preview:${_selectedMediaName!}]';
-                          final content = [text, mediaLabel]
-                              .where((part) => part.isNotEmpty)
-                              .join('\n');
+                          final content = [
+                            text,
+                            mediaLabel,
+                          ].where((part) => part.isNotEmpty).join('\n');
 
                           if (content.isEmpty) {
                             return;
@@ -508,8 +523,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           });
                           await ref
                               .read(
-                                conversationMessagesProvider(_activePartnerId!)
-                                    .notifier,
+                                conversationMessagesProvider(
+                                  _activePartnerId!,
+                                ).notifier,
                               )
                               .sendMessage(
                                 baseUrl: widget.serverUrl,
@@ -576,10 +592,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall,
-      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }
