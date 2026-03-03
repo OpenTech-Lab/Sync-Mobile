@@ -131,17 +131,6 @@ class MyProfileScreen extends ConsumerWidget {
       ).showSnackBar(const SnackBar(content: Text('Description updated')));
     }
 
-    const palette = [
-      Color(0xFF6366F1),
-      Color(0xFF0EA5E9),
-      Color(0xFF10B981),
-      Color(0xFFF59E0B),
-      Color(0xFFEC4899),
-      Color(0xFF8B5CF6),
-    ];
-    final hash = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
-    final avatarColor = palette[hash.abs() % palette.length];
-
     Future<void> editAvatar() async {
       final picker = ImagePicker();
       final image = await picker.pickImage(
@@ -209,218 +198,265 @@ class MyProfileScreen extends ConsumerWidget {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
+    // warm muted avatar palette
+    const palette = [
+      Color(0xFF8A8069), Color(0xFF7A9080), Color(0xFF9B7B6E),
+      Color(0xFF7D8A74), Color(0xFF8E8278), Color(0xFF7B8A8A),
+    ];
+    final hash2 = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
+    final mujiAvatarColor = palette[hash2.abs() % palette.length];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'profile',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+        iconTheme: IconThemeData(color: mujiMuted),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: const EdgeInsets.fromLTRB(28, 20, 28, 40),
         children: [
+          // ── avatar row ──
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(36),
+              GestureDetector(
                 onTap: editAvatar,
-                child: CircleAvatar(
-                  radius: 36,
-                  backgroundColor: avatarColor,
-                  child: ClipOval(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (avatarBase64 == null)
-                          Center(
-                            child: Text(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: mujiAvatarColor,
+                      child: avatarBase64 == null
+                          ? Text(
                               currentUserId.length >= 2
                                   ? currentUserId.substring(0, 2).toUpperCase()
                                   : '?',
                               style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w300,
                                 color: Colors.white,
                               ),
-                            ),
-                          )
-                        else
-                          Image.memory(
-                            base64Decode(avatarBase64),
-                            fit: BoxFit.cover,
-                          ),
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            height: 20,
-                            width: double.infinity,
-                            alignment: Alignment.center,
-                            color: cs.surfaceContainerHighest.withValues(
-                              alpha: .88,
-                            ),
-                            child: Text(
-                              'Edit',
-                              style: tt.labelSmall?.copyWith(
-                                color: cs.onSurface,
-                                fontWeight: FontWeight.w700,
+                            )
+                          : ClipOval(
+                              child: SizedBox.expand(
+                                child: Image.memory(
+                                  base64Decode(avatarBase64),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // username row
                     Row(
                       children: [
                         Expanded(
                           child: Text(
                             displayName,
-                            style: tt.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w300,
+                              color: inkColor,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        _PlanetBadge(label: planetLabel),
-                        const SizedBox(width: 4),
-                        SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.edit_outlined,
-                              size: 15,
-                              color: cs.onSurfaceVariant,
+                        GestureDetector(
+                          onTap: saveUsername,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
+                            child: Text(
+                              'edit',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: mujiMuted,
+                                letterSpacing: 0.3,
+                              ),
                             ),
-                            tooltip: 'Edit username',
-                            onPressed: saveUsername,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.copy_outlined,
-                              size: 14,
-                              color: cs.onSurfaceVariant,
-                            ),
-                            tooltip: 'Copy friend link',
-                            onPressed: () {
-                              final link = _friendLink(
-                                serverUrl: serverUrl,
-                                userId: currentUserId,
-                              );
-                              Clipboard.setData(ClipboardData(text: link));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Friend link copied'),
-                                  duration: Duration(seconds: 1),
-                                  behavior: SnackBarBehavior.floating,
-                                  width: 180,
-                                ),
-                              );
-                            },
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
+                    // planet label
+                    Text(
+                      planetLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: mujiMuted,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // description row
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             oneLineDescription.isEmpty
-                                ? 'No description yet'
+                                ? 'no description yet'
                                 : oneLineDescription,
-                            style: tt.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w300,
+                              color: oneLineDescription.isEmpty
+                                  ? mujiMuted
+                                  : inkColor,
+                              height: 1.5,
                             ),
-                            maxLines: 1,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.edit_note_outlined,
-                              size: 14,
-                              color: cs.onSurfaceVariant,
+                        GestureDetector(
+                          onTap: saveDescription,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
+                            child: Text(
+                              'edit',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: mujiMuted,
+                                letterSpacing: 0.3,
+                              ),
                             ),
-                            tooltip: 'Edit description',
-                            onPressed: saveDescription,
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    // copy friend link
+                    GestureDetector(
+                      onTap: () {
+                        final link = _friendLink(
+                          serverUrl: serverUrl,
+                          userId: currentUserId,
+                        );
+                        Clipboard.setData(ClipboardData(text: link));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Friend link copied'),
+                            duration: Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                            width: 180,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'copy friend link',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: mujiMuted,
+                          letterSpacing: 0.3,
+                          decoration: TextDecoration.underline,
+                          decorationColor: ruleColor,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Text(
-            'My Friend QR',
-            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+
+          const SizedBox(height: 36),
+          Divider(height: 1, color: ruleColor),
+          const SizedBox(height: 16),
+
+          // ── QR section ──
+          const Text(
+            'FRIEND QR',
+            style: TextStyle(
+              fontSize: 10,
+              letterSpacing: 2.8,
+              color: mujiMuted,
+              fontWeight: FontWeight.w400,
+            ),
           ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: .45),
+          const SizedBox(height: 20),
+          Center(
+            child: QrImageView(
+              data: myQrPayload,
+              version: QrVersions.auto,
+              size: 200,
+              backgroundColor: Colors.white,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Colors.black,
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Colors.black,
               ),
             ),
-            child: Column(
-              children: [
-                Center(
-                  child: QrImageView(
-                    data: myQrPayload,
-                    version: QrVersions.auto,
-                    size: 220,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Colors.black,
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Colors.black,
-                    ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              'contains your server url and id',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w300,
+                color: mujiMuted,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: myQrPayload));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('QR payload copied'),
+                    duration: Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                    width: 180,
                   ),
+                );
+              },
+              child: Text(
+                'copy qr payload',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: mujiMuted,
+                  letterSpacing: 0.3,
+                  decoration: TextDecoration.underline,
+                  decorationColor: ruleColor,
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Contains your server URL and ID',
-                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: myQrPayload));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('QR payload copied'),
-                        duration: Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                        width: 180,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_outlined, size: 16),
-                  label: const Text('Copy QR payload'),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -464,226 +500,177 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
   @override
   Widget build(BuildContext context) {
     final words = _wordCount(_ctrl.text);
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
     final isOverLimit = words > 100;
-    final isNearLimit = words > 80;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final counterColor = isOverLimit
-        ? cs.error
-        : isNearLimit
-            ? const Color(0xFFF59E0B)
-            : cs.onSurfaceVariant;
+    // ── Muji warm-neutral palette ────────────────────────────────────────
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    const mujiRed     = Color(0xFF9B3A2A);
+
+    final bgColor      = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor     = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor    = isDark ? mujiRuleDk  : mujiRule;
+    final counterColor = isOverLimit ? mujiRed : mujiMuted;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Header ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 12, 16),
-            child: Row(
+      backgroundColor: bgColor,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.black26,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Eyebrow label ─────────────────────────────────────────────
+            Text(
+              'ABOUT YOU',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 2.8,
+                color: mujiMuted,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ── Heading ───────────────────────────────────────────────────
+            Text(
+              'A few words about yourself',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w300,
+                height: 1.4,
+                color: inkColor,
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // ── Text field (underline only) ───────────────────────────────
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              maxLines: 5,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.8,
+                color: inkColor,
+                fontWeight: FontWeight.w300,
+              ),
+              decoration: InputDecoration(
+                hintText: 'What would you like others to know…',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  height: 1.8,
+                  color: mujiMuted.withOpacity(0.65),
+                  fontWeight: FontWeight.w300,
+                ),
+                filled: false,
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: mujiMuted),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Word counter ──────────────────────────────────────────────
+            Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(14),
+                if (isOverLimit)
+                  Text(
+                    'exceeded 100-word limit',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 0.4,
+                      color: mujiRed,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.edit_note_rounded,
-                    color: cs.onPrimaryContainer,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'About you',
-                        style: tt.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Let others know who you are',
-                        style: tt.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                const Spacer(),
+                Text(
+                  '$words / 100',
+                  style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                    color: counterColor,
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  style: IconButton.styleFrom(
-                    backgroundColor: cs.surfaceContainerHighest,
-                    foregroundColor: cs.onSurfaceVariant,
-                    minimumSize: const Size(36, 36),
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+            Divider(height: 1, thickness: 1, color: ruleColor),
+            const SizedBox(height: 20),
+
+            // ── Actions (text only, right-aligned) ────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: Text(
+                      'cancel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: mujiMuted,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 28),
+                GestureDetector(
+                  onTap: isOverLimit
+                      ? null
+                      : () => Navigator.of(context).pop(_ctrl.text.trim()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: Text(
+                      'S A V E',
+                      style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 2.5,
+                        fontWeight: FontWeight.w500,
+                        color: isOverLimit
+                            ? mujiMuted.withOpacity(0.35)
+                            : inkColor,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-
-          Divider(height: 1, color: cs.outlineVariant.withOpacity(0.5)),
-
-          // ── Text field ───────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _ctrl,
-                  autofocus: true,
-                  maxLines: 5,
-                  style: tt.bodyMedium?.copyWith(height: 1.5),
-                  decoration: InputDecoration(
-                    hintText: 'Write something about yourself…',
-                    hintStyle: tt.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant.withOpacity(0.55),
-                      height: 1.5,
-                    ),
-                    filled: true,
-                    fillColor: cs.surfaceContainerHighest.withOpacity(0.45),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant,
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: cs.primary, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: cs.error, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // ── Word counter ───────────────────────────────────────────
-                Row(
-                  children: [
-                    if (isOverLimit) ...[
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 13,
-                        color: cs.error,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Over the 100‑word limit',
-                        style: tt.labelSmall?.copyWith(color: cs.error),
-                      ),
-                    ],
-                    const Spacer(),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: (tt.labelSmall ?? const TextStyle()).copyWith(
-                        color: counterColor,
-                        fontWeight: isNearLimit
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                      child: Text('$words / 100'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // ── Actions ───────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      side: BorderSide(color: cs.outlineVariant),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: isOverLimit
-                        ? null
-                        : () => Navigator.of(context).pop(_ctrl.text.trim()),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text('Save'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanetBadge extends StatelessWidget {
-  const _PlanetBadge({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: cs.onPrimaryContainer,
-          fontWeight: FontWeight.w700,
+          ],
         ),
       ),
     );
   }
 }
+
+
 
 int _wordCount(String text) {
   final normalized = text.trim();
@@ -733,27 +720,111 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Edit username'),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Username (3-32, a-zA-Z0-9._-)',
-          border: OutlineInputBorder(),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
+    return Dialog(
+      backgroundColor: bgColor,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'USERNAME',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: mujiMuted,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+              ),
+              decoration: InputDecoration(
+                hintText: '3–32 chars, a-zA-Z0-9._-',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: mujiMuted.withOpacity(0.55),
+                  fontWeight: FontWeight.w300,
+                ),
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: mujiMuted),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
+              ),
+              onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+            ),
+            const SizedBox(height: 28),
+            Divider(height: 1, thickness: 1, color: ruleColor),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Text(
+                      'cancel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: mujiMuted,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 28),
+                GestureDetector(
+                  onTap: () =>
+                      Navigator.of(context).pop(_ctrl.text.trim()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 4, vertical: 4),
+                    child: Text(
+                      'S A V E',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 2.5,
+                        fontWeight: FontWeight.w500,
+                        color: inkColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }

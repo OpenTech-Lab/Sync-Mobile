@@ -28,8 +28,19 @@ class HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
 
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
@@ -44,75 +55,76 @@ class HomeTab extends ConsumerWidget {
         uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           children: [
-            const _SectionLabel('My Profile'),
+            _SectionLabel(text: 'My Profile', ruleColor: ruleColor),
             _ProfileCard(
               serverUrl: serverUrl,
               accessToken: accessToken,
               currentUserId: currentUserId,
               currentUsername: currentUsername,
+              inkColor: inkColor,
+              mujiMuted: mujiMuted,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
             if (totalUnread > 0) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.mark_chat_unread_outlined,
-                      size: 18,
-                      color: cs.onPrimaryContainer,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF9B3A2A),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
-                      style: tt.bodySmall?.copyWith(
-                        color: cs.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9B3A2A),
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 0.2,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
             ],
-            _SectionLabel('Friends (${friendIds.length})'),
+            _SectionLabel(
+              text: 'Friends (${friendIds.length})',
+              ruleColor: ruleColor,
+            ),
             if (friendIds.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 40,
-                        color: cs.onSurfaceVariant,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'No friends yet',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No friends yet',
-                        style: tt.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Open Chats and start a conversation',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mujiMuted,
+                        letterSpacing: 0.1,
                       ),
-                      Text(
-                        'Open Chats and start a conversation',
-                        style: tt.labelSmall?.copyWith(
-                          color: cs.outlineVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               )
             else
@@ -123,8 +135,7 @@ class HomeTab extends ConsumerWidget {
                 itemCount: friendIds.length,
                 separatorBuilder: (_, _) => Divider(
                   height: 1,
-                  indent: 60,
-                  color: cs.outlineVariant.withValues(alpha: .45),
+                  color: ruleColor,
                 ),
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
@@ -138,16 +149,16 @@ class HomeTab extends ConsumerWidget {
                       .watch(userAvatarBase64Provider(id))
                       .value;
                   return ListTile(
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: _avatarColor(id, cs),
+                      radius: 18,
+                      backgroundColor: _mujiAvatarColor(id),
                       child: avatarBase64 == null
                           ? Text(
                               initials(id),
                               style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
                                 color: Colors.white,
                               ),
                             )
@@ -165,25 +176,36 @@ class HomeTab extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             displayName,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w300,
+                              color: inkColor,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        _PlanetBadge(label: planetLabel),
+                        Text(
+                          planetLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: mujiMuted,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                     subtitle: Text(
                       description.trim().isEmpty
-                          ? 'No description yet'
+                          ? ''
                           : description.trim(),
                       style: TextStyle(
-                        fontSize: 11,
-                        color: cs.onSurfaceVariant,
+                        fontSize: 12,
+                        color: mujiMuted,
+                        fontWeight: FontWeight.w300,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -238,14 +260,15 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  Color _avatarColor(String id, ColorScheme cs) {
+  Color _mujiAvatarColor(String id) {
+    // Warm muted tones consistent with Muji palette
     const palette = [
-      Color(0xFF6366F1),
-      Color(0xFF0EA5E9),
-      Color(0xFF10B981),
-      Color(0xFFF59E0B),
-      Color(0xFFEC4899),
-      Color(0xFF8B5CF6),
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
     ];
     final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
     return palette[hash.abs() % palette.length];
@@ -277,62 +300,38 @@ String _planetNameFromServerUrl(String serverUrl) {
 }
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
+  const _SectionLabel({
+    required this.text,
+    required this.ruleColor,
+  });
   final String text;
+  final Color ruleColor;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             text.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: cs.primary,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
+            style: const TextStyle(
+              fontSize: 10,
+              letterSpacing: 2.8,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFF8A8680),
             ),
           ),
-          const SizedBox(height: 6),
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: cs.outlineVariant.withValues(alpha: .45),
-          ),
+          const SizedBox(height: 8),
+          Divider(height: 1, thickness: 1, color: ruleColor),
         ],
       ),
     );
   }
 }
 
-class _PlanetBadge extends StatelessWidget {
-  const _PlanetBadge({required this.label});
-  final String label;
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: cs.onPrimaryContainer,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
 
 class _ProfileCard extends ConsumerWidget {
   const _ProfileCard({
@@ -340,16 +339,19 @@ class _ProfileCard extends ConsumerWidget {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
+    required this.inkColor,
+    required this.mujiMuted,
   });
 
   final String serverUrl;
   final String accessToken;
   final String currentUserId;
   final String? currentUsername;
+  final Color inkColor;
+  final Color mujiMuted;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tt = Theme.of(context).textTheme;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
@@ -360,36 +362,35 @@ class _ProfileCard extends ConsumerWidget {
         : currentUsername!.trim();
 
     const palette = [
-      Color(0xFF6366F1),
-      Color(0xFF0EA5E9),
-      Color(0xFF10B981),
-      Color(0xFFF59E0B),
-      Color(0xFFEC4899),
-      Color(0xFF8B5CF6),
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
     ];
     final hash = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarColor = palette[hash.abs() % palette.length];
 
-    return Row(
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(28),
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MyProfileScreen(
-                  serverUrl: serverUrl,
-                  accessToken: accessToken,
-                  currentUserId: currentUserId,
-                  currentUsername: currentUsername,
-                ),
-              ),
-            );
-            ref.invalidate(userAvatarBase64Provider(currentUserId));
-            ref.invalidate(userDisplayNameProvider(currentUserId));
-          },
-          child: CircleAvatar(
-            radius: 28,
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MyProfileScreen(
+              serverUrl: serverUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              currentUsername: currentUsername,
+            ),
+          ),
+        );
+        ref.invalidate(userAvatarBase64Provider(currentUserId));
+        ref.invalidate(userDisplayNameProvider(currentUserId));
+      },
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 26,
             backgroundColor: avatarColor,
             child: avatarBase64 == null
                 ? Text(
@@ -397,8 +398,8 @@ class _ProfileCard extends ConsumerWidget {
                         ? currentUserId.substring(0, 2).toUpperCase()
                         : '?',
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w300,
                       color: Colors.white,
                     ),
                   )
@@ -411,32 +412,36 @@ class _ProfileCard extends ConsumerWidget {
                     ),
                   ),
           ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayName,
-                      style: tt.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                    letterSpacing: -0.2,
                   ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              const SizedBox(height: 2),
-            ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'View profile',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: mujiMuted,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -470,27 +475,112 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Edit username'),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Username (3-32, a-zA-Z0-9._-)',
-          border: OutlineInputBorder(),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
+    return Dialog(
+      backgroundColor: bgColor,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'USERNAME',
+              style: const TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: mujiMuted,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+              ),
+              decoration: InputDecoration(
+                hintText: '3–32 characters, a-z A-Z 0-9 . _ -',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: mujiMuted.withValues(alpha: 0.55),
+                  fontWeight: FontWeight.w300,
+                ),
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: mujiMuted),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
+              ),
+              onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+            ),
+            const SizedBox(height: 28),
+            Divider(height: 1, thickness: 1, color: ruleColor),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4, vertical: 4),
+                    child: const Text(
+                      'cancel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: mujiMuted,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 28),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(_ctrl.text.trim()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4, vertical: 4),
+                    child: Text(
+                      'S A V E',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 2.5,
+                        fontWeight: FontWeight.w500,
+                        color: inkColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }

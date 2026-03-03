@@ -43,154 +43,217 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRed     = Color(0xFF9B3A2A);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
     final isValidating = widget.connectionStatus == ConnectionStatus.validating;
-    final isSuccess = widget.connectionStatus == ConnectionStatus.success;
-    final isFailure = widget.connectionStatus == ConnectionStatus.failure;
+    final isSuccess    = widget.connectionStatus == ConnectionStatus.success;
+    final isFailure    = widget.connectionStatus == ConnectionStatus.failure;
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+          padding: const EdgeInsets.fromLTRB(28, 48, 28, 40),
           children: [
-            // — Logo / hero
+            // ── hero ──
             Center(
-              child: Image.asset('assets/logo.png', width: 72, height: 72),
+              child: Image.asset('assets/logo.png', width: 56, height: 56),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Text(
               'Welcome to Sync',
-              style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+                letterSpacing: -0.3,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Connect to your planet server to get started.',
-              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w300,
+                color: mujiMuted,
+                height: 1.6,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 44),
 
-            // — Server URL field
+            // ── server URL label ──
+            const Text(
+              'SERVER URL',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: mujiMuted,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ── URL field ──
             TextField(
               controller: _serverUrlController,
               keyboardType: TextInputType.url,
               autocorrect: false,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+              ),
               decoration: InputDecoration(
-                labelText: 'Server URL',
-                hintText: 'https://localhost',
-                prefixIcon: const Icon(Icons.dns_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                hintText: 'https://my-planet.example.com',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: mujiMuted.withOpacity(0.5),
+                  fontWeight: FontWeight.w300,
                 ),
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: ruleColor),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: mujiMuted),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
               ),
             ),
-            const SizedBox(height: 14),
 
-            // — Planet presets
+            // ── presets ──
             if (officialPlanetPresets.isNotEmpty) ...[
-              Text(
-                'Or choose a preset',
-                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              const SizedBox(height: 20),
+              Divider(height: 1, color: ruleColor),
+              const SizedBox(height: 14),
+              const Text(
+                'QUICK CONNECT',
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 2.8,
+                  color: mujiMuted,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 20,
+                runSpacing: 10,
                 children: officialPlanetPresets
                     .map(
-                      (preset) => ActionChip(
-                        avatar: Icon(Icons.public, size: 15, color: cs.primary),
-                        label: Text(
+                      (preset) => GestureDetector(
+                        onTap: () => _serverUrlController.text = preset.url,
+                        child: Text(
                           preset.name,
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                            decoration: TextDecoration.underline,
+                            decorationColor: ruleColor,
+                          ),
                         ),
-                        onPressed: () {
-                          _serverUrlController.text = preset.url;
-                        },
                       ),
                     )
                     .toList(),
               ),
-              const SizedBox(height: 20),
             ],
 
-            // — Validate button
-            SizedBox(
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: isValidating
-                    ? null
-                    : () => widget.onValidate(_serverUrlController.text),
-                icon: isValidating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.wifi_tethering, size: 18),
-                label: Text(
-                  isValidating ? 'Checking connection…' : 'Check connection',
-                ),
-                style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 36),
+            Divider(height: 1, color: ruleColor),
+            const SizedBox(height: 20),
 
-            // — Status feedback
-            if (isSuccess) ...[
-              const SizedBox(height: 14),
-              if (widget.planetInfo != null) ...[
-                _PlanetInfoCard(info: widget.planetInfo!),
-              ],
-            ],
-            if (isFailure) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cs.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: cs.error, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.errorMessage ?? 'Connection failed.',
-                        style: TextStyle(color: cs.onErrorContainer),
+            // ── validate action ──
+            GestureDetector(
+              onTap: isValidating
+                  ? null
+                  : () => widget.onValidate(_serverUrlController.text),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (isValidating)
+                    const SizedBox(
+                      width: 13,
+                      height: 13,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: mujiMuted,
                       ),
                     ),
-                  ],
+                  if (isValidating) const SizedBox(width: 10),
+                  Text(
+                    isValidating ? 'checking…' : 'C H E C K   C O N N E C T I O N',
+                    style: TextStyle(
+                      fontSize: isValidating ? 13 : 10,
+                      letterSpacing: isValidating ? 0.2 : 2.2,
+                      fontWeight: FontWeight.w500,
+                      color: isValidating ? mujiMuted : inkColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── status feedback ──
+            if (isSuccess) ...[
+              const SizedBox(height: 24),
+              if (widget.planetInfo != null)
+                _PlanetInfoCard(
+                  info: widget.planetInfo!,
+                  inkColor: inkColor,
+                  mujiMuted: mujiMuted,
+                  ruleColor: ruleColor,
+                ),
+              const SizedBox(height: 28),
+              Divider(height: 1, color: ruleColor),
+              const SizedBox(height: 20),
+              // continue
+              GestureDetector(
+                onTap: () => widget.onContinue(_serverUrlController.text),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'C O N T I N U E',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 2.5,
+                      fontWeight: FontWeight.w500,
+                      color: inkColor,
+                    ),
+                  ),
                 ),
               ),
             ],
 
-            const SizedBox(height: 16),
-
-            // — Continue button (active only when server is validated)
-            SizedBox(
-              height: 48,
-              child: OutlinedButton(
-                onPressed: isSuccess
-                    ? () => widget.onContinue(_serverUrlController.text)
-                    : null,
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+            if (isFailure) ...[
+              const SizedBox(height: 20),
+              Text(
+                widget.errorMessage ?? 'Connection failed.',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w300,
+                  color: mujiRed,
+                  height: 1.5,
                 ),
-                child: const Text('Continue'),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -199,13 +262,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _PlanetInfoCard extends StatelessWidget {
-  const _PlanetInfoCard({required this.info});
+  const _PlanetInfoCard({
+    required this.info,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.ruleColor,
+  });
 
   final PlanetInfo info;
+  final Color inkColor;
+  final Color mujiMuted;
+  final Color ruleColor;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final planetName = (info.instanceName ?? '').trim().isEmpty
         ? info.host
         : info.instanceName!.trim();
@@ -214,111 +284,136 @@ class _PlanetInfoCard extends StatelessWidget {
       info.instanceImageUrl,
     );
     final countryLabel = (info.countryName ?? '').trim();
-    final countryChipText = countryLabel.isEmpty
-        ? 'Country unavailable'
-        : countryLabel;
     final isSecure = info.scheme.toLowerCase() == 'https';
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: planetImageUri == null
-                        ? Icon(
-                            Icons.public,
-                            color: cs.onPrimaryContainer,
-                            size: 20,
-                          )
-                        : Image.network(
-                            planetImageUri.toString(),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.public,
-                              color: cs.onPrimaryContainer,
-                              size: 20,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          planetName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          'Planet Information',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                        if ((info.instanceDescription ?? '').isNotEmpty)
-                          Text(
-                            info.instanceDescription!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+        // ── planet name row ──
+        Row(
+          children: [
+            // tiny avatar
+            Container(
+              width: 28,
+              height: 28,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: mujiMuted.withOpacity(0.15),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _InfoChip(icon: Icons.place_outlined, text: countryChipText),
-                  _InfoChip(
-                    icon: Icons.speed_outlined,
-                    text: '${info.latencyMs} ms',
-                  ),
-                  _InfoChip(
-                    icon: isSecure ? Icons.lock_outline : Icons.info_outline,
-                    text: isSecure ? 'Secure' : 'Standard',
-                  ),
-                ],
+              child: planetImageUri == null
+                  ? Center(
+                      child: Text(
+                        planetName.isNotEmpty
+                            ? planetName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w300,
+                          color: mujiMuted,
+                        ),
+                      ),
+                    )
+                  : Image.network(
+                      planetImageUri.toString(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Center(
+                        child: Text(
+                          planetName.isNotEmpty
+                              ? planetName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w300,
+                            color: mujiMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                planetName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w300,
+                  color: inkColor,
+                ),
               ),
-            ],
-          ),
-        ),
-        Positioned(
-          top: 10,
-          right: 10,
-          child: Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: Colors.green.shade500,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.shade200,
-                  blurRadius: 6,
-                  spreadRadius: 1,
+            ),
+            // connected dot
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF6B8F6B),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'connected',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: mujiMuted,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
               ],
             ),
+          ],
+        ),
+
+        if ((info.instanceDescription ?? '').isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            info.instanceDescription!,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+              color: mujiMuted,
+              height: 1.5,
+            ),
           ),
+        ],
+
+        const SizedBox(height: 14),
+        Divider(height: 1, color: ruleColor),
+        const SizedBox(height: 12),
+
+        // ── stats row ──
+        Row(
+          children: [
+            _Stat(
+              label: 'LATENCY',
+              value: '${info.latencyMs} ms',
+              inkColor: inkColor,
+              mujiMuted: mujiMuted,
+            ),
+            const SizedBox(width: 28),
+            if (countryLabel.isNotEmpty)
+              _Stat(
+                label: 'REGION',
+                value: countryLabel,
+                inkColor: inkColor,
+                mujiMuted: mujiMuted,
+              ),
+            const SizedBox(width: 28),
+            _Stat(
+              label: 'SECURITY',
+              value: isSecure ? 'HTTPS' : 'HTTP',
+              inkColor: inkColor,
+              mujiMuted: mujiMuted,
+            ),
+          ],
         ),
       ],
     );
@@ -337,30 +432,43 @@ Uri? _resolvePlanetImageUri(String baseUrl, String? instanceImageUrl) {
   return raw.hasScheme ? raw : base?.resolveUri(raw);
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.text});
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.inkColor,
+    required this.mujiMuted,
+  });
 
-  final IconData icon;
-  final String text;
+  final String label;
+  final String value;
+  final Color inkColor;
+  final Color mujiMuted;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: .35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: cs.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Text(text, style: const TextStyle(fontSize: 12)),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            letterSpacing: 2.2,
+            color: mujiMuted,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+      ],
     );
   }
 }

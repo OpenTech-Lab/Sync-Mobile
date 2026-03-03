@@ -185,39 +185,117 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   Future<_ChatTargetInput?> _promptForChatTarget() async {
     final targetController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
     final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('New friend / start chat'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: targetController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Paste friend link or user ID',
-                  border: OutlineInputBorder(),
+        return Dialog(
+          backgroundColor: bgColor,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'NEW FRIEND',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.8,
+                    color: mujiMuted,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                TextField(
+                  controller: targetController,
+                  autofocus: true,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Paste friend link or user ID…',
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: mujiMuted.withValues(alpha: 0.55),
+                      fontWeight: FontWeight.w300,
+                    ),
+                    border: UnderlineInputBorder(
+                      borderSide: BorderSide(color: ruleColor),
+                    ),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: ruleColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: mujiMuted),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Divider(height: 1, thickness: 1, color: ruleColor),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        child: Text(
+                          'cancel',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: mujiMuted,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 28),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(
+                        _parseChatTargetInput(
+                          targetController.text.trim(),
+                          defaultServerUrl: widget.serverUrl,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 4),
+                        child: Text(
+                          'N E X T',
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.5,
+                            fontWeight: FontWeight.w500,
+                            color: inkColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                _parseChatTargetInput(
-                  targetController.text.trim(),
-                  defaultServerUrl: widget.serverUrl,
-                ),
-              ),
-              child: const Text('Next'),
-            ),
-          ],
         );
       },
     );
@@ -552,6 +630,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+
     final cs = Theme.of(context).colorScheme;
     final stickers =
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
@@ -621,7 +704,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: bgColor,
       appBar: inConversation
           ? AppBar(
               backgroundColor: Colors.transparent,
@@ -856,8 +939,19 @@ class _ConversationStarter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
     final unreadConversationIds = orderedConversationIds
         .where((id) => (unreadCounts[id] ?? 0) > 0)
         .toList(growable: false);
@@ -868,90 +962,127 @@ class _ConversationStarter extends ConsumerWidget {
         unreadConversationIds.isNotEmpty || chatConversationIds.isNotEmpty;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
       children: [
+        // ── actions row ──
         Align(
           alignment: Alignment.centerRight,
-          child: PopupMenuButton<_ChatQuickAction>(
-            tooltip: 'New chat or add friend',
-            onSelected: onQuickAction,
-            icon: const Icon(Icons.add),
-            itemBuilder: (context) => const [
-              PopupMenuItem<_ChatQuickAction>(
-                value: _ChatQuickAction.newFriendOrChat,
-                child: Text('New friend / start chat'),
-              ),
-              PopupMenuItem<_ChatQuickAction>(
-                value: _ChatQuickAction.scanFriendQr,
-                child: Text('Scan friend QR'),
-              ),
-            ],
+          child: GestureDetector(
+            onTap: () async {
+              final action = await showModalBottomSheet<_ChatQuickAction>(
+                context: context,
+                backgroundColor: bgColor,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
+                builder: (_) => _MujiQuickActionSheet(
+                  inkColor: inkColor,
+                  mujiMuted: mujiMuted,
+                  ruleColor: ruleColor,
+                ),
+              );
+              if (action != null) onQuickAction(action);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.add, color: inkColor, size: 22),
+            ),
           ),
         ),
+        // ── search ──
         TextField(
           controller: controller,
           focusNode: focusNode,
           autocorrect: false,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
           decoration: InputDecoration(
-            hintText: 'Search chat',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+            hintText: 'search…',
+            hintStyle: TextStyle(
+              fontSize: 14,
+              color: mujiMuted.withValues(alpha: 0.55),
+              fontWeight: FontWeight.w300,
             ),
+            border:      UnderlineInputBorder(borderSide: BorderSide(color: ruleColor)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: ruleColor)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: mujiMuted)),
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            isDense: true,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
+
+        // ── unread section ──
         if (unreadConversationIds.isNotEmpty) ...[
           Row(
             children: [
               Text(
-                'Unread',
-                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                'UNREAD',
+                style: const TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 2.4,
+                  color: mujiMuted,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
               const Spacer(),
-              TextButton(
-                onPressed: onMarkAllRead,
+              GestureDetector(
+                onTap: onMarkAllRead,
                 child: const Text(
-                  'Mark all read',
-                  style: TextStyle(fontSize: 12),
+                  'mark all read',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: mujiMuted,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
+          Divider(height: 1, thickness: 1, color: ruleColor),
+          const SizedBox(height: 4),
           ...unreadConversationIds.map(
-            (userId) =>
-                _buildConversationRow(context, ref, cs, userId, summariesById),
+            (userId) => _buildConversationRow(
+              context, ref, userId, summariesById, ruleColor, inkColor, mujiMuted),
           ),
         ],
-        if (hasAnyRows && chatConversationIds.isNotEmpty)
-          const SizedBox(height: 8),
-        if (hasAnyRows && chatConversationIds.isNotEmpty)
-          Text(
-            'Chat',
-            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-        if (hasAnyRows && chatConversationIds.isNotEmpty)
-          const SizedBox(height: 8),
-        if (!hasAnyRows)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
+
+        if (hasAnyRows && chatConversationIds.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'CHATS',
+            style: TextStyle(
+              fontSize: 10,
+              letterSpacing: 2.4,
+              color: mujiMuted,
+              fontWeight: FontWeight.w400,
             ),
+          ),
+          const SizedBox(height: 8),
+          Divider(height: 1, thickness: 1, color: ruleColor),
+          const SizedBox(height: 4),
+        ],
+
+        if (!hasAnyRows)
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
             child: Text(
-              'No matching chats yet.',
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+              'No chats yet.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w300,
+                color: mujiMuted,
+              ),
             ),
           )
         else
           ...chatConversationIds.map(
-            (userId) =>
-                _buildConversationRow(context, ref, cs, userId, summariesById),
+            (userId) => _buildConversationRow(
+              context, ref, userId, summariesById, ruleColor, inkColor, mujiMuted),
           ),
       ],
     );
@@ -960,9 +1091,11 @@ class _ConversationStarter extends ConsumerWidget {
   Widget _buildConversationRow(
     BuildContext context,
     WidgetRef ref,
-    ColorScheme cs,
     String userId,
     Map<String, ConversationSummary> summariesById,
+    Color ruleColor,
+    Color inkColor,
+    Color mujiMuted,
   ) {
     final summary = summariesById[userId];
     final unreadCount = unreadCounts[userId] ?? 0;
@@ -970,48 +1103,123 @@ class _ConversationStarter extends ConsumerWidget {
     final avatarBase64Async = ref.watch(userAvatarBase64Provider(userId));
     final displayName = _displayNameOrFallback(userId, displayNameAsync.value);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: unreadCount > 0 ? const Color(0xFFEDE7F6) : cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: ListTile(
-        leading: _ProfileAvatar(
-          userId: userId,
-          avatarBase64: avatarBase64Async.value,
-          radius: 18,
+    // avatar warm palette
+    const palette = [
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
+    ];
+    final hash = userId.codeUnits.fold(0, (a, b) => a ^ b);
+    final avatarColor = palette[hash.abs() % palette.length];
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => onOpenConversation(userId),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                // avatar
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: avatarColor,
+                  child: avatarBase64Async.value == null
+                      ? Text(
+                          userId.length >= 2
+                              ? userId.substring(0, 2).toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        )
+                      : ClipOval(
+                          child: SizedBox.expand(
+                            child: Image.memory(
+                              base64Decode(avatarBase64Async.value!),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300,
+                          color: inkColor,
+                        ),
+                      ),
+                      if (summary != null)
+                        Text(
+                          summary.lastBody,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: mujiMuted,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (summary != null)
+                      Text(
+                        _timeLabel(summary.lastAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: mujiMuted,
+                        ),
+                      ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF9B3A2A),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$unreadCount',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF9B3A2A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        title: Text(
-          displayName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 13),
-        ),
-        subtitle: Text(
-          summary?.lastBody ?? 'Unread messages',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (summary != null)
-              Text(
-                _timeLabel(summary.lastAt),
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-              ),
-            if (unreadCount > 0) ...[
-              if (summary != null) const SizedBox(width: 8),
-              _UnreadBadge(count: unreadCount),
-            ],
-          ],
-        ),
-        onTap: () {
-          onOpenConversation(userId);
-        },
-      ),
+        Divider(height: 1, thickness: 1, color: ruleColor),
+      ],
     );
   }
 }
@@ -1022,58 +1230,6 @@ String _displayNameOrFallback(String userId, String? displayName) {
     return normalized;
   }
   return userId.length >= 8 ? userId.substring(0, 8) : userId;
-}
-
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({
-    required this.userId,
-    required this.avatarBase64,
-    required this.radius,
-  });
-
-  final String userId;
-  final String? avatarBase64;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final initials = userId.length >= 2
-        ? userId.substring(0, 2).toUpperCase()
-        : '?';
-
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: cs.secondaryContainer,
-      child: avatarBase64 == null
-          ? Text(
-              initials,
-              style: TextStyle(
-                color: cs.onSecondaryContainer,
-                fontSize: radius * 0.45,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          : ClipOval(
-              child: SizedBox.expand(
-                child: Image.memory(
-                  base64Decode(avatarBase64!),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Center(
-                    child: Text(
-                      initials,
-                      style: TextStyle(
-                        color: cs.onSecondaryContainer,
-                        fontSize: radius * 0.45,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-    );
-  }
 }
 
 String _timeLabel(DateTime dt) {
@@ -1112,31 +1268,36 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
 
     return Container(
-      color: cs.surface,
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+      color: bgColor,
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Media preview
           if (selectedMediaBytes != null)
             Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: ruleColor),
               ),
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
                     child: Image.memory(
                       selectedMediaBytes!,
-                      width: 48,
-                      height: 48,
+                      width: 40,
+                      height: 40,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -1145,96 +1306,107 @@ class _Composer extends StatelessWidget {
                     child: Text(
                       selectedMediaName ?? 'Image',
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
+                        color: mujiMuted,
+                      ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: onClearMedia,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                  GestureDetector(
+                    onTap: onClearMedia,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close, size: 16, color: mujiMuted),
+                    ),
                   ),
                 ],
               ),
             ),
 
+          Divider(height: 1, thickness: 1, color: ruleColor),
+
           // Input row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Attach
-              _ComposerIconButton(
-                icon: Icons.attach_file,
-                tooltip: 'Attach image',
-                onPressed: onPickMedia,
-              ),
-              // Stickers
-              _ComposerIconButton(
-                icon: Icons.emoji_emotions_outlined,
-                tooltip: 'Stickers',
-                onPressed: () async {
-                  final selected = await showModalBottomSheet<Sticker>(
-                    context: context,
-                    backgroundColor: cs.surfaceContainerHighest,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Attach
+                _ComposerIconButton(
+                  icon: Icons.attach_file_outlined,
+                  tooltip: 'Attach image',
+                  onPressed: onPickMedia,
+                ),
+                // Stickers
+                _ComposerIconButton(
+                  icon: Icons.tag_faces_outlined,
+                  tooltip: 'Stickers',
+                  onPressed: () async {
+                    final selected = await showModalBottomSheet<Sticker>(
+                      context: context,
+                      backgroundColor: bgColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      builder: (_) => _StickerPicker(stickers: stickers),
+                    );
+                    if (selected != null) {
+                      onStickerSelected(selected);
+                    }
+                  },
+                ),
+                // Text field
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    onChanged: onChanged,
+                    minLines: 1,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w300,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Message…',
+                      hintStyle: const TextStyle(
+                        color: mujiMuted,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                      ),
+                      filled: false,
+                      border: const UnderlineInputBorder(
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
                       ),
                     ),
-                    builder: (_) => _StickerPicker(stickers: stickers),
-                  );
-                  if (selected != null) {
-                    onStickerSelected(selected);
-                  }
-                },
-              ),
-              // Text field
-              Expanded(
-                child: TextField(
-                  controller: messageController,
-                  onChanged: onChanged,
-                  minLines: 1,
-                  maxLines: 5,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    hintText: 'Message',
-                    hintStyle: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 14,
-                    ),
-                    filled: true,
-                    fillColor: cs.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide.none,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                // Send — plain text arrow
+                GestureDetector(
+                  onTap: onSend,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 4, 8),
+                    child: const Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 22,
+                      color: mujiMuted,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              // Send
-              InkWell(
-                onTap: onSend,
-                borderRadius: BorderRadius.circular(22),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: cs.primary,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Icon(
-                    Icons.send_rounded,
-                    size: 20,
-                    color: cs.onPrimary,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1278,7 +1450,16 @@ class _StickerPicker extends StatelessWidget {
     if (stickers.isEmpty) {
       return const SizedBox(
         height: 140,
-        child: Center(child: Text('No stickers yet.')),
+        child: Center(
+          child: Text(
+            'No stickers yet.',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+              color: Color(0xFF8A8680),
+            ),
+          ),
+        ),
       );
     }
 
@@ -1287,18 +1468,24 @@ class _StickerPicker extends StatelessWidget {
       child: Column(
         children: [
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Stickers',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                'STICKERS',
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 2.8,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8A8680),
+                ),
               ),
             ),
           ),
+          const Divider(height: 1, color: Color(0xFFDDD8CF)),
           Expanded(
             child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 5,
                 crossAxisSpacing: 8,
@@ -1313,13 +1500,9 @@ class _StickerPicker extends StatelessWidget {
                 } catch (_) {
                   return const SizedBox.shrink();
                 }
-                return InkWell(
+                return GestureDetector(
                   onTap: () => Navigator.of(context).pop(sticker),
-                  borderRadius: BorderRadius.circular(10),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.memory(bytes, fit: BoxFit.cover),
-                  ),
+                  child: Image.memory(bytes, fit: BoxFit.cover),
                 );
               },
             ),
@@ -1363,12 +1546,33 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bubbleColor = isMine ? cs.primary : cs.surfaceContainerHighest;
-    final onBubble = isMine ? cs.onPrimary : cs.onSurface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+
+    // Warm bubble colours
+    final myBubble = isDark ? const Color(0xFF3A3428) : const Color(0xFFEDE8DF);
+    final theirBubble = isDark ? const Color(0xFF2A2926) : const Color(0xFFF5F2EE);
+
+    final bubbleColor = isMine ? myBubble : theirBubble;
+    final onBubble = inkColor;
 
     final avatarId = isMine ? currentUserId : message.senderId;
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
+
+    const palette = [
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
+    ];
+    final hash = avatarId.codeUnits.fold(0, (a, b) => a ^ b);
+    final avatarBg = palette[hash.abs() % palette.length];
 
     Widget bubble = Container(
       constraints: BoxConstraints(
@@ -1379,27 +1583,31 @@ class _MessageBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMine ? 18 : 4),
-          bottomRight: Radius.circular(isMine ? 4 : 18),
+          topLeft: const Radius.circular(6),
+          topRight: const Radius.circular(6),
+          bottomLeft: Radius.circular(isMine ? 6 : 2),
+          bottomRight: Radius.circular(isMine ? 2 : 6),
         ),
       ),
       clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 26),
             child: Text(
               message.body,
               maxLines: 7,
               overflow: TextOverflow.fade,
               softWrap: true,
               textAlign: isMine ? TextAlign.right : TextAlign.left,
-              style: TextStyle(color: onBubble, fontSize: 14),
+              style: TextStyle(
+                color: onBubble,
+                fontSize: 14,
+                fontWeight: FontWeight.w300,
+                height: 1.5,
+              ),
             ),
           ),
-          // Bottom gradient + timestamp row — always pinned to bottom.
           Positioned(
             left: 0,
             right: 0,
@@ -1413,11 +1621,9 @@ class _MessageBubble extends StatelessWidget {
                   stops: const [0.0, 0.55],
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
               child: Align(
-                alignment: isMine
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
+                alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
                 child: Text(
                   _timeLabel(message.createdAt),
                   maxLines: 1,
@@ -1425,9 +1631,7 @@ class _MessageBubble extends StatelessWidget {
                   overflow: TextOverflow.fade,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isMine
-                        ? cs.onPrimary.withValues(alpha: .7)
-                        : cs.onSurfaceVariant,
+                    color: mujiMuted,
                   ),
                 ),
               ),
@@ -1451,6 +1655,7 @@ class _MessageBubble extends StatelessWidget {
               child: _MessageAvatar(
                 userId: avatarId,
                 avatarBase64: avatarBase64,
+                avatarBg: avatarBg,
               ),
             ),
             const SizedBox(width: 6),
@@ -1458,7 +1663,11 @@ class _MessageBubble extends StatelessWidget {
           bubble,
           if (isMine) ...[
             const SizedBox(width: 6),
-            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+            _MessageAvatar(
+              userId: avatarId,
+              avatarBase64: avatarBase64,
+              avatarBg: avatarBg,
+            ),
           ],
         ],
       ),
@@ -1485,21 +1694,42 @@ class _MessageDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+
     final local = message.createdAt.toLocal();
     final dateStr =
         '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
         '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
 
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text(isMine ? 'Your message' : 'Message'),
+        backgroundColor: bgColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          isMine ? 'Your message' : 'Message',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+        iconTheme: IconThemeData(color: mujiMuted),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.copy_outlined),
-            tooltip: 'Copy',
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Clipboard.setData(ClipboardData(text: message.body));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -1510,62 +1740,55 @@ class _MessageDetailScreen extends StatelessWidget {
                 ),
               );
             },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Text(
+                'copy',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: mujiMuted,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isMine
-                    ? cs.primaryContainer
-                    : cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: SelectableText(
-                message.body,
-                style: tt.bodyLarge?.copyWith(
-                  color: isMine ? cs.onPrimaryContainer : cs.onSurface,
-                  height: 1.5,
-                ),
+            SelectableText(
+              message.body,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+                height: 1.7,
               ),
             ),
+            const SizedBox(height: 28),
+            Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 14, color: cs.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  dateStr,
-                  style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ],
+            Text(
+              dateStr,
+              style: const TextStyle(
+                fontSize: 11,
+                color: mujiMuted,
+                letterSpacing: 0.2,
+              ),
             ),
             if (!isMine) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.person_outline,
-                    size: 14,
-                    color: cs.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      message.senderId,
-                      style: tt.labelSmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 6),
+              Text(
+                message.senderId,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: mujiMuted,
+                  letterSpacing: 0.2,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
@@ -1576,28 +1799,32 @@ class _MessageDetailScreen extends StatelessWidget {
 }
 
 class _MessageAvatar extends StatelessWidget {
-  const _MessageAvatar({required this.userId, required this.avatarBase64});
+  const _MessageAvatar({
+    required this.userId,
+    required this.avatarBase64,
+    required this.avatarBg,
+  });
 
   final String userId;
   final String? avatarBase64;
+  final Color avatarBg;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final initials = userId.length >= 2
         ? userId.substring(0, 2).toUpperCase()
         : '?';
 
     return CircleAvatar(
-      radius: 13,
-      backgroundColor: cs.secondaryContainer,
+      radius: 12,
+      backgroundColor: avatarBg,
       child: avatarBase64 == null
           ? Text(
               initials,
-              style: TextStyle(
-                color: cs.onSecondaryContainer,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.w300,
               ),
             )
           : ClipOval(
@@ -1613,6 +1840,109 @@ class _MessageAvatar extends StatelessWidget {
 }
 
 // —————————————————————————————————————————————————————
+// Quick action sheet (Muji)
+// —————————————————————————————————————————————————————
+
+class _MujiQuickActionSheet extends StatelessWidget {
+  const _MujiQuickActionSheet({
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.ruleColor,
+  });
+
+  final Color inkColor;
+  final Color mujiMuted;
+  final Color ruleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'NEW',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: mujiMuted,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Divider(height: 1, color: ruleColor),
+            _SheetItem(
+              label: 'friend / start chat',
+              inkColor: inkColor,
+              onTap: () => Navigator.of(context)
+                  .pop(_ChatQuickAction.newFriendOrChat),
+            ),
+            Divider(height: 1, color: ruleColor),
+            _SheetItem(
+              label: 'scan friend qr',
+              inkColor: inkColor,
+              onTap: () =>
+                  Navigator.of(context).pop(_ChatQuickAction.scanFriendQr),
+            ),
+            Divider(height: 1, color: ruleColor),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'cancel',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: mujiMuted,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetItem extends StatelessWidget {
+  const _SheetItem({
+    required this.label,
+    required this.inkColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color inkColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// —————————————————————————————————————————————————————
 // Unread badge
 // —————————————————————————————————————————————————————
 
@@ -1622,21 +1952,27 @@ class _UnreadBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: cs.error,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        count > 99 ? '99+' : '$count',
-        style: TextStyle(
-          color: cs.onError,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: Color(0xFF9B3A2A),
+            shape: BoxShape.circle,
+          ),
         ),
-      ),
+        const SizedBox(width: 4),
+        Text(
+          count > 99 ? '99+' : '$count',
+          style: const TextStyle(
+            color: Color(0xFF9B3A2A),
+            fontSize: 11,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+      ],
     );
   }
 }

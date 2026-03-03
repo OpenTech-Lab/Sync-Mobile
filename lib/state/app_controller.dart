@@ -96,8 +96,12 @@ class AppController extends AsyncNotifier<AppState> {
   @override
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
+    final normalizedServerUrl = (serverUrl ?? '').trim();
     final savedEmail = serverUrl != null && serverUrl.isNotEmpty
         ? await _serverPreferences.readSavedEmail(serverUrl)
+        : null;
+    final cachedPlanet = serverUrl != null && serverUrl.isNotEmpty
+        ? await _serverPreferences.readPlanetInfo(serverUrl)
         : null;
     var accessToken = await _sessionStorage.readAccessToken();
 
@@ -175,7 +179,22 @@ class AppController extends AsyncNotifier<AppState> {
       savedEmail: savedEmail,
       connectionStatus: ConnectionStatus.idle,
       connectionError: null,
-      planetInfo: null,
+      planetInfo: cachedPlanet == null
+          ? null
+          : PlanetInfo(
+              baseUrl: normalizedServerUrl,
+              host: Uri.tryParse(normalizedServerUrl)?.host ?? '',
+              scheme: Uri.tryParse(normalizedServerUrl)?.scheme ?? 'https',
+              instanceName: cachedPlanet.instanceName,
+              instanceDescription: cachedPlanet.instanceDescription,
+              instanceImageUrl: cachedPlanet.instanceImageUrl,
+              instanceDomain: cachedPlanet.instanceDomain,
+              countryCode: cachedPlanet.countryCode,
+              countryName: cachedPlanet.countryName,
+              healthStatus: cachedPlanet.healthStatus,
+              latencyMs: cachedPlanet.latencyMs,
+              checkedAt: cachedPlanet.checkedAt,
+            ),
       isSubmitting: false,
       authError: null,
     );
@@ -197,6 +216,10 @@ class AppController extends AsyncNotifier<AppState> {
 
     try {
       final planetInfo = await _serverHealthService.validate(rawUrl);
+      await _serverPreferences.writePlanetInfo(
+        serverUrl: planetInfo.baseUrl,
+        planetInfo: planetInfo,
+      );
       state = AsyncData(
         current.copyWith(
           connectionStatus: ConnectionStatus.success,
@@ -229,7 +252,6 @@ class AppController extends AsyncNotifier<AppState> {
         serverUrl: normalized,
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
-        clearPlanetInfo: true,
         clearAuthError: true,
       ),
     );

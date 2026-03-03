@@ -61,31 +61,52 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk     = Color(0xFF2C2A27);
+    const mujiInkDk   = Color(0xFFE8E4DC);
+    const mujiMuted   = Color(0xFF8A8680);
+    const mujiRule    = Color(0xFFDDD8CF);
+    const mujiRuleDk  = Color(0xFF3A3730);
+
+    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor  = isDark ? mujiInkDk   : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
 
     final hasAccount = widget.savedEmail != null;
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
           children: [
             // — Top bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(12, 12, 20, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed:
-                        widget.isSubmitting ? null : widget.onBackToUrl,
-                    tooltip: 'Change server',
+                  GestureDetector(
+                    onTap: widget.isSubmitting ? null : widget.onBackToUrl,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: mujiMuted,
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       _hostLabel(widget.serverUrl),
-                      style: tt.labelSmall
-                          ?.copyWith(color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mujiMuted,
+                        letterSpacing: 0.2,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -94,100 +115,105 @@ class _LoginScreenState extends State<LoginScreen>
             ),
 
             // — Hero
-            const SizedBox(height: 24),
+            const SizedBox(height: 36),
             Center(
-              child: Image.asset('assets/logo.png', width: 60, height: 60),
+              child: Image.asset('assets/logo.png', width: 52, height: 52),
             ),
-            const SizedBox(height: 12),
-            Text('Sync', style: tt.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            )),
+            const SizedBox(height: 16),
+            Text(
+              'Sync',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+                letterSpacing: 1.2,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               'Your private messenger',
-              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                color: mujiMuted,
+                letterSpacing: 0.3,
+              ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 36),
 
-            // — Tabs (hidden when account exists for this server)
+            // — Tabs / account-found note
             if (!hasAccount) ...[
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 28),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TabBar(
-                  controller: _tabs,
-                  indicator: BoxDecoration(
-                    color: cs.primary,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  dividerColor: Colors.transparent,
-                  labelColor: cs.onPrimary,
-                  unselectedLabelColor: cs.onSurfaceVariant,
-                  labelStyle: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
-                  tabs: const [
-                    Tab(text: 'Sign in'),
-                    Tab(text: 'Sign up'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Row(
+                  children: [
+                    _MujiTab(
+                      label: 'Sign in',
+                      selected: _tabs.index == 0,
+                      inkColor: inkColor,
+                      mujiMuted: mujiMuted,
+                      onTap: () => setState(() => _tabs.index = 0),
+                    ),
+                    const SizedBox(width: 32),
+                    _MujiTab(
+                      label: 'Sign up',
+                      selected: _tabs.index == 1,
+                      inkColor: inkColor,
+                      mujiMuted: mujiMuted,
+                      onTap: () => setState(() => _tabs.index = 1),
+                    ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Divider(height: 1, thickness: 1, color: ruleColor),
               ),
               const SizedBox(height: 20),
             ] else ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.account_circle_outlined,
-                          size: 16, color: cs.onPrimaryContainer),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Account found for this server',
-                        style: tt.labelSmall?.copyWith(
-                          color: cs.onPrimaryContainer,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                child: Text(
+                  'Account found for this server',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: mujiMuted,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
               const SizedBox(height: 20),
             ],
 
-            // — Error banner
+            // — Error notice
             if (widget.errorMessage != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: cs.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: cs.error, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.errorMessage!,
-                          style: TextStyle(
-                              color: cs.onErrorContainer, fontSize: 13),
+                padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF9B3A2A),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.errorMessage!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF9B3A2A),
+                          fontWeight: FontWeight.w300,
+                          height: 1.5,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -207,6 +233,10 @@ class _LoginScreenState extends State<LoginScreen>
                     onSubmit: () => widget.onSignIn(
                         _signInEmail.text, _signInPassword.text),
                     onForgotPassword: widget.onForgotPassword,
+                    inkColor: inkColor,
+                    mujiMuted: mujiMuted,
+                    ruleColor: ruleColor,
+                    isDark: isDark,
                   ),
                   if (!hasAccount)
                     _SignUpForm(
@@ -219,6 +249,10 @@ class _LoginScreenState extends State<LoginScreen>
                       isSubmitting: widget.isSubmitting,
                       onSubmit: () => widget.onSignUp(_signUpUsername.text,
                           _signUpEmail.text, _signUpPassword.text),
+                      inkColor: inkColor,
+                      mujiMuted: mujiMuted,
+                      ruleColor: ruleColor,
+                      isDark: isDark,
                     ),
                 ],
               ),
@@ -248,6 +282,10 @@ class _SignInForm extends StatelessWidget {
     required this.onToggleObscure,
     required this.isSubmitting,
     required this.onSubmit,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.ruleColor,
+    required this.isDark,
     this.onForgotPassword,
   });
 
@@ -259,6 +297,10 @@ class _SignInForm extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onSubmit;
   final Future<void> Function(String email)? onForgotPassword;
+  final Color inkColor;
+  final Color mujiMuted;
+  final Color ruleColor;
+  final bool isDark;
 
   void _showForgotDialog(BuildContext context) {
     final emailCtrl = TextEditingController(text: emailController.text);
@@ -269,72 +311,148 @@ class _SignInForm extends StatelessWidget {
         var done = false;
         return StatefulBuilder(
           builder: (ctx, setState) {
-            return AlertDialog(
-              title: const Text('Reset password'),
-              content: done
-                  ? const Text(
-                      'If that email is registered, a reset link was sent.',
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Enter your email address and we'll send you a reset link.",
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          autofocus: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email_outlined, size: 20),
-                          ),
-                        ),
-                      ],
+            return Dialog(
+              backgroundColor: isDark
+                  ? const Color(0xFF1E1C19)
+                  : const Color(0xFFFAF9F6),
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 36, vertical: 60),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Reset password',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
                     ),
-              actions: done
-                  ? [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Close'),
+                    const SizedBox(height: 12),
+                    if (done)
+                      Text(
+                        'If that email is registered, a reset link was sent.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300,
+                          color: mujiMuted,
+                          height: 1.6,
+                        ),
+                      )
+                    else ...[
+                      Text(
+                        "Enter your email and we'll send a reset link.",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300,
+                          color: mujiMuted,
+                          height: 1.6,
+                        ),
                       ),
-                    ]
-                  : [
-                      TextButton(
-                        onPressed: sending
-                            ? null
-                            : () => Navigator.of(ctx).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        onPressed: sending
-                            ? null
-                            : () async {
-                                setState(() => sending = true);
-                                try {
-                                  await onForgotPassword!(
-                                      emailCtrl.text.trim());
-                                } catch (_) {
-                                  // Silently swallow — always show success
-                                  // to prevent email enumeration.
-                                }
-                                setState(() {
-                                  sending = false;
-                                  done = true;
-                                });
-                              },
-                        child: sending
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
-                              )
-                            : const Text('Send link'),
+                      const SizedBox(height: 20),
+                      _AuthField(
+                        controller: emailCtrl,
+                        label: 'Email',
+                        keyboardType: TextInputType.emailAddress,
+                        inkColor: inkColor,
+                        mujiMuted: mujiMuted,
+                        ruleColor: ruleColor,
                       ),
                     ],
+                    const SizedBox(height: 28),
+                    Divider(
+                      height: 1, thickness: 1, color: ruleColor),
+                    const SizedBox(height: 16),
+                    if (done)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(ctx).pop(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 4),
+                            child: Text(
+                              'close',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: mujiMuted,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GestureDetector(
+                            onTap: sending
+                                ? null
+                                : () => Navigator.of(ctx).pop(),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 4),
+                              child: Text(
+                                'cancel',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: mujiMuted,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 28),
+                          GestureDetector(
+                            onTap: sending
+                                ? null
+                                : () async {
+                                    setState(() => sending = true);
+                                    try {
+                                      await onForgotPassword!(
+                                          emailCtrl.text.trim());
+                                    } catch (_) {}
+                                    setState(() {
+                                      sending = false;
+                                      done = true;
+                                    });
+                                  },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 4),
+                              child: sending
+                                  ? SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        color: inkColor,
+                                      ),
+                                    )
+                                  : Text(
+                                      'S E N D',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        letterSpacing: 2.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: inkColor,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
             );
           },
         );
@@ -350,35 +468,49 @@ class _SignInForm extends StatelessWidget {
         _AuthField(
           controller: emailController,
           label: 'Email',
-          icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
           readOnly: emailLocked,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
+          ruleColor: ruleColor,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         _AuthField(
           controller: passwordController,
           label: 'Password',
-          icon: Icons.lock_outline,
           obscure: obscure,
           toggleObscure: onToggleObscure,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
+          ruleColor: ruleColor,
         ),
         if (onForgotPassword != null)
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: isSubmitting
+            child: GestureDetector(
+              onTap: isSubmitting
                   ? null
                   : () => _showForgotDialog(context),
-              child: const Text(
-                'Forgot password?',
-                style: TextStyle(fontSize: 12),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Text(
+                  'Forgot password?',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: mujiMuted,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
             ),
           ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _SubmitButton(
-          label: isSubmitting ? 'Signing in…' : 'Sign in',
+          label: isSubmitting ? 'signing in…' : 'S I G N   I N',
+          busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
         ),
       ],
     );
@@ -394,6 +526,10 @@ class _SignUpForm extends StatelessWidget {
     required this.onToggleObscure,
     required this.isSubmitting,
     required this.onSubmit,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.ruleColor,
+    required this.isDark,
   });
 
   final TextEditingController usernameController;
@@ -403,6 +539,10 @@ class _SignUpForm extends StatelessWidget {
   final VoidCallback onToggleObscure;
   final bool isSubmitting;
   final VoidCallback onSubmit;
+  final Color inkColor;
+  final Color mujiMuted;
+  final Color ruleColor;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -412,27 +552,36 @@ class _SignUpForm extends StatelessWidget {
         _AuthField(
           controller: usernameController,
           label: 'Username',
-          icon: Icons.person_outline,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
+          ruleColor: ruleColor,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         _AuthField(
           controller: emailController,
           label: 'Email',
-          icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-        _AuthField(
-          controller: passwordController,
-          label: 'Password (min 8 chars)',
-          icon: Icons.lock_outline,
-          obscure: obscure,
-          toggleObscure: onToggleObscure,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
+          ruleColor: ruleColor,
         ),
         const SizedBox(height: 24),
+        _AuthField(
+          controller: passwordController,
+          label: 'Password · min 8 characters',
+          obscure: obscure,
+          toggleObscure: onToggleObscure,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
+          ruleColor: ruleColor,
+        ),
+        const SizedBox(height: 32),
         _SubmitButton(
-          label: isSubmitting ? 'Creating account…' : 'Create account',
+          label: isSubmitting ? 'creating account…' : 'C R E A T E   A C C O U N T',
+          busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
+          inkColor: inkColor,
+          mujiMuted: mujiMuted,
         ),
       ],
     );
@@ -443,7 +592,9 @@ class _AuthField extends StatelessWidget {
   const _AuthField({
     required this.controller,
     required this.label,
-    required this.icon,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.ruleColor,
     this.keyboardType,
     this.readOnly = false,
     this.obscure = false,
@@ -452,7 +603,9 @@ class _AuthField extends StatelessWidget {
 
   final TextEditingController controller;
   final String label;
-  final IconData icon;
+  final Color inkColor;
+  final Color mujiMuted;
+  final Color ruleColor;
   final TextInputType? keyboardType;
   final bool readOnly;
   final bool obscure;
@@ -460,67 +613,139 @@ class _AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final disabledColor = cs.onSurface.withValues(alpha: .38);
+    final effectiveInk = readOnly ? mujiMuted.withOpacity(0.45) : inkColor;
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       readOnly: readOnly,
       obscureText: obscure,
       autocorrect: false,
-      style: readOnly ? TextStyle(color: disabledColor) : null,
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w300,
+        color: effectiveInk,
+        height: 1.4,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: readOnly ? TextStyle(color: disabledColor) : null,
-        filled: readOnly,
-        fillColor: readOnly ? cs.onSurface.withValues(alpha: .06) : null,
-        prefixIcon: Icon(icon, size: 20,
-            color: readOnly ? disabledColor : null),
-        suffixIcon: toggleObscure != null
-            ? IconButton(
-                icon: Icon(
-                  obscure ? Icons.visibility_off : Icons.visibility,
-                  size: 20,
-                ),
-                onPressed: toggleObscure,
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        labelStyle: TextStyle(
+          fontSize: 12,
+          letterSpacing: 0.4,
+          color: mujiMuted,
+          fontWeight: FontWeight.w400,
         ),
-        enabledBorder: readOnly
-            ? OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: cs.onSurface.withValues(alpha: .18),
+        floatingLabelStyle: TextStyle(
+          fontSize: 11,
+          letterSpacing: 1.0,
+          color: mujiMuted,
+        ),
+        border: UnderlineInputBorder(
+          borderSide: BorderSide(color: ruleColor),
+        ),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: ruleColor),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: mujiMuted),
+        ),
+        suffixIcon: toggleObscure != null
+            ? GestureDetector(
+                onTap: toggleObscure,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Icon(
+                    obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 18,
+                    color: mujiMuted,
+                  ),
                 ),
               )
             : null,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        isDense: true,
       ),
     );
   }
 }
 
 class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({required this.label, this.onPressed});
+  const _SubmitButton({
+    required this.label,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.busy,
+    this.onPressed,
+  });
 
   final String label;
+  final Color inkColor;
+  final Color mujiMuted;
+  final bool busy;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: onPressed,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (busy)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: mujiMuted,
+                ),
+              ),
+            ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: busy ? 13 : 12,
+              letterSpacing: busy ? 0.2 : 2.4,
+              fontWeight: FontWeight.w500,
+              color: onPressed == null ? mujiMuted.withOpacity(0.4) : inkColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MujiTab extends StatelessWidget {
+  const _MujiTab({
+    required this.label,
+    required this.selected,
+    required this.inkColor,
+    required this.mujiMuted,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final Color inkColor;
+  final Color mujiMuted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
+            color: selected ? inkColor : mujiMuted,
+            letterSpacing: 0.2,
           ),
         ),
-        child: Text(label),
       ),
     );
   }

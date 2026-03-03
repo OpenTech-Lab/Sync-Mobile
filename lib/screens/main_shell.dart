@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/server_health_service.dart';
 import '../state/app_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
@@ -17,6 +18,7 @@ class MainShell extends ConsumerStatefulWidget {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
+    required this.planetInfo,
     required this.onSignOut,
   });
 
@@ -24,6 +26,7 @@ class MainShell extends ConsumerStatefulWidget {
   final String accessToken;
   final String currentUserId;
   final String? currentUsername;
+  final PlanetInfo? planetInfo;
   final Future<void> Function() onSignOut;
 
   @override
@@ -110,7 +113,6 @@ class _MainShellState extends ConsumerState<MainShell>
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final hideTabs = _selectedIndex == 1 && _activePartnerId != null;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
@@ -139,54 +141,96 @@ class _MainShellState extends ConsumerState<MainShell>
       ),
       SettingsTab(
         serverUrl: widget.serverUrl,
+        planetInfo: widget.planetInfo,
         currentUserId: widget.currentUserId,
         activePartnerId: _activePartnerId,
         onSignOut: widget.onSignOut,
       ),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const mujiPaper = Color(0xFFFAF9F6);
+    const mujiPaperDk = Color(0xFF1E1C19);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+
+    const tabIcons = [
+      Icons.home_outlined,
+      Icons.chat_bubble_outline,
+      Icons.settings_outlined,
+    ];
+    const tabLabels = ['home', 'chats', 'settings'];
+
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: tabs),
       bottomNavigationBar: hideTabs
           ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _onTabTapped,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              height: 60,
-              indicatorColor: cs.primaryContainer,
-              backgroundColor: cs.surface,
-              destinations: [
-                const NavigationDestination(
-                  icon: Icon(Icons.home_outlined, size: 22),
-                  selectedIcon: Icon(Icons.home, size: 22),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: totalUnread > 0,
-                    label: Text(
-                      totalUnread > 99 ? '99+' : '$totalUnread',
-                      style: const TextStyle(fontSize: 9),
+          : Container(
+              color: bgColor,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Divider(height: 1, thickness: 1, color: ruleColor),
+                  SafeArea(
+                    top: false,
+                    child: SizedBox(
+                      height: 48,
+                      child: Row(
+                        children: List.generate(tabIcons.length, (i) {
+                          final selected = _selectedIndex == i;
+                          final isChats = i == 1;
+                          return Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _onTabTapped(i),
+                              child: Center(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (selected)
+                                      Icon(
+                                        tabIcons[i],
+                                        size: 19,
+                                        color: inkColor,
+                                      )
+                                    else
+                                      Text(
+                                        tabLabels[i],
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          letterSpacing: 0.2,
+                                          fontWeight: FontWeight.w300,
+                                          color: mujiMuted,
+                                        ),
+                                      ),
+                                    if (isChats && totalUnread > 0) ...[
+                                      const SizedBox(width: 5),
+                                      Container(
+                                        width: 5,
+                                        height: 5,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF9B3A2A),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
-                    child: const Icon(Icons.chat_bubble_outline, size: 22),
                   ),
-                  selectedIcon: Badge(
-                    isLabelVisible: totalUnread > 0,
-                    label: Text(
-                      totalUnread > 99 ? '99+' : '$totalUnread',
-                      style: const TextStyle(fontSize: 9),
-                    ),
-                    child: const Icon(Icons.chat_bubble, size: 22),
-                  ),
-                  label: 'Chats',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.settings_outlined, size: 22),
-                  selectedIcon: Icon(Icons.settings, size: 22),
-                  label: 'Settings',
-                ),
-              ],
+                ],
+              ),
             ),
     );
   }
