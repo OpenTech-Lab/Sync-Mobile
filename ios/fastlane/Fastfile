@@ -1,0 +1,59 @@
+require 'base64'
+require 'tmpdir'
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build Flutter iOS app and upload to TestFlight"
+  lane :release do
+    # --- Apple API key (App Store Connect) ---
+    api_key_path = File.join(Dir.tmpdir, "apple_api_key_#{ENV['APPLE_API_KEY_ID']}.p8")
+    File.write(api_key_path, Base64.decode64(ENV.fetch("APPLE_API_PRIVATE_KEY_BASE64")))
+
+    api_key = app_store_connect_api_key(
+      key_id:     ENV.fetch("APPLE_API_KEY_ID"),
+      issuer_id:  ENV.fetch("APPLE_API_ISSUER_ID"),
+      key_filepath: api_key_path,
+      duration:   1200,
+      in_house:   false,
+    )
+
+    # --- Build number ---
+    increment_build_number(
+      build_number: ENV.fetch("IOS_BUILD_NUMBER"),
+      xcodeproj:    "Runner.xcodeproj",
+    )
+
+    # --- Compile Flutter / Dart ---
+    # Run from the Flutter project root (one level above ios/)
+    Dir.chdir("..") do
+      sh("flutter build ios --release --no-codesign")
+    end
+
+    # --- Archive & export (manual signing; profile already installed by CI) ---
+    gym(
+      project:       "Runner.xcodeproj",
+      scheme:        "Runner",
+      configuration: "Release",
+      clean:         false,
+      export_method: "app-store",
+      export_options: {
+        method:               "app-store",
+        teamID:               ENV.fetch("IOS_TEAM_ID"),
+        signingStyle:         "manual",
+        provisioningProfiles: {
+          "com.sync.icyanstudio" => ENV.fetch("IOS_PROVISIONING_PROFILE_NAME"),
+        },
+        uploadBitcode:        false,
+        uploadSymbols:        true,
+        compileBitcode:       false,
+      },
+    )
+
+    # --- Upload to TestFlight ---
+    upload_to_testflight(
+      api_key:                          api_key,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
