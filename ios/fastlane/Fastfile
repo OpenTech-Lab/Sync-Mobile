@@ -39,7 +39,7 @@ platform :ios do
     profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
 
     gym(
-      project:       "Runner.xcodeproj",
+      workspace:     "Runner.xcworkspace",
       scheme:        "Runner",
       configuration: "Release",
       clean:         false,

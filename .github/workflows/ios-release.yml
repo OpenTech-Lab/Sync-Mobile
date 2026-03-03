@@ -19,6 +19,9 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
       - name: Validate required TestFlight secrets
         run: |
           required=(
