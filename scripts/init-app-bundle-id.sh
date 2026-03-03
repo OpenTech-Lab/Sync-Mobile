@@ -32,7 +32,27 @@ replace_in_file() {
 		return
 	fi
 
+	if ! grep -qF "${from}" "${file_path}"; then
+		echo "  [skip] '${from}' not found in ${file_path}"
+		return
+	fi
+
 	sed -i "s|${from}|${to}|g" "${file_path}"
+	echo "  [ok]   ${file_path}"
+}
+
+# Detect the current iOS bundle ID from project.pbxproj (ignores RunnerTests suffix)
+detect_current_ios_bundle_id() {
+	local pbxproj="${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj"
+	if [ ! -f "${pbxproj}" ]; then
+		echo ""
+		return
+	fi
+	# Find PRODUCT_BUNDLE_IDENTIFIER lines, exclude RunnerTests, take the first value
+	grep 'PRODUCT_BUNDLE_IDENTIFIER' "${pbxproj}" \
+		| grep -v 'RunnerTests' \
+		| sed 's/.*PRODUCT_BUNDLE_IDENTIFIER = //;s/;//;s/[[:space:]]//g' \
+		| sort -u | head -n 1
 }
 
 update_main_activity_package() {
@@ -86,9 +106,15 @@ echo "Updating app identifier to: ${NEW_APP_ID}"
 # Android
 replace_in_file "${PROJECT_ROOT}/android/app/build.gradle.kts" "com.example.mobile" "${NEW_APP_ID}"
 
-# iOS
-replace_in_file "${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj" "com.example.mobile.RunnerTests" "${NEW_APP_ID}.RunnerTests"
-replace_in_file "${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj" "com.example.mobile" "${NEW_APP_ID}"
+# iOS — detect whatever bundle ID is currently in the project rather than
+# assuming the Flutter template default (com.example.mobile).
+CURRENT_IOS_BUNDLE_ID="$(detect_current_ios_bundle_id)"
+if [ -z "${CURRENT_IOS_BUNDLE_ID}" ]; then
+	CURRENT_IOS_BUNDLE_ID="com.example.mobile"
+fi
+echo "iOS current bundle ID: ${CURRENT_IOS_BUNDLE_ID}"
+replace_in_file "${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj" "${CURRENT_IOS_BUNDLE_ID}.RunnerTests" "${NEW_APP_ID}.RunnerTests"
+replace_in_file "${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj" "${CURRENT_IOS_BUNDLE_ID}" "${NEW_APP_ID}"
 
 # macOS
 replace_in_file "${PROJECT_ROOT}/macos/Runner.xcodeproj/project.pbxproj" "com.example.mobile.RunnerTests" "${NEW_APP_ID}.RunnerTests"

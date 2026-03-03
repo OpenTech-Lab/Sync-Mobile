@@ -57,9 +57,7 @@ platform :ios do
         provisioningProfiles: {
           "com.sync.icyanstudio" => profile_name,
         },
-        uploadBitcode:        false,
         uploadSymbols:        true,
-        compileBitcode:       false,
       },
     )
 
