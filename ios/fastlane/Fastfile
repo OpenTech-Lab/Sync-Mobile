@@ -31,6 +31,13 @@ platform :ios do
     end
 
     # --- Archive & export (manual signing; profile already installed by CI) ---
+    # xcargs must be a Hash so fastlane shell-quotes each value individually.
+    # Passing a joined String breaks when the profile name contains spaces.
+    # Use PROVISIONING_PROFILE_SPECIFIER with the UUID (never contains spaces)
+    # rather than the human-readable name.
+    profile_uuid = ENV.fetch("IOS_PROVISIONING_PROFILE_UUID")
+    profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
+
     gym(
       project:       "Runner.xcodeproj",
       scheme:        "Runner",
@@ -38,17 +45,17 @@ platform :ios do
       clean:         false,
       export_method: "app-store",
       codesigning_identity: "Apple Distribution",
-      xcargs:        [
-        "DEVELOPMENT_TEAM=#{ENV.fetch('IOS_TEAM_ID')}",
-        "CODE_SIGN_STYLE=Manual",
-        "PROVISIONING_PROFILE_SPECIFIER=#{ENV.fetch('IOS_PROVISIONING_PROFILE_NAME')}",
-      ].join(" "),
+      xcargs: {
+        "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
+        "CODE_SIGN_STYLE"                => "Manual",
+        "PROVISIONING_PROFILE_SPECIFIER" => profile_uuid,
+      },
       export_options: {
         method:               "app-store",
         teamID:               ENV.fetch("IOS_TEAM_ID"),
         signingStyle:         "manual",
         provisioningProfiles: {
-          "com.sync.icyanstudio" => ENV.fetch("IOS_PROVISIONING_PROFILE_NAME"),
+          "com.sync.icyanstudio" => profile_name,
         },
         uploadBitcode:        false,
         uploadSymbols:        true,
