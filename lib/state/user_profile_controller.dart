@@ -7,19 +7,26 @@ final userProfilePreferencesProvider = Provider<UserProfilePreferences>((ref) {
   return UserProfilePreferences();
 });
 
-final userAvatarBase64Provider = FutureProvider.family<String?, String>(
-  (ref, userId) {
-    return ref.read(userProfilePreferencesProvider).readAvatarBase64(userId);
-  },
-);
+final userAvatarBase64Provider = FutureProvider.family<String?, String>((
+  ref,
+  userId,
+) {
+  return ref.read(userProfilePreferencesProvider).readAvatarBase64(userId);
+});
 
-final userDisplayNameProvider = FutureProvider.family<String?, String>(
-  (ref, userId) {
-    return ref.read(userProfilePreferencesProvider).readDisplayName(userId);
-  },
-);
+final userDisplayNameProvider = FutureProvider.family<String?, String>((
+  ref,
+  userId,
+) {
+  return ref.read(userProfilePreferencesProvider).readDisplayName(userId);
+});
 
-final remoteUserProfileServiceProvider =
-    Provider<RemoteUserProfileService>((ref) {
+final friendIdsProvider = FutureProvider<List<String>>((ref) {
+  return ref.read(userProfilePreferencesProvider).readFriendIds();
+});
+
+final remoteUserProfileServiceProvider = Provider<RemoteUserProfileService>((
+  ref,
+) {
   return RemoteUserProfileService();
 });

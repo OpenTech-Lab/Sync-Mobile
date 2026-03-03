@@ -10,11 +10,13 @@ class ChatTargetProfileScreen extends StatelessWidget {
     required this.displayName,
     required this.displayHandle,
     required this.avatarBase64,
+    this.showActions = true,
   });
 
   final String displayName;
   final String displayHandle;
   final String? avatarBase64;
+  final bool showActions;
 
   @override
   Widget build(BuildContext context) {
@@ -76,26 +78,28 @@ class ChatTargetProfileScreen extends StatelessWidget {
                 ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).pop(ChatTargetProfileAction.startChat),
-                  child: const Text('Start chat'),
+              if (showActions) ...[
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pop(ChatTargetProfileAction.startChat),
+                    child: const Text('Start chat'),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).pop(ChatTargetProfileAction.addFriend),
-                  child: const Text('Add friend'),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pop(ChatTargetProfileAction.addFriend),
+                    child: const Text('Add friend'),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

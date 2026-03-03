@@ -170,7 +170,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   Future<void> _openPartner(String partnerId) async {
     setState(() => _activePartnerId = partnerId);
-    _partnerController.text = partnerId;
     widget.onPartnerChanged(partnerId);
     await _syncUserProfile(partnerId, force: true);
     final accessToken = await _effectiveAccessToken();
@@ -310,6 +309,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           resolved.recipientServerUrl;
       await _openPartner(resolved.partnerId);
       if (action == ChatTargetProfileAction.addFriend && mounted) {
+        await ref
+            .read(userProfilePreferencesProvider)
+            .addFriendId(resolved.partnerId);
+        ref.invalidate(friendIdsProvider);
+        if (!mounted) {
+          return;
+        }
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Friend added')));
@@ -373,6 +379,77 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
   }
 
+  Future<void> _openActivePartnerProfile() async {
+    final partnerId = _activePartnerId;
+    if (partnerId == null || partnerId.isEmpty) {
+      return;
+    }
+    await _syncUserProfile(partnerId);
+    if (!mounted) {
+      return;
+    }
+    final displayName = _displayNameOrFallback(
+      partnerId,
+      ref.read(userDisplayNameProvider(partnerId)).value,
+    );
+    final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatTargetProfileScreen(
+          displayName: displayName,
+          displayHandle: partnerId,
+          avatarBase64: avatarBase64,
+          showActions: false,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markAllUnreadAsRead(Map<String, int> unreadCounts) async {
+    final partnerIds = unreadCounts.entries
+        .where((entry) => entry.value > 0)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    if (partnerIds.isEmpty) {
+      return;
+    }
+
+    final accessToken = await _effectiveAccessToken();
+    final failed = <String>[];
+    for (final partnerId in partnerIds) {
+      try {
+        await ref
+            .read(conversationMessagesProvider(partnerId).notifier)
+            .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
+        ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+      } catch (_) {
+        failed.add(partnerId);
+      }
+    }
+
+    await ref
+        .read(unreadCountsProvider.notifier)
+        .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
+    ref.invalidate(conversationSummariesProvider);
+
+    if (!mounted) {
+      return;
+    }
+    if (failed.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Marked all as read')));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Marked as read for ${partnerIds.length - failed.length}/${partnerIds.length} conversations',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -400,10 +477,34 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     summary.lastBody.toLowerCase().contains(searchQuery);
               })
               .toList(growable: false);
-    final rowUserIds = <String>{
-      ...filteredSummaries.map((s) => s.conversationId),
-      ...unreadCounts.keys,
+    final summariesById = <String, ConversationSummary>{
+      for (final summary in filteredSummaries) summary.conversationId: summary,
     };
+    final orderedConversationIds = <String>{
+      ...unreadCounts.keys,
+      ...filteredSummaries.map((summary) => summary.conversationId),
+    }.toList(growable: false)
+      ..sort((a, b) {
+        final aHasUnread = (unreadCounts[a] ?? 0) > 0;
+        final bHasUnread = (unreadCounts[b] ?? 0) > 0;
+        if (aHasUnread != bHasUnread) {
+          return aHasUnread ? -1 : 1;
+        }
+
+        final aLastAt = summariesById[a]?.lastAt;
+        final bLastAt = summariesById[b]?.lastAt;
+        if (aLastAt != null && bLastAt != null) {
+          return bLastAt.compareTo(aLastAt);
+        }
+        if (aLastAt != null) {
+          return -1;
+        }
+        if (bLastAt != null) {
+          return 1;
+        }
+        return a.compareTo(b);
+      });
+    final rowUserIds = orderedConversationIds.toSet();
     _prefetchVisibleProfiles(rowUserIds);
     final activeUnread = _activePartnerId == null
         ? 0
@@ -429,10 +530,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               scrolledUnderElevation: 0,
               forceMaterialTransparency: true,
               centerTitle: true,
-              title: Text(
-                activeDisplayName ?? 'Chat',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              title: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: _openActivePartnerProfile,
+                child: Text(
+                  activeDisplayName ?? 'Chat',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -457,7 +562,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 controller: _partnerController,
                 focusNode: _partnerFocusNode,
                 unreadCounts: unreadCounts,
-                summaries: filteredSummaries,
+                orderedConversationIds: orderedConversationIds,
+                summariesById: summariesById,
                 onQuickAction: (action) {
                   switch (action) {
                     case _ChatQuickAction.newFriendOrChat:
@@ -469,15 +575,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 onOpenConversation: (id) async {
                   await _openPartner(id);
                 },
-                onRefresh: () async {
-                  final accessToken = await _effectiveAccessToken();
-                  await ref
-                      .read(unreadCountsProvider.notifier)
-                      .refresh(
-                        baseUrl: widget.serverUrl,
-                        accessToken: accessToken,
-                      );
-                },
+                onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
                 onStartNewChat: _openNewFriendOrChat,
                 onAddFriend: _openNewFriendOrChat,
               ),
@@ -539,6 +637,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                     currentUserAvatarBase64:
                                         currentUserAvatarBase64,
                                     partnerAvatarBase64: partnerAvatarBase64,
+                                    onPartnerAvatarTap:
+                                        _openActivePartnerProfile,
                                   ),
                                 ),
                         ),
@@ -632,10 +732,11 @@ class _ConversationStarter extends ConsumerWidget {
     required this.controller,
     required this.focusNode,
     required this.unreadCounts,
-    required this.summaries,
+    required this.orderedConversationIds,
+    required this.summariesById,
     required this.onQuickAction,
     required this.onOpenConversation,
-    required this.onRefresh,
+    required this.onMarkAllRead,
     required this.onStartNewChat,
     required this.onAddFriend,
   });
@@ -643,10 +744,11 @@ class _ConversationStarter extends ConsumerWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final Map<String, int> unreadCounts;
-  final List<ConversationSummary> summaries;
+  final List<String> orderedConversationIds;
+  final Map<String, ConversationSummary> summariesById;
   final ValueChanged<_ChatQuickAction> onQuickAction;
   final ValueChanged<String> onOpenConversation;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onMarkAllRead;
   final VoidCallback onStartNewChat;
   final VoidCallback onAddFriend;
 
@@ -654,6 +756,14 @@ class _ConversationStarter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final unreadConversationIds = orderedConversationIds
+        .where((id) => (unreadCounts[id] ?? 0) > 0)
+        .toList(growable: false);
+    final chatConversationIds = orderedConversationIds
+        .where((id) => (unreadCounts[id] ?? 0) == 0)
+        .toList(growable: false);
+    final hasAnyRows =
+        unreadConversationIds.isNotEmpty || chatConversationIds.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -681,7 +791,7 @@ class _ConversationStarter extends ConsumerWidget {
           focusNode: focusNode,
           autocorrect: false,
           decoration: InputDecoration(
-            hintText: 'Search chat history',
+            hintText: 'Search chat',
             prefixIcon: const Icon(Icons.search, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             contentPadding: const EdgeInsets.symmetric(
@@ -691,12 +801,39 @@ class _ConversationStarter extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Chat history',
-          style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 8),
-        if (summaries.isEmpty)
+        if (unreadConversationIds.isNotEmpty) ...[
+          Row(
+            children: [
+              Text(
+                'Unread',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: onMarkAllRead,
+                child: const Text(
+                  'Mark all read',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...unreadConversationIds.map(
+            (userId) =>
+                _buildConversationRow(context, ref, cs, userId, summariesById),
+          ),
+        ],
+        if (hasAnyRows && chatConversationIds.isNotEmpty)
+          const SizedBox(height: 8),
+        if (hasAnyRows && chatConversationIds.isNotEmpty)
+          Text(
+            'Chat',
+            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        if (hasAnyRows && chatConversationIds.isNotEmpty)
+          const SizedBox(height: 8),
+        if (!hasAnyRows)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
@@ -710,108 +847,69 @@ class _ConversationStarter extends ConsumerWidget {
             ),
           )
         else
-          ...summaries.map((summary) {
-            final userId = summary.conversationId;
-            final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
-            final avatarBase64Async = ref.watch(
-              userAvatarBase64Provider(userId),
-            );
-            final displayName = _displayNameOrFallback(
-              userId,
-              displayNameAsync.value,
-            );
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: ListTile(
-                leading: _ProfileAvatar(
-                  userId: userId,
-                  avatarBase64: avatarBase64Async.value,
-                  radius: 18,
-                ),
-                title: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
-                ),
-                subtitle: Text(
-                  summary.lastBody,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                ),
-                trailing: Text(
-                  _timeLabel(summary.lastAt),
-                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                ),
-                onTap: () {
-                  onOpenConversation(userId);
-                },
-              ),
-            );
-          }),
-
-        if (unreadCounts.isNotEmpty) ...[
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Text(
-                'Conversations with unread',
-                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh, size: 14),
-                label: const Text('Refresh', style: TextStyle(fontSize: 12)),
-              ),
-            ],
+          ...chatConversationIds.map(
+            (userId) =>
+                _buildConversationRow(context, ref, cs, userId, summariesById),
           ),
-          const SizedBox(height: 8),
-          ...unreadCounts.entries.map((e) {
-            final userId = e.key;
-            final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
-            final avatarBase64Async = ref.watch(
-              userAvatarBase64Provider(userId),
-            );
-            final displayName = _displayNameOrFallback(
-              userId,
-              displayNameAsync.value,
-            );
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: ListTile(
-                leading: _ProfileAvatar(
-                  userId: userId,
-                  avatarBase64: avatarBase64Async.value,
-                  radius: 18,
-                ),
-                title: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
-                ),
-                trailing: _UnreadBadge(count: e.value),
-                onTap: () {
-                  controller.text = userId;
-                  onOpenConversation(userId);
-                },
-              ),
-            );
-          }),
-        ],
       ],
+    );
+  }
+
+  Widget _buildConversationRow(
+    BuildContext context,
+    WidgetRef ref,
+    ColorScheme cs,
+    String userId,
+    Map<String, ConversationSummary> summariesById,
+  ) {
+    final summary = summariesById[userId];
+    final unreadCount = unreadCounts[userId] ?? 0;
+    final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
+    final avatarBase64Async = ref.watch(userAvatarBase64Provider(userId));
+    final displayName = _displayNameOrFallback(userId, displayNameAsync.value);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: unreadCount > 0 ? const Color(0xFFEDE7F6) : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ListTile(
+        leading: _ProfileAvatar(
+          userId: userId,
+          avatarBase64: avatarBase64Async.value,
+          radius: 18,
+        ),
+        title: Text(
+          displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13),
+        ),
+        subtitle: Text(
+          summary?.lastBody ?? 'Unread messages',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (summary != null)
+              Text(
+                _timeLabel(summary.lastAt),
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
+            if (unreadCount > 0) ...[
+              if (summary != null) const SizedBox(width: 8),
+              _UnreadBadge(count: unreadCount),
+            ],
+          ],
+        ),
+        onTap: () {
+          onOpenConversation(userId);
+        },
+      ),
     );
   }
 }
@@ -1141,6 +1239,7 @@ class _MessageBubble extends StatelessWidget {
     required this.currentUserId,
     required this.currentUserAvatarBase64,
     required this.partnerAvatarBase64,
+    required this.onPartnerAvatarTap,
   });
 
   final LocalChatMessage message;
@@ -1148,6 +1247,7 @@ class _MessageBubble extends StatelessWidget {
   final String currentUserId;
   final String? currentUserAvatarBase64;
   final String? partnerAvatarBase64;
+  final VoidCallback onPartnerAvatarTap;
 
   static const double _kMaxBubbleHeight = 180;
 
@@ -1244,7 +1344,13 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMine) ...[
-            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+            GestureDetector(
+              onTap: onPartnerAvatarTap,
+              child: _MessageAvatar(
+                userId: avatarId,
+                avatarBase64: avatarBase64,
+              ),
+            ),
             const SizedBox(width: 6),
           ],
           bubble,

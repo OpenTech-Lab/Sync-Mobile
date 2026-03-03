@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class UserProfilePreferences {
   String _displayNameKey(String userId) => 'profile_display_name_$userId';
   String _avatarKey(String userId) => 'profile_avatar_base64_$userId';
+  static const String _friendIdsKey = 'friend_ids';
 
   Future<String?> readDisplayName(String userId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -32,5 +33,29 @@ class UserProfilePreferences {
       return;
     }
     await prefs.setString(_avatarKey(userId), normalized);
+  }
+
+  Future<List<String>> readFriendIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_friendIdsKey) ?? const <String>[];
+    return raw
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  Future<void> addFriendId(String userId) async {
+    final normalized = userId.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getStringList(_friendIdsKey) ?? const <String>[];
+    final next = {
+      ...existing.map((id) => id.trim()).where((id) => id.isNotEmpty),
+      normalized,
+    }.toList(growable: false);
+    await prefs.setStringList(_friendIdsKey, next);
   }
 }

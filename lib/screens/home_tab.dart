@@ -35,10 +35,8 @@ class HomeTab extends ConsumerWidget {
       0,
       (sum, count) => sum + count,
     );
-    final friendIds = unreadCounts.keys.toList();
+    final friendIds = ref.watch(friendIdsProvider).value ?? const <String>[];
 
-    String shortId(String uuid) =>
-        uuid.length >= 8 ? uuid.substring(0, 8) : uuid;
     String initials(String uuid) =>
         uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
 
@@ -132,26 +130,40 @@ class HomeTab extends ConsumerWidget {
                   ),
                   itemBuilder: (ctx, i) {
                     final id = friendIds[i];
-                    final unread = unreadCounts[id] ?? 0;
+                    final displayName = _displayNameOrFallback(
+                      id,
+                      ref.watch(userDisplayNameProvider(id)).value,
+                    );
+                    final avatarBase64 = ref
+                        .watch(userAvatarBase64Provider(id))
+                        .value;
                     return ListTile(
                       leading: CircleAvatar(
                         radius: 20,
                         backgroundColor: _avatarColor(id, cs),
-                        child: Text(
-                          initials(id),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: avatarBase64 == null
+                            ? Text(
+                                initials(id),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : ClipOval(
+                                child: SizedBox.expand(
+                                  child: Image.memory(
+                                    base64Decode(avatarBase64),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
                       ),
                       title: Text(
-                        shortId(id),
+                        displayName,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          fontFamily: 'monospace',
                         ),
                       ),
                       subtitle: Text(
@@ -167,26 +179,6 @@ class HomeTab extends ConsumerWidget {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (unread > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: cs.primary,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '$unread',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: cs.onPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          if (unread > 0) const SizedBox(width: 6),
                           IconButton(
                             icon: Icon(
                               Icons.copy_outlined,
@@ -231,6 +223,14 @@ class HomeTab extends ConsumerWidget {
     final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
     return palette[hash.abs() % palette.length];
   }
+}
+
+String _displayNameOrFallback(String userId, String? displayName) {
+  final normalized = (displayName ?? '').trim();
+  if (normalized.isNotEmpty) {
+    return normalized;
+  }
+  return userId.length >= 8 ? userId.substring(0, 8) : userId;
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -280,7 +280,6 @@ class _ProfileCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
@@ -364,45 +363,7 @@ class _ProfileCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 2),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      currentUserId,
-                      style: tt.labelSmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: cs.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 26,
-                    height: 26,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.copy_outlined,
-                        size: 13,
-                        color: cs.onSurfaceVariant,
-                      ),
-                      tooltip: 'Copy ID',
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: currentUserId));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Your ID copied'),
-                            duration: Duration(seconds: 1),
-                            behavior: SnackBarBehavior.floating,
-                            width: 160,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: 2),
             ],
           ),
         ),
