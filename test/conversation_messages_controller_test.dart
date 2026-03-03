@@ -27,7 +27,9 @@ class _InMemoryChatRepository implements ChatRepository {
 
   @override
   Future<void> clearConversation(String conversationId) async {
-    _messages.removeWhere((message) => message.conversationId == conversationId);
+    _messages.removeWhere(
+      (message) => message.conversationId == conversationId,
+    );
   }
 
   @override
@@ -64,6 +66,28 @@ class _InMemoryChatRepository implements ChatRepository {
       ..clear()
       ..addAll(messages);
   }
+
+  @override
+  Future<List<ConversationSummary>> listConversations() async {
+    final grouped = <String, List<LocalChatMessage>>{};
+    for (final message in _messages) {
+      (grouped[message.conversationId] ??= <LocalChatMessage>[]).add(message);
+    }
+
+    final summaries = <ConversationSummary>[];
+    for (final entry in grouped.entries) {
+      entry.value.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      summaries.add(
+        ConversationSummary(
+          conversationId: entry.key,
+          lastBody: entry.value.first.body,
+          lastAt: entry.value.first.createdAt,
+        ),
+      );
+    }
+    summaries.sort((a, b) => b.lastAt.compareTo(a.lastAt));
+    return summaries;
+  }
 }
 
 class _FakeRemoteChatService extends RemoteChatService {
@@ -95,6 +119,7 @@ class _FakeRemoteChatService extends RemoteChatService {
     required String accessToken,
     required String partnerId,
     required String body,
+    String? recipientServerUrl,
   }) async {
     return LocalChatMessage(
       id: 'sent-1',
@@ -147,7 +172,9 @@ void main() {
         .read(conversationMessagesProvider(partnerId).notifier)
         .syncLatest(baseUrl: 'http://localhost:8080', accessToken: 'token');
 
-    final messages = container.read(conversationMessagesProvider(partnerId)).value!;
+    final messages = container
+        .read(conversationMessagesProvider(partnerId))
+        .value!;
     expect(messages, hasLength(1));
     expect(messages.first.id, 'r1');
   });
@@ -193,7 +220,9 @@ void main() {
         .read(conversationMessagesProvider(partnerId).notifier)
         .loadMore(baseUrl: 'http://localhost:8080', accessToken: 'token');
 
-    final messages = container.read(conversationMessagesProvider(partnerId)).value!;
+    final messages = container
+        .read(conversationMessagesProvider(partnerId))
+        .value!;
     expect(messages, hasLength(2));
     expect(messages.map((message) => message.id), containsAll(['r1', 'r2']));
   });
@@ -211,13 +240,17 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(conversationMessagesProvider(partnerId).future);
-    await container.read(conversationMessagesProvider(partnerId).notifier).sendMessage(
+    await container
+        .read(conversationMessagesProvider(partnerId).notifier)
+        .sendMessage(
           baseUrl: 'http://localhost:8080',
           accessToken: 'token',
           body: 'hi',
         );
 
-    final messages = container.read(conversationMessagesProvider(partnerId)).value!;
+    final messages = container
+        .read(conversationMessagesProvider(partnerId))
+        .value!;
     expect(messages, hasLength(1));
     expect(messages.first.id, 'sent-1');
     expect(messages.first.body, 'hi');

@@ -47,12 +47,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   String? _selectedMediaName;
   final Set<String> _profileSyncInFlight = <String>{};
   final Set<String> _profileSyncedOnce = <String>{};
+  final Map<String, String> _partnerServerUrlOverrides = <String, String>{};
 
   @override
   void initState() {
     super.initState();
     _partnerController.addListener(_onSearchChanged);
-    if (widget.initialPartnerId != null && widget.initialPartnerId!.isNotEmpty) {
+    if (widget.initialPartnerId != null &&
+        widget.initialPartnerId!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _openPartner(widget.initialPartnerId!);
       });
@@ -103,8 +105,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 
   Future<void> _pickMedia() async {
-    final image =
-        await _imagePicker.pickImage(source: ImageSource.gallery);
+    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
     final bytes = await image.readAsBytes();
     setState(() {
@@ -114,9 +115,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 
   void _clearMedia() => setState(() {
-        _selectedMediaBytes = null;
-        _selectedMediaName = null;
-      });
+    _selectedMediaBytes = null;
+    _selectedMediaName = null;
+  });
 
   Future<String> _effectiveAccessToken() async {
     final fresh = await ref
@@ -172,35 +173,46 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final accessToken = await _effectiveAccessToken();
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
-        .syncLatest(
-          baseUrl: widget.serverUrl,
-          accessToken: accessToken,
-        );
+        .syncLatest(baseUrl: widget.serverUrl, accessToken: accessToken);
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
-        .markRead(
-          baseUrl: widget.serverUrl,
-          accessToken: accessToken,
-        );
+        .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
     ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
     ref.invalidate(conversationSummariesProvider);
   }
 
-  Future<void> _startNewChat() async {
-    final partnerController = TextEditingController();
-    final partnerId = await showDialog<String>(
+  Future<_ChatTargetInput?> _promptForChatTarget({
+    required String title,
+    required String confirmLabel,
+  }) async {
+    final idController = TextEditingController();
+    final serverController = TextEditingController();
+    final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Start new chat'),
-          content: TextField(
-            controller: partnerController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Friend user UUID',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: idController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Friend ID',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) {},
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: serverController,
+                decoration: const InputDecoration(
+                  hintText: 'Friend server URL (required for other planet)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -208,58 +220,80 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(partnerController.text.trim()),
-              child: const Text('Start'),
+              onPressed: () => Navigator.of(context).pop(
+                _ChatTargetInput(
+                  friendId: idController.text.trim(),
+                  serverUrl: serverController.text.trim(),
+                ),
+              ),
+              child: Text(confirmLabel),
             ),
           ],
         );
       },
     );
-    partnerController.dispose();
+    idController.dispose();
+    serverController.dispose();
+    return result;
+  }
 
-    if (!mounted || partnerId == null || partnerId.isEmpty) {
+  Future<void> _openFromTarget(_ChatTargetInput target) async {
+    final friendId = target.friendId.trim();
+    if (friendId.isEmpty) {
       return;
     }
 
-    await _openPartner(partnerId);
+    final serverUrl = target.serverUrl.trim();
+    if (serverUrl.isEmpty) {
+      _partnerServerUrlOverrides.remove(friendId);
+      await _openPartner(friendId);
+      return;
+    }
+
+    try {
+      final accessToken = await _effectiveAccessToken();
+      final remote = ref.read(remoteChatServiceProvider);
+      final resolved = await remote.resolveContact(
+        baseUrl: widget.serverUrl,
+        accessToken: accessToken,
+        recipientId: friendId,
+        recipientServerUrl: serverUrl,
+      );
+      _partnerServerUrlOverrides[resolved.partnerId] =
+          resolved.recipientServerUrl;
+      await _openPartner(resolved.partnerId);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _startNewChat() async {
+    final target = await _promptForChatTarget(
+      title: 'Start new chat',
+      confirmLabel: 'Start',
+    );
+
+    if (!mounted || target == null || target.friendId.isEmpty) {
+      return;
+    }
+
+    await _openFromTarget(target);
   }
 
   Future<void> _showAddFriendDialog() async {
-    final friendController = TextEditingController();
-    final friendId = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add friend'),
-          content: TextField(
-            controller: friendController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Friend user UUID',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(friendController.text.trim()),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
+    final target = await _promptForChatTarget(
+      title: 'Add friend',
+      confirmLabel: 'Add',
     );
-    friendController.dispose();
 
-    if (!mounted || friendId == null || friendId.isEmpty) {
+    if (!mounted || target == null || target.friendId.isEmpty) {
       return;
     }
 
-    await _openPartner(friendId);
+    await _openFromTarget(target);
   }
 
   Future<void> _sendMessage() async {
@@ -268,8 +302,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final mediaLabel = _selectedMediaName == null
         ? ''
         : '[media-preview:${_selectedMediaName!}]';
-    final content =
-        [text, mediaLabel].where((p) => p.isNotEmpty).join('\n');
+    final content = [text, mediaLabel].where((p) => p.isNotEmpty).join('\n');
     if (content.isEmpty) return;
 
     _messageController.clear();
@@ -283,12 +316,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           baseUrl: widget.serverUrl,
           accessToken: accessToken,
           body: content,
+          recipientServerUrl: _partnerServerUrlOverrides[_activePartnerId!],
         );
     _clearMedia();
-    await ref.read(unreadCountsProvider.notifier).refresh(
-          baseUrl: widget.serverUrl,
-          accessToken: accessToken,
-        );
+    await ref
+        .read(unreadCountsProvider.notifier)
+        .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
   }
 
   @override
@@ -298,21 +331,26 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final currentUserAvatarBase64 =
-        ref.watch(userAvatarBase64Provider(widget.currentUserId)).value;
+    final currentUserAvatarBase64 = ref
+        .watch(userAvatarBase64Provider(widget.currentUserId))
+        .value;
     final partnerAvatarBase64 = _activePartnerId == null
         ? null
         : ref.watch(userAvatarBase64Provider(_activePartnerId!)).value;
     final conversationSummaries =
         ref.watch(conversationSummariesProvider).value ??
-            const <ConversationSummary>[];
+        const <ConversationSummary>[];
     final searchQuery = _partnerController.text.trim().toLowerCase();
     final filteredSummaries = searchQuery.isEmpty
         ? conversationSummaries
-        : conversationSummaries.where((summary) {
-            return summary.conversationId.toLowerCase().contains(searchQuery) ||
-                summary.lastBody.toLowerCase().contains(searchQuery);
-          }).toList(growable: false);
+        : conversationSummaries
+              .where((summary) {
+                return summary.conversationId.toLowerCase().contains(
+                      searchQuery,
+                    ) ||
+                    summary.lastBody.toLowerCase().contains(searchQuery);
+              })
+              .toList(growable: false);
     final rowUserIds = <String>{
       ...filteredSummaries.map((s) => s.conversationId),
       ...unreadCounts.keys,
@@ -398,7 +436,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               },
               onRefresh: () async {
                 final accessToken = await _effectiveAccessToken();
-                await ref.read(unreadCountsProvider.notifier).refresh(
+                await ref
+                    .read(unreadCountsProvider.notifier)
+                    .refresh(
                       baseUrl: widget.serverUrl,
                       accessToken: accessToken,
                     );
@@ -411,16 +451,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 // Messages list
                 Expanded(
                   child: messagesAsync == null
-                      ? const Center(
-                          child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator())
                       : messagesAsync.when(
-                          loading: () => const Center(
-                              child: CircularProgressIndicator()),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
                           error: (err, _) => Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24),
-                              child: Text('$err',
-                                  textAlign: TextAlign.center),
+                              child: Text('$err', textAlign: TextAlign.center),
                             ),
                           ),
                           data: (messages) => messages.isEmpty
@@ -429,34 +467,37 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                          Icons
-                                              .chat_bubble_outline,
-                                          size: 48,
-                                          color: cs.outlineVariant),
+                                        Icons.chat_bubble_outline,
+                                        size: 48,
+                                        color: cs.outlineVariant,
+                                      ),
                                       const SizedBox(height: 12),
                                       Text(
                                         'No messages yet.\nSay hello!',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                            color:
-                                                cs.onSurfaceVariant),
+                                          color: cs.onSurfaceVariant,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 )
                               : ListView.separated(
                                   reverse: true,
-                                  controller:
-                                      _messageScrollController,
+                                  controller: _messageScrollController,
                                   padding: const EdgeInsets.fromLTRB(
-                                      12, 8, 12, 8),
+                                    12,
+                                    8,
+                                    12,
+                                    8,
+                                  ),
                                   itemCount: messages.length,
                                   separatorBuilder: (_, _) =>
                                       const SizedBox(height: 6),
-                                  itemBuilder: (ctx, i) =>
-                                      _MessageBubble(
+                                  itemBuilder: (ctx, i) => _MessageBubble(
                                     message: messages[i],
-                                    isMine: messages[i].senderId ==
+                                    isMine:
+                                        messages[i].senderId ==
                                         widget.currentUserId,
                                     currentUserId: widget.currentUserId,
                                     currentUserAvatarBase64:
@@ -470,16 +511,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 // Typing indicator
                 if (_isTyping)
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Typing…',
                         style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurfaceVariant,
-                            fontStyle: FontStyle.italic),
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ),
@@ -498,18 +539,19 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     onClearMedia: _clearMedia,
                     onStickerSelected: (sticker) async {
                       if (_activePartnerId == null) return;
-                        final accessToken = await _effectiveAccessToken();
+                      final accessToken = await _effectiveAccessToken();
                       await ref
                           .read(
                             conversationMessagesProvider(
-                                    _activePartnerId!)
-                                .notifier,
+                              _activePartnerId!,
+                            ).notifier,
                           )
                           .sendMessage(
                             baseUrl: widget.serverUrl,
-                          accessToken: accessToken,
-                            body:
-                                '[sticker:${sticker.id}:${sticker.name}]',
+                            accessToken: accessToken,
+                            body: '[sticker:${sticker.id}:${sticker.name}]',
+                            recipientServerUrl:
+                                _partnerServerUrlOverrides[_activePartnerId!],
                           );
                     },
                   ),
@@ -521,6 +563,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 }
 
 enum _ChatQuickAction { newChat, addFriend }
+
+class _ChatTargetInput {
+  const _ChatTargetInput({required this.friendId, required this.serverUrl});
+
+  final String friendId;
+  final String serverUrl;
+}
 
 // —————————————————————————————————————————————————————
 // Conversation starter (empty state)
@@ -562,16 +611,18 @@ class _ConversationStarter extends ConsumerWidget {
           decoration: InputDecoration(
             hintText: 'Search chat history',
             prefixIcon: const Icon(Icons.search, size: 20),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        Text('Chat history',
-            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+        Text(
+          'Chat history',
+          style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+        ),
         const SizedBox(height: 8),
         if (summaries.isEmpty)
           Container(
@@ -587,17 +638,18 @@ class _ConversationStarter extends ConsumerWidget {
             ),
           )
         else
-          ...summaries.map(
-            (summary) {
-              final userId = summary.conversationId;
-              final displayNameAsync =
-                  ref.watch(userDisplayNameProvider(userId));
-              final avatarBase64Async =
-                  ref.watch(userAvatarBase64Provider(userId));
-              final displayName =
-                  _displayNameOrFallback(userId, displayNameAsync.value);
+          ...summaries.map((summary) {
+            final userId = summary.conversationId;
+            final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
+            final avatarBase64Async = ref.watch(
+              userAvatarBase64Provider(userId),
+            );
+            final displayName = _displayNameOrFallback(
+              userId,
+              displayNameAsync.value,
+            );
 
-              return Container(
+            return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLow,
@@ -630,36 +682,37 @@ class _ConversationStarter extends ConsumerWidget {
                 },
               ),
             );
-            },
-          ),
+          }),
 
         if (unreadCounts.isNotEmpty) ...[
           const SizedBox(height: 28),
           Row(
             children: [
-              Text('Conversations with unread',
-                  style: tt.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant)),
+              Text(
+                'Conversations with unread',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
               const Spacer(),
               TextButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh, size: 14),
-                label: const Text('Refresh',
-                    style: TextStyle(fontSize: 12)),
+                label: const Text('Refresh', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          ...unreadCounts.entries.map(
-            (e) {
-              final userId = e.key;
-              final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
-              final avatarBase64Async =
-                  ref.watch(userAvatarBase64Provider(userId));
-              final displayName =
-                  _displayNameOrFallback(userId, displayNameAsync.value);
+          ...unreadCounts.entries.map((e) {
+            final userId = e.key;
+            final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
+            final avatarBase64Async = ref.watch(
+              userAvatarBase64Provider(userId),
+            );
+            final displayName = _displayNameOrFallback(
+              userId,
+              displayNameAsync.value,
+            );
 
-              return Container(
+            return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
@@ -684,8 +737,7 @@ class _ConversationStarter extends ConsumerWidget {
                 },
               ),
             );
-            },
-          ),
+          }),
         ],
       ],
     );
@@ -714,8 +766,9 @@ class _ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final initials =
-        userId.length >= 2 ? userId.substring(0, 2).toUpperCase() : '?';
+    final initials = userId.length >= 2
+        ? userId.substring(0, 2).toUpperCase()
+        : '?';
 
     return CircleAvatar(
       radius: radius,
@@ -848,17 +901,15 @@ class _Composer extends StatelessWidget {
                 icon: Icons.emoji_emotions_outlined,
                 tooltip: 'Stickers',
                 onPressed: () async {
-                  final selected =
-                      await showModalBottomSheet<Sticker>(
+                  final selected = await showModalBottomSheet<Sticker>(
                     context: context,
-                    backgroundColor:
-                        cs.surfaceContainerHighest,
+                    backgroundColor: cs.surfaceContainerHighest,
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20)),
+                        top: Radius.circular(20),
+                      ),
                     ),
-                    builder: (_) => _StickerPicker(
-                        stickers: stickers),
+                    builder: (_) => _StickerPicker(stickers: stickers),
                   );
                   if (selected != null) {
                     onStickerSelected(selected);
@@ -872,17 +923,19 @@ class _Composer extends StatelessWidget {
                   onChanged: onChanged,
                   minLines: 1,
                   maxLines: 5,
-                  textCapitalization:
-                      TextCapitalization.sentences,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
                     hintText: 'Message',
                     hintStyle: TextStyle(
-                        color: cs.onSurfaceVariant,
-                        fontSize: 14),
+                      color: cs.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
                     filled: true,
                     fillColor: cs.surfaceContainerHighest,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(22),
                       borderSide: BorderSide.none,
@@ -902,8 +955,11 @@ class _Composer extends StatelessWidget {
                     color: cs.primary,
                     borderRadius: BorderRadius.circular(22),
                   ),
-                  child: Icon(Icons.send_rounded,
-                      size: 20, color: cs.onPrimary),
+                  child: Icon(
+                    Icons.send_rounded,
+                    size: 20,
+                    color: cs.onPrimary,
+                  ),
                 ),
               ),
             ],
@@ -962,16 +1018,16 @@ class _StickerPicker extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Stickers',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15)),
+              child: Text(
+                'Stickers',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
             ),
           ),
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 5,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
@@ -986,8 +1042,7 @@ class _StickerPicker extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
                 return InkWell(
-                  onTap: () =>
-                      Navigator.of(context).pop(sticker),
+                  onTap: () => Navigator.of(context).pop(sticker),
                   borderRadius: BorderRadius.circular(10),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
@@ -1008,12 +1063,13 @@ class _StickerPicker extends StatelessWidget {
 // —————————————————————————————————————————————————————
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble(
-      {required this.message,
-      required this.isMine,
-      required this.currentUserId,
-  required this.currentUserAvatarBase64,
-  required this.partnerAvatarBase64});
+  const _MessageBubble({
+    required this.message,
+    required this.isMine,
+    required this.currentUserId,
+    required this.currentUserAvatarBase64,
+    required this.partnerAvatarBase64,
+  });
 
   final LocalChatMessage message;
   final bool isMine;
@@ -1078,17 +1134,15 @@ class _MessageBubble extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    bubbleColor.withValues(alpha: 0),
-                    bubbleColor,
-                  ],
+                  colors: [bubbleColor.withValues(alpha: 0), bubbleColor],
                   stops: const [0.0, 0.55],
                 ),
               ),
               padding: const EdgeInsets.fromLTRB(14, 4, 14, 6),
               child: Align(
-                alignment:
-                    isMine ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: isMine
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
                 child: Text(
                   _timeLabel(message.createdAt),
                   maxLines: 1,
@@ -1108,10 +1162,7 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
 
-    bubble = GestureDetector(
-      onTap: () => _openDetail(context),
-      child: bubble,
-    );
+    bubble = GestureDetector(onTap: () => _openDetail(context), child: bubble);
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -1119,9 +1170,15 @@ class _MessageBubble extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isMine) ...[_MessageAvatar(userId: avatarId, avatarBase64: avatarBase64), const SizedBox(width: 6)],
+          if (!isMine) ...[
+            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+            const SizedBox(width: 6),
+          ],
           bubble,
-          if (isMine) ...[const SizedBox(width: 6), _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64)],
+          if (isMine) ...[
+            const SizedBox(width: 6),
+            _MessageAvatar(userId: avatarId, avatarBase64: avatarBase64),
+          ],
         ],
       ),
     );
@@ -1140,10 +1197,7 @@ class _MessageBubble extends StatelessWidget {
 // —————————————————————————————————————————————————————
 
 class _MessageDetailScreen extends StatelessWidget {
-  const _MessageDetailScreen({
-    required this.message,
-    required this.isMine,
-  });
+  const _MessageDetailScreen({required this.message, required this.isMine});
 
   final LocalChatMessage message;
   final bool isMine;
@@ -1187,7 +1241,9 @@ class _MessageDetailScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isMine ? cs.primaryContainer : cs.surfaceContainerHighest,
+                color: isMine
+                    ? cs.primaryContainer
+                    : cs.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: SelectableText(
@@ -1203,20 +1259,28 @@ class _MessageDetailScreen extends StatelessWidget {
               children: [
                 Icon(Icons.access_time, size: 14, color: cs.onSurfaceVariant),
                 const SizedBox(width: 6),
-                Text(dateStr,
-                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+                Text(
+                  dateStr,
+                  style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
               ],
             ),
-            if (!isMine) ...[  
+            if (!isMine) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 14, color: cs.onSurfaceVariant),
+                  Icon(
+                    Icons.person_outline,
+                    size: 14,
+                    color: cs.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       message.senderId,
-                      style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                      style: tt.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1239,7 +1303,9 @@ class _MessageAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final initials = userId.length >= 2 ? userId.substring(0, 2).toUpperCase() : '?';
+    final initials = userId.length >= 2
+        ? userId.substring(0, 2).toUpperCase()
+        : '?';
 
     return CircleAvatar(
       radius: 13,
@@ -1285,9 +1351,10 @@ class _UnreadBadge extends StatelessWidget {
       child: Text(
         count > 99 ? '99+' : '$count',
         style: TextStyle(
-            color: cs.onError,
-            fontSize: 11,
-            fontWeight: FontWeight.w700),
+          color: cs.onError,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

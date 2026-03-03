@@ -4,9 +4,32 @@ import 'package:http/http.dart' as http;
 
 import '../models/local_chat_message.dart';
 
+class ResolvedContact {
+  const ResolvedContact({
+    required this.partnerId,
+    required this.recipientId,
+    required this.recipientServerUrl,
+    required this.displayHandle,
+  });
+
+  final String partnerId;
+  final String recipientId;
+  final String recipientServerUrl;
+  final String displayHandle;
+
+  factory ResolvedContact.fromJson(Map<String, dynamic> json) {
+    return ResolvedContact(
+      partnerId: json['partner_id'] as String,
+      recipientId: json['recipient_id'] as String,
+      recipientServerUrl: json['recipient_server_url'] as String,
+      displayHandle: json['display_handle'] as String,
+    );
+  }
+}
+
 class RemoteChatService {
   RemoteChatService([http.Client? httpClient])
-      : _httpClient = httpClient ?? http.Client();
+    : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
 
@@ -49,16 +72,20 @@ class RemoteChatService {
     required String accessToken,
     required String partnerId,
     required String body,
+    String? recipientServerUrl,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final uri = Uri.parse('$normalized/api/messages');
 
+    final normalizedServerUrl = recipientServerUrl?.trim();
     final response = await _httpClient
         .post(
           uri,
           headers: _authHeaders(accessToken),
           body: jsonEncode({
             'recipient_id': partnerId,
+            if (normalizedServerUrl != null && normalizedServerUrl.isNotEmpty)
+              'recipient_server_url': normalizedServerUrl,
             'content': body,
           }),
         )
@@ -70,6 +97,34 @@ class RemoteChatService {
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     return _fromRemoteJson(json, conversationId: partnerId);
+  }
+
+  Future<ResolvedContact> resolveContact({
+    required String baseUrl,
+    required String accessToken,
+    required String recipientId,
+    required String recipientServerUrl,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/messages/resolve-contact');
+
+    final response = await _httpClient
+        .post(
+          uri,
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({
+            'recipient_id': recipientId.trim(),
+            'recipient_server_url': recipientServerUrl.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw StateError('Failed to resolve contact (${response.statusCode}).');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return ResolvedContact.fromJson(json);
   }
 
   Future<int> markRead({
@@ -105,13 +160,13 @@ class RemoteChatService {
         .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
-      throw StateError('Failed to fetch unread counts (${response.statusCode}).');
+      throw StateError(
+        'Failed to fetch unread counts (${response.statusCode}).',
+      );
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return decoded.map(
-      (key, value) => MapEntry(key, value is int ? value : 0),
-    );
+    return decoded.map((key, value) => MapEntry(key, value is int ? value : 0));
   }
 
   Map<String, String> _authHeaders(String accessToken) {

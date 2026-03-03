@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-  show TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/local_chat_message.dart';
@@ -7,7 +7,8 @@ import '../services/local_chat_repository.dart';
 import '../services/remote_chat_service.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  final supportsEncryptedLocalDb = !kIsWeb &&
+  final supportsEncryptedLocalDb =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS);
@@ -28,15 +29,18 @@ final conversationSummariesProvider = FutureProvider<List<ConversationSummary>>(
   },
 );
 
-final conversationMessagesProvider = AsyncNotifierProviderFamily<
-    ConversationMessagesController,
-    List<LocalChatMessage>,
-    String>(ConversationMessagesController.new);
+final conversationMessagesProvider =
+    AsyncNotifierProviderFamily<
+      ConversationMessagesController,
+      List<LocalChatMessage>,
+      String
+    >(ConversationMessagesController.new);
 
 class ConversationMessagesController
     extends FamilyAsyncNotifier<List<LocalChatMessage>, String> {
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
-  RemoteChatService get _remoteChatService => ref.read(remoteChatServiceProvider);
+  RemoteChatService get _remoteChatService =>
+      ref.read(remoteChatServiceProvider);
 
   @override
   Future<List<LocalChatMessage>> build(String partnerId) {
@@ -56,7 +60,10 @@ class ConversationMessagesController
 
     await _repository.upsertMessages(latest);
     ref.invalidate(conversationSummariesProvider);
-    final local = await _repository.listMessages(conversationId: arg, limit: 200);
+    final local = await _repository.listMessages(
+      conversationId: arg,
+      limit: 200,
+    );
     state = AsyncData(local);
   }
 
@@ -81,7 +88,10 @@ class ConversationMessagesController
 
     await _repository.upsertMessages(older);
     ref.invalidate(conversationSummariesProvider);
-    final local = await _repository.listMessages(conversationId: arg, limit: 200);
+    final local = await _repository.listMessages(
+      conversationId: arg,
+      limit: 200,
+    );
     state = AsyncData(local);
   }
 
@@ -89,6 +99,7 @@ class ConversationMessagesController
     required String baseUrl,
     required String accessToken,
     required String body,
+    String? recipientServerUrl,
   }) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) {
@@ -100,6 +111,7 @@ class ConversationMessagesController
       accessToken: accessToken,
       partnerId: arg,
       body: trimmed,
+      recipientServerUrl: recipientServerUrl,
     );
 
     await _repository.upsertMessages([sent]);
@@ -110,14 +122,14 @@ class ConversationMessagesController
       partnerId: arg,
     );
 
-    final local = await _repository.listMessages(conversationId: arg, limit: 200);
+    final local = await _repository.listMessages(
+      conversationId: arg,
+      limit: 200,
+    );
     state = AsyncData(local);
   }
 
-  Future<int> markRead({
-    required String baseUrl,
-    required String accessToken,
-  }) {
+  Future<int> markRead({required String baseUrl, required String accessToken}) {
     return _remoteChatService.markRead(
       baseUrl: baseUrl,
       accessToken: accessToken,
