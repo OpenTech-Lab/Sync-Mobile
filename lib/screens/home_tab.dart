@@ -189,27 +189,44 @@ class HomeTab extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     onTap: () async {
+                      final prefs = ref.read(userProfilePreferencesProvider);
                       final messages = await ref
                           .read(chatRepositoryProvider)
                           .listMessages(conversationId: id, limit: 5000);
                       final sentMessageCount = messages
                           .where((message) => message.senderId == currentUserId)
                           .length;
+                      final friendAddedAt = await prefs.readFriendAddedAt(id);
                       if (!context.mounted) {
                         return;
                       }
-                      await Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
+                      final action = await Navigator.of(
+                        context,
+                      ).push<ChatTargetProfileAction>(
+                        MaterialPageRoute<ChatTargetProfileAction>(
                           builder: (_) => ChatTargetProfileScreen(
                             displayName: displayName,
                             displayHandle: id,
                             avatarBase64: avatarBase64,
                             isFriend: true,
+                            friendAddedAt: friendAddedAt,
                             sentMessageCount: sentMessageCount,
                             description: description,
                             showActions: false,
                           ),
                         ),
+                      );
+                      if (!context.mounted ||
+                          action != ChatTargetProfileAction.cancelFriend) {
+                        return;
+                      }
+                      await prefs.removeFriendId(id);
+                      ref.invalidate(friendIdsProvider);
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Friend removed')),
                       );
                     },
                   );

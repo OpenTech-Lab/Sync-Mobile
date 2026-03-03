@@ -32,6 +32,13 @@ final friendIdsProvider = FutureProvider<List<String>>((ref) {
   return ref.read(userProfilePreferencesProvider).readFriendIds();
 });
 
+final friendAddedAtProvider = FutureProvider.family<DateTime?, String>((
+  ref,
+  userId,
+) {
+  return ref.read(userProfilePreferencesProvider).readFriendAddedAt(userId);
+});
+
 final remoteUserProfileServiceProvider = Provider<RemoteUserProfileService>((
   ref,
 ) {

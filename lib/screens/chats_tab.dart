@@ -184,8 +184,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 
   Future<_ChatTargetInput?> _promptForChatTarget() async {
-    final idController = TextEditingController();
-    final serverController = TextEditingController(text: widget.serverUrl);
+    final targetController = TextEditingController();
     final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
@@ -195,18 +194,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: idController,
+                controller: targetController,
                 autofocus: true,
                 decoration: const InputDecoration(
-                  hintText: 'Friend ID',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: serverController,
-                decoration: const InputDecoration(
-                  hintText: 'Friend server URL',
+                  hintText: 'Paste friend link or user ID',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -219,9 +210,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(
-                _ChatTargetInput(
-                  friendId: idController.text.trim(),
-                  serverUrl: serverController.text.trim(),
+                _parseChatTargetInput(
+                  targetController.text.trim(),
+                  defaultServerUrl: widget.serverUrl,
                 ),
               ),
               child: const Text('Next'),
@@ -230,9 +221,37 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         );
       },
     );
-    idController.dispose();
-    serverController.dispose();
+    targetController.dispose();
     return result;
+  }
+
+  _ChatTargetInput _parseChatTargetInput(
+    String raw, {
+    required String defaultServerUrl,
+  }) {
+    final value = raw.trim();
+    final parsed = Uri.tryParse(value);
+
+    if (parsed != null && parsed.hasScheme && parsed.host.isNotEmpty) {
+      String id = '';
+      for (final segment in parsed.pathSegments) {
+        final normalized = segment.trim();
+        if (normalized.isNotEmpty) {
+          id = normalized;
+          break;
+        }
+      }
+      final host = parsed.host.trim();
+      final origin = host.isEmpty
+          ? ''
+          : '${parsed.scheme}://$host${parsed.hasPort ? ':${parsed.port}' : ''}';
+      return _ChatTargetInput(
+        friendId: id,
+        serverUrl: origin.isEmpty ? defaultServerUrl : origin,
+      );
+    }
+
+    return _ChatTargetInput(friendId: value, serverUrl: defaultServerUrl);
   }
 
   Future<_ResolvedTargetProfile?> _resolveTarget(
@@ -299,10 +318,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       final sentMessageCount = await _sentMessageCountForPartner(
         resolved.partnerId,
       );
-      final isFriend = (await ref
-              .read(userProfilePreferencesProvider)
-              .readFriendIds())
-          .contains(resolved.partnerId);
+      final prefs = ref.read(userProfilePreferencesProvider);
+      final isFriend = (await prefs.readFriendIds()).contains(
+        resolved.partnerId,
+      );
+      final friendAddedAt = isFriend
+          ? await prefs.readFriendAddedAt(resolved.partnerId)
+          : null;
       if (!mounted) {
         return;
       }
@@ -314,6 +336,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             displayHandle: resolved.displayHandle,
             avatarBase64: resolved.avatarBase64,
             isFriend: isFriend,
+            friendAddedAt: friendAddedAt,
             sentMessageCount: sentMessageCount,
             description: resolved.description,
           ),
@@ -323,13 +346,19 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         return;
       }
 
-      _partnerServerUrlOverrides[resolved.partnerId] =
-          resolved.recipientServerUrl;
-      await _openPartner(resolved.partnerId);
+      if (action == ChatTargetProfileAction.cancelFriend) {
+        await prefs.removeFriendId(resolved.partnerId);
+        ref.invalidate(friendIdsProvider);
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Friend removed')));
+        return;
+      }
       if (action == ChatTargetProfileAction.addFriend && mounted) {
-        await ref
-            .read(userProfilePreferencesProvider)
-            .addFriendId(resolved.partnerId);
+        await prefs.addFriendId(resolved.partnerId);
         ref.invalidate(friendIdsProvider);
         if (!mounted) {
           return;
@@ -337,6 +366,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Friend added')));
+      }
+      if (action == ChatTargetProfileAction.startChat ||
+          action == ChatTargetProfileAction.addFriend) {
+        _partnerServerUrlOverrides[resolved.partnerId] =
+            resolved.recipientServerUrl;
+        await _openPartner(resolved.partnerId);
       }
     } catch (error) {
       if (!mounted) return;
@@ -413,10 +448,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
     final description = ref.read(userDescriptionProvider(partnerId)).value;
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
-    final isFriend = (await ref
-            .read(userProfilePreferencesProvider)
-            .readFriendIds())
-        .contains(partnerId);
+    final prefs = ref.read(userProfilePreferencesProvider);
+    final isFriend = (await prefs.readFriendIds()).contains(partnerId);
+    final friendAddedAt = isFriend
+        ? await prefs.readFriendAddedAt(partnerId)
+        : null;
     if (!mounted) {
       return;
     }
@@ -427,23 +463,37 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           displayHandle: partnerId,
           avatarBase64: avatarBase64,
           isFriend: isFriend,
+          friendAddedAt: friendAddedAt,
           sentMessageCount: sentMessageCount,
           description: description,
           showActions: false,
         ),
       ),
     );
-    if (!mounted || action != ChatTargetProfileAction.addFriend) {
+    if (!mounted || action == null) {
       return;
     }
-    await ref.read(userProfilePreferencesProvider).addFriendId(partnerId);
-    ref.invalidate(friendIdsProvider);
-    if (!mounted) {
+    if (action == ChatTargetProfileAction.addFriend) {
+      await ref.read(userProfilePreferencesProvider).addFriendId(partnerId);
+      ref.invalidate(friendIdsProvider);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Friend added')));
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Friend added')));
+    if (action == ChatTargetProfileAction.cancelFriend) {
+      await ref.read(userProfilePreferencesProvider).removeFriendId(partnerId);
+      ref.invalidate(friendIdsProvider);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Friend removed')));
+    }
   }
 
   Future<int> _sentMessageCountForPartner(String partnerId) async {

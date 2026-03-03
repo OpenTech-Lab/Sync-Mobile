@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-enum ChatTargetProfileAction { startChat, addFriend }
+enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
 
 class ChatTargetProfileScreen extends StatelessWidget {
   const ChatTargetProfileScreen({
@@ -11,6 +11,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
     required this.displayHandle,
     required this.avatarBase64,
     this.isFriend = false,
+    this.friendAddedAt,
     this.sentMessageCount,
     this.description,
     this.showActions = true,
@@ -20,6 +21,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
   final String displayHandle;
   final String? avatarBase64;
   final bool isFriend;
+  final DateTime? friendAddedAt;
   final int? sentMessageCount;
   final String? description;
   final bool showActions;
@@ -33,7 +35,18 @@ class ChatTargetProfileScreen extends StatelessWidget {
         : displayName.trim().substring(0, 1).toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          if (isFriend)
+            TextButton(
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(ChatTargetProfileAction.cancelFriend),
+              child: const Text('Cancel friend'),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: SizedBox(
           width: double.infinity,
@@ -129,6 +142,22 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isFriend && friendAddedAt != null) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Friend since ${_friendSinceLabel(friendAddedAt!)}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               if (isFriend && sentMessageCount != null) ...[
                 const SizedBox(height: 12),
                 Padding(
@@ -223,6 +252,15 @@ class ChatTargetProfileScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+String _friendSinceLabel(DateTime value) {
+  final y = value.year.toString().padLeft(4, '0');
+  final m = value.month.toString().padLeft(2, '0');
+  final d = value.day.toString().padLeft(2, '0');
+  final hh = value.hour.toString().padLeft(2, '0');
+  final mm = value.minute.toString().padLeft(2, '0');
+  return '$y-$m-$d $hh:$mm';
 }
 
 class _TargetProfileQuickAction extends StatelessWidget {

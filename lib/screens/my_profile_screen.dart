@@ -301,6 +301,34 @@ class MyProfileScreen extends ConsumerWidget {
                             onPressed: saveUsername,
                           ),
                         ),
+                        SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              Icons.copy_outlined,
+                              size: 14,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            tooltip: 'Copy friend link',
+                            onPressed: () {
+                              final link = _friendLink(
+                                serverUrl: serverUrl,
+                                userId: currentUserId,
+                              );
+                              Clipboard.setData(ClipboardData(text: link));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Friend link copied'),
+                                  duration: Duration(seconds: 1),
+                                  behavior: SnackBarBehavior.floating,
+                                  width: 180,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -524,6 +552,13 @@ String _planetNameFromServerUrl(String serverUrl) {
     return host;
   }
   return normalized;
+}
+
+String _friendLink({required String serverUrl, required String userId}) {
+  final normalized = serverUrl.trim().endsWith('/')
+      ? serverUrl.trim().substring(0, serverUrl.trim().length - 1)
+      : serverUrl.trim();
+  return '$normalized/${userId.trim()}';
 }
 
 class _UsernameEditDialogState extends State<_UsernameEditDialog> {
