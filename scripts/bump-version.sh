@@ -49,15 +49,16 @@ semver_gt() {
   return 1  # equal
 }
 
-if [ "${VERSION_NAME}" = "${CURRENT_VERSION_NAME}" ]; then
-  echo "Error: ${VERSION_NAME} is already the current version (${CURRENT_VERSION_FULL})."
-  echo "Use a higher version number."
-  exit 1
+# Determine latest known version from current pubspec and existing release tags.
+LATEST_VERSION="${CURRENT_VERSION_NAME}"
+LATEST_TAG_VERSION="$(git -C "${PROJECT_ROOT}" tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -n1)"
+if [ -n "${LATEST_TAG_VERSION}" ] && semver_gt "${LATEST_TAG_VERSION}" "${LATEST_VERSION}"; then
+  LATEST_VERSION="${LATEST_TAG_VERSION}"
 fi
 
-if ! semver_gt "${VERSION_NAME}" "${CURRENT_VERSION_NAME}"; then
-  echo "Error: ${VERSION_NAME} is older than the current version (${CURRENT_VERSION_NAME})."
-  echo "You must bump to a version greater than ${CURRENT_VERSION_NAME}."
+if ! semver_gt "${VERSION_NAME}" "${LATEST_VERSION}"; then
+  echo "Error: ${VERSION_NAME} must be greater than latest version (${LATEST_VERSION})."
+  echo "Use a higher version number."
   exit 1
 fi
 
