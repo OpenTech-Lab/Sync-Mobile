@@ -110,7 +110,7 @@ jobs:
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/ios/Gemfile
         with:
-          ruby-version: '3.1'
+          ruby-version: '3.2'
           bundler-cache: true
 
       - name: Build and Upload
