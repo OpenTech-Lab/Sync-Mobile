@@ -27,43 +27,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Validate required secret
-        run: |
-          if [ -z "${{ secrets.GOOGLE_CLOUD_TRANSLATE_API_KEY }}" ]; then
-            echo "Missing required secret: GOOGLE_CLOUD_TRANSLATE_API_KEY"
-            exit 1
-          fi
-
-      - name: Create .env for mobile build
-        run: |
-          printf 'GOOGLE_CLOUD_TRANSLATE_API_KEY=%s\n' "${{ secrets.GOOGLE_CLOUD_TRANSLATE_API_KEY }}" > .env
-
-      - name: Prepare Amplify outputs for mobile
-        run: |
-          mkdir -p apps/mobile/assets
-
-          if [ -f "apps/mobile/assets/amplify_outputs.json" ]; then
-            echo "Using existing apps/mobile/assets/amplify_outputs.json"
-          elif [ -f "packages/backend/amplify_outputs.json" ]; then
-            cp packages/backend/amplify_outputs.json apps/mobile/assets/amplify_outputs.json
-            echo "Copied packages/backend/amplify_outputs.json to apps/mobile/assets/amplify_outputs.json"
-          elif [ -n "${{ secrets.AMPLIFY_OUTPUTS_JSON }}" ]; then
-            printf '%s' "${{ secrets.AMPLIFY_OUTPUTS_JSON }}" > apps/mobile/assets/amplify_outputs.json
-            echo "Created apps/mobile/assets/amplify_outputs.json from secret AMPLIFY_OUTPUTS_JSON"
-          else
-            echo "Missing amplify_outputs.json. Provide one of:"
-            echo "1) Commit apps/mobile/assets/amplify_outputs.json"
-            echo "2) Commit packages/backend/amplify_outputs.json"
-            echo "3) Set GitHub secret AMPLIFY_OUTPUTS_JSON"
-            exit 1
-          fi
-
       - name: Build iOS IPA (release, no codesign)
         run: |
           cd apps/mobile
-          flutter build ipa --release --no-codesign --dart-define=GOOGLE_CLOUD_TRANSLATE_API_KEY="${GOOGLE_CLOUD_TRANSLATE_API_KEY}"
-        env:
-          GOOGLE_CLOUD_TRANSLATE_API_KEY: ${{ secrets.GOOGLE_CLOUD_TRANSLATE_API_KEY }}
+          flutter build ipa --release --no-codesign
+
 
       - name: Upload iOS build artifacts
         uses: actions/upload-artifact@v4
