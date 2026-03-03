@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../constants/planet_presets.dart';
 import '../models/friend_qr_payload.dart';
 import '../state/app_controller.dart';
 import '../state/user_profile_controller.dart';
@@ -36,6 +37,9 @@ class MyProfileScreen extends ConsumerWidget {
               ? currentUserId.substring(0, 8)
               : currentUserId)
         : currentUsername!.trim();
+    final description = ref.watch(userDescriptionProvider(currentUserId)).value;
+    final oneLineDescription = (description ?? '').trim();
+    final planetLabel = _planetNameFromServerUrl(serverUrl);
     final myQrPayload = FriendQrPayload(
       userId: currentUserId,
       serverUrl: serverUrl,
@@ -93,6 +97,38 @@ class MyProfileScreen extends ConsumerWidget {
           const SnackBar(content: Text('Failed to update username')),
         );
       }
+    }
+
+    Future<void> saveDescription() async {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) =>
+            _DescriptionEditDialog(initialValue: description ?? ''),
+      );
+
+      if (result == null) {
+        return;
+      }
+
+      final normalized = result.trim();
+      final words = _wordCount(normalized);
+      if (words > 100) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Description must be 100 words or less')),
+        );
+        return;
+      }
+
+      await ref
+          .read(userProfilePreferencesProvider)
+          .writeDescription(currentUserId, normalized.isEmpty ? null : normalized);
+      ref.invalidate(userDescriptionProvider(currentUserId));
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Description updated')));
     }
 
     const palette = [
@@ -248,6 +284,9 @@ class MyProfileScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 6),
+                        _PlanetBadge(label: planetLabel),
+                        const SizedBox(width: 4),
                         SizedBox(
                           width: 26,
                           height: 26,
@@ -269,9 +308,10 @@ class MyProfileScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            currentUserId,
-                            style: tt.labelSmall?.copyWith(
-                              fontFamily: 'monospace',
+                            oneLineDescription.isEmpty
+                                ? 'No description yet'
+                                : oneLineDescription,
+                            style: tt.bodySmall?.copyWith(
                               color: cs.onSurfaceVariant,
                             ),
                             maxLines: 1,
@@ -284,24 +324,12 @@ class MyProfileScreen extends ConsumerWidget {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             icon: Icon(
-                              Icons.copy_outlined,
+                              Icons.edit_note_outlined,
                               size: 14,
                               color: cs.onSurfaceVariant,
                             ),
-                            tooltip: 'Copy ID',
-                            onPressed: () {
-                              Clipboard.setData(
-                                ClipboardData(text: currentUserId),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Your ID copied'),
-                                  duration: Duration(seconds: 1),
-                                  behavior: SnackBarBehavior.floating,
-                                  width: 160,
-                                ),
-                              );
-                            },
+                            tooltip: 'Edit description',
+                            onPressed: saveDescription,
                           ),
                         ),
                       ],
@@ -379,6 +407,123 @@ class _UsernameEditDialog extends StatefulWidget {
 
   @override
   State<_UsernameEditDialog> createState() => _UsernameEditDialogState();
+}
+
+class _DescriptionEditDialog extends StatefulWidget {
+  const _DescriptionEditDialog({required this.initialValue});
+  final String initialValue;
+
+  @override
+  State<_DescriptionEditDialog> createState() => _DescriptionEditDialogState();
+}
+
+class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialValue);
+    _ctrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final words = _wordCount(_ctrl.text);
+    return AlertDialog(
+      title: const Text('Edit description'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Write about yourself (max 100 words)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '$words / 100 words',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: words > 100
+              ? null
+              : () => Navigator.of(context).pop(_ctrl.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlanetBadge extends StatelessWidget {
+  const _PlanetBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: cs.onPrimaryContainer,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+int _wordCount(String text) {
+  final normalized = text.trim();
+  if (normalized.isEmpty) {
+    return 0;
+  }
+  return normalized.split(RegExp(r'\s+')).length;
+}
+
+String _planetNameFromServerUrl(String serverUrl) {
+  final normalized = serverUrl.trim();
+  final preset = officialPlanetPresets.firstWhere(
+    (item) => item.url.toLowerCase() == normalized.toLowerCase(),
+    orElse: () => const PlanetPreset(name: '', url: ''),
+  );
+  if (preset.name.isNotEmpty) {
+    return preset.name;
+  }
+  final host = Uri.tryParse(normalized)?.host.trim() ?? '';
+  if (host.isNotEmpty) {
+    return host;
+  }
+  return normalized;
 }
 
 class _UsernameEditDialogState extends State<_UsernameEditDialog> {

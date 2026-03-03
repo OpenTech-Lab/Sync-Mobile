@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/planet_presets.dart';
+import '../state/conversation_messages_controller.dart';
 import 'chat_target_profile_screen.dart';
 import 'my_profile_screen.dart';
 import '../state/unread_counts_controller.dart';
@@ -131,6 +132,8 @@ class HomeTab extends ConsumerWidget {
                     id,
                     ref.watch(userDisplayNameProvider(id)).value,
                   );
+                  final description =
+                      ref.watch(userDescriptionProvider(id)).value ?? '';
                   final avatarBase64 = ref
                       .watch(userAvatarBase64Provider(id))
                       .value;
@@ -157,15 +160,27 @@ class HomeTab extends ConsumerWidget {
                               ),
                             ),
                     ),
-                    title: Text(
-                      displayName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _PlanetBadge(label: planetLabel),
+                      ],
                     ),
                     subtitle: Text(
-                      planetLabel,
+                      description.trim().isEmpty
+                          ? 'No description yet'
+                          : description.trim(),
                       style: TextStyle(
                         fontSize: 11,
                         color: cs.onSurfaceVariant,
@@ -174,6 +189,15 @@ class HomeTab extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     onTap: () async {
+                      final messages = await ref
+                          .read(chatRepositoryProvider)
+                          .listMessages(conversationId: id, limit: 5000);
+                      final sentMessageCount = messages
+                          .where((message) => message.senderId == currentUserId)
+                          .length;
+                      if (!context.mounted) {
+                        return;
+                      }
                       await Navigator.of(context).push<void>(
                         MaterialPageRoute<void>(
                           builder: (_) => ChatTargetProfileScreen(
@@ -181,6 +205,8 @@ class HomeTab extends ConsumerWidget {
                             displayHandle: id,
                             avatarBase64: avatarBase64,
                             isFriend: true,
+                            sentMessageCount: sentMessageCount,
+                            description: description,
                             showActions: false,
                           ),
                         ),
@@ -260,6 +286,32 @@ class _SectionLabel extends StatelessWidget {
             color: cs.outlineVariant.withValues(alpha: .45),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlanetBadge extends StatelessWidget {
+  const _PlanetBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: cs.onPrimaryContainer,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

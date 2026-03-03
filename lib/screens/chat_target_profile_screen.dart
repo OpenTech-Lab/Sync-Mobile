@@ -11,6 +11,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
     required this.displayHandle,
     required this.avatarBase64,
     this.isFriend = false,
+    this.sentMessageCount,
+    this.description,
     this.showActions = true,
   });
 
@@ -18,6 +20,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
   final String displayHandle;
   final String? avatarBase64;
   final bool isFriend;
+  final int? sentMessageCount;
+  final String? description;
   final bool showActions;
 
   @override
@@ -125,6 +129,44 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isFriend && sentMessageCount != null) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.analytics_outlined,
+                          size: 18,
+                          color: cs.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Messages sent: $sentMessageCount',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (showActions) ...[
                 const SizedBox(height: 28),
                 SizedBox(
@@ -134,6 +176,44 @@ class ChatTargetProfileScreen extends StatelessWidget {
                       context,
                     ).pop(ChatTargetProfileAction.startChat),
                     child: const Text('Start chat'),
+                  ),
+                ),
+              ],
+              if ((description ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Description',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          description!.trim(),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: cs.onSurface),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

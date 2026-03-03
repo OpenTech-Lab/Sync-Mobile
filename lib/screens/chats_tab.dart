@@ -260,6 +260,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
     String displayName = resolved.displayHandle;
     String? avatarBase64;
+    String? description;
     try {
       final profile = await ref
           .read(remoteUserProfileServiceProvider)
@@ -275,6 +276,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     } catch (_) {
       // fallback to resolved handle only
     }
+    description = await ref
+        .read(userProfilePreferencesProvider)
+        .readDescription(resolved.partnerId);
 
     return _ResolvedTargetProfile(
       partnerId: resolved.partnerId,
@@ -282,6 +286,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       displayName: displayName,
       displayHandle: resolved.displayHandle,
       avatarBase64: avatarBase64,
+      description: description,
     );
   }
 
@@ -291,6 +296,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted || resolved == null) {
         return;
       }
+      final sentMessageCount = await _sentMessageCountForPartner(
+        resolved.partnerId,
+      );
       final isFriend = (await ref
               .read(userProfilePreferencesProvider)
               .readFriendIds())
@@ -306,6 +314,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             displayHandle: resolved.displayHandle,
             avatarBase64: resolved.avatarBase64,
             isFriend: isFriend,
+            sentMessageCount: sentMessageCount,
+            description: resolved.description,
           ),
         ),
       );
@@ -401,6 +411,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       ref.read(userDisplayNameProvider(partnerId)).value,
     );
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
+    final description = ref.read(userDescriptionProvider(partnerId)).value;
+    final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final isFriend = (await ref
             .read(userProfilePreferencesProvider)
             .readFriendIds())
@@ -415,6 +427,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           displayHandle: partnerId,
           avatarBase64: avatarBase64,
           isFriend: isFriend,
+          sentMessageCount: sentMessageCount,
+          description: description,
           showActions: false,
         ),
       ),
@@ -430,6 +444,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Friend added')));
+  }
+
+  Future<int> _sentMessageCountForPartner(String partnerId) async {
+    final messages = await ref
+        .read(chatRepositoryProvider)
+        .listMessages(conversationId: partnerId, limit: 5000);
+    return messages
+        .where((message) => message.senderId == widget.currentUserId)
+        .length;
   }
 
   Future<void> _markAllUnreadAsRead(Map<String, int> unreadCounts) async {
@@ -741,6 +764,7 @@ class _ResolvedTargetProfile {
     required this.displayName,
     required this.displayHandle,
     required this.avatarBase64,
+    required this.description,
   });
 
   final String partnerId;
@@ -748,6 +772,7 @@ class _ResolvedTargetProfile {
   final String displayName;
   final String displayHandle;
   final String? avatarBase64;
+  final String? description;
 }
 
 // —————————————————————————————————————————————————————

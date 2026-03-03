@@ -21,6 +21,13 @@ final userDisplayNameProvider = FutureProvider.family<String?, String>((
   return ref.read(userProfilePreferencesProvider).readDisplayName(userId);
 });
 
+final userDescriptionProvider = FutureProvider.family<String?, String>((
+  ref,
+  userId,
+) {
+  return ref.read(userProfilePreferencesProvider).readDescription(userId);
+});
+
 final friendIdsProvider = FutureProvider<List<String>>((ref) {
   return ref.read(userProfilePreferencesProvider).readFriendIds();
 });
