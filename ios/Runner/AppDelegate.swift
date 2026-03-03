@@ -58,6 +58,8 @@ import UserNotifications
       case "getPushToken":
         let token = self.apnsTokenHex ?? UserDefaults.standard.string(forKey: "apns_push_token")
         result(token)
+      case "showLocalNotification":
+        self.showLocalNotification(call: call, result: result)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -87,6 +89,63 @@ import UserNotifications
         }
         result(granted)
       }
+    }
+  }
+
+  private func showLocalNotification(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any] else {
+      result(
+        FlutterError(
+          code: "invalid_args",
+          message: "Expected title/body arguments",
+          details: nil
+        )
+      )
+      return
+    }
+
+    let title = (args["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let body = (args["body"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if title.isEmpty && body.isEmpty {
+      result(nil)
+      return
+    }
+
+    let content = UNMutableNotificationContent()
+    content.title = title
+    content.body = body
+    content.sound = .default
+
+    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+    let request = UNNotificationRequest(
+      identifier: UUID().uuidString,
+      content: content,
+      trigger: trigger
+    )
+    UNUserNotificationCenter.current().add(request) { error in
+      if let error {
+        result(
+          FlutterError(
+            code: "notification_error",
+            message: "Failed to show local notification",
+            details: error.localizedDescription
+          )
+        )
+        return
+      }
+      result(nil)
+    }
+  }
+
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    if #available(iOS 14.0, *) {
+      completionHandler([.banner, .list, .sound, .badge])
+    } else {
+      completionHandler([.alert, .sound, .badge])
     }
   }
 }

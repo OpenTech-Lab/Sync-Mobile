@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/realtime_event.dart';
 import '../services/realtime_sync_service.dart';
+import '../services/notification_service.dart';
+import 'chat_visibility_controller.dart';
 import 'conversation_messages_controller.dart';
 import 'unread_counts_controller.dart';
 
@@ -25,6 +27,10 @@ final realtimeSyncServiceProvider = Provider<RealtimeSyncService>((ref) {
   final service = RealtimeSyncService();
   ref.onDispose(service.dispose);
   return service;
+});
+
+final realtimeNotificationServiceProvider = Provider<NotificationService>((_) {
+  return NotificationService();
 });
 
 final realtimeSyncControllerProvider =
@@ -75,10 +81,21 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
       }
 
       if (event.message != null) {
-        await ref.read(chatRepositoryProvider).upsertMessages([event.message!]);
-        final partnerId = event.message!.conversationId;
+        final message = event.message!;
+        await ref.read(chatRepositoryProvider).upsertMessages([message]);
+        final partnerId = message.conversationId;
         ref.invalidate(conversationMessagesProvider(partnerId));
         ref.invalidate(conversationSummariesProvider);
+        final visibility = ref.read(chatVisibilityProvider);
+        if (!visibility.isConversationOpen(partnerId) &&
+            message.senderId != currentUserId) {
+          await ref
+              .read(realtimeNotificationServiceProvider)
+              .showIncomingMessageNotification(
+                partnerId: partnerId,
+                body: message.body,
+              );
+        }
         final accessToken = await accessTokenProvider();
         if (accessToken == null || accessToken.isEmpty) {
           return;

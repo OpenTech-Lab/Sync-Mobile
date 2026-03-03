@@ -20,7 +20,9 @@ class NotificationService {
   final http.Client _httpClient;
 
   Future<void> initialize() async {
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android)) {
       try {
         await _channel.invokeMethod<bool>('requestPushPermission');
       } catch (_) {}
@@ -88,6 +90,30 @@ class NotificationService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Push token sync failed (${response.statusCode}).');
     }
+  }
+
+  Future<void> showIncomingMessageNotification({
+    required String partnerId,
+    required String body,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+
+    final trimmedPartner = partnerId.trim();
+    if (trimmedPartner.isEmpty) {
+      return;
+    }
+
+    final normalizedBody = body.trim();
+    final preview = normalizedBody.isEmpty ? 'New message' : normalizedBody;
+
+    try {
+      await _channel.invokeMethod<void>('showLocalNotification', {
+        'title': trimmedPartner,
+        'body': preview,
+      });
+    } catch (_) {}
   }
 
   String _platformName() {

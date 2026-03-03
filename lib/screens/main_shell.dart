@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/server_health_service.dart';
 import '../state/app_controller.dart';
+import '../state/chat_visibility_controller.dart';
 import '../state/notification_controller.dart';
 import '../state/realtime_sync_controller.dart';
 import '../state/sticker_controller.dart';
@@ -46,6 +47,7 @@ class _MainShellState extends ConsumerState<MainShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
+    _syncChatVisibility();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final effectiveToken =
           await _effectiveAccessToken() ?? widget.accessToken;
@@ -104,12 +106,26 @@ class _MainShellState extends ConsumerState<MainShell>
 
   @override
   void dispose() {
+    ref.read(chatVisibilityProvider.notifier).state = const ChatVisibilityState(
+      isChatsTabSelected: false,
+      activePartnerId: null,
+    );
     WidgetsBinding.instance.removeObserver(this);
     _realtimeSyncNotifier.disconnect();
     super.dispose();
   }
 
-  void _onTabTapped(int index) => setState(() => _selectedIndex = index);
+  void _onTabTapped(int index) {
+    setState(() => _selectedIndex = index);
+    _syncChatVisibility();
+  }
+
+  void _syncChatVisibility() {
+    ref.read(chatVisibilityProvider.notifier).state = ChatVisibilityState(
+      isChatsTabSelected: _selectedIndex == 1,
+      activePartnerId: _activePartnerId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +146,7 @@ class _MainShellState extends ConsumerState<MainShell>
             _selectedIndex = 1;
             _activePartnerId = friendId;
           });
+          _syncChatVisibility();
         },
       ),
       ChatsTab(
@@ -137,7 +154,10 @@ class _MainShellState extends ConsumerState<MainShell>
         accessToken: widget.accessToken,
         currentUserId: widget.currentUserId,
         initialPartnerId: _activePartnerId,
-        onPartnerChanged: (id) => setState(() => _activePartnerId = id),
+        onPartnerChanged: (id) {
+          setState(() => _activePartnerId = id);
+          _syncChatVisibility();
+        },
       ),
       SettingsTab(
         serverUrl: widget.serverUrl,
