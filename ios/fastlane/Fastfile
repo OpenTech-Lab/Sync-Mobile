@@ -33,6 +33,10 @@ platform :ios do
     # --- Archive & export (manual signing; profile already installed by CI) ---
     # xcargs must be a Hash so fastlane shell-quotes each value individually.
     # Passing a joined String breaks when the profile name contains spaces.
+    app_identifier = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
+    if app_identifier.to_s.empty?
+      UI.user_error!("app_identifier is missing. Set it in ios/fastlane/Appfile")
+    end
     profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
 
     gym(
@@ -51,7 +55,7 @@ platform :ios do
         teamID:               ENV.fetch("IOS_TEAM_ID"),
         signingStyle:         "manual",
         provisioningProfiles: {
-          "com.sync.icyanstudio" => profile_name,
+          app_identifier => profile_name,
         },
         uploadSymbols:        true,
       },
