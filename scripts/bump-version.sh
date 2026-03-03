@@ -6,7 +6,7 @@
 set -e
 
 VERSION=$1
-PUBSPEC="apps/mobile/pubspec.yaml"
+PUBSPEC="./pubspec.yaml"
 
 if [ -z "$VERSION" ]; then
   echo "Usage: $0 <version>"
