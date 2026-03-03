@@ -104,22 +104,43 @@ jobs:
           echo "IOS_PROVISIONING_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           echo "IOS_PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
 
-      - name: Setup Ruby and Fastlane
-        uses: ruby/setup-ruby@v1
-        env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/mobile/ios/Gemfile
-        with:
-          ruby-version: '3.1'
-          bundler-cache: true
+      - name: Flutter pub get
+        working-directory: mobile
+        run: flutter pub get
 
-      - name: Build and Upload
-        working-directory: mobile/ios
+      - name: Build signed IPA
+        working-directory: mobile
         env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/mobile/ios/Gemfile
+          IOS_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          VERSION_NAME="${GITHUB_REF_NAME#v}"
+          flutter build ipa \
+            --release \
+            --build-name "${VERSION_NAME}" \
+            --build-number "${IOS_BUILD_NUMBER}"
+
+      - name: Upload IPA to TestFlight
+        working-directory: mobile
+        env:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
-          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-          GOOGLE_CLOUD_TRANSLATE_API_KEY: ${{ secrets.GOOGLE_CLOUD_TRANSLATE_API_KEY }}
-          IOS_BUILD_NUMBER: ${{ github.run_number }}
-        run: bundle exec fastlane release
+        run: |
+          IPA_PATH="$(find build/ios/ipa -name '*.ipa' -maxdepth 1 | head -n 1)"
+
+          if [ -z "$IPA_PATH" ]; then
+            echo "No IPA found under build/ios/ipa"
+            exit 1
+          fi
+
+          API_KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          API_KEY_PATH="$API_KEY_DIR/AuthKey_${APPLE_API_KEY_ID}.p8"
+          mkdir -p "$API_KEY_DIR"
+          printf '%s' "$APPLE_API_PRIVATE_KEY_BASE64" | base64 -d > "$API_KEY_PATH"
+
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$APPLE_API_KEY_ID" \
+            --apiIssuer "$APPLE_API_ISSUER_ID"
