@@ -108,15 +108,15 @@ jobs:
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          BUNDLE_GEMFILE: ${{ github.workspace }}/ios/Gemfile
         with:
           ruby-version: '3.1'
           bundler-cache: true
 
       - name: Build and Upload
-        working-directory: apps/mobile/ios
+        working-directory: ios
         env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          BUNDLE_GEMFILE: ${{ github.workspace }}/ios/Gemfile
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
