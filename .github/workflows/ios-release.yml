@@ -104,47 +104,18 @@ jobs:
           echo "IOS_PROVISIONING_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           echo "IOS_PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
 
-      - name: Prepare Amplify outputs for mobile
-        env:
-          AMPLIFY_OUTPUTS_JSON: ${{ secrets.AMPLIFY_OUTPUTS_JSON }}
-        run: |
-          mkdir -p apps/mobile/assets
-
-          RAW_JSON=""
-          if [ -f "apps/mobile/assets/amplify_outputs.json" ]; then
-            echo "Using existing apps/mobile/assets/amplify_outputs.json"
-            RAW_JSON="$(cat apps/mobile/assets/amplify_outputs.json)"
-          elif [ -f "packages/backend/amplify_outputs.json" ]; then
-            echo "Found packages/backend/amplify_outputs.json"
-            RAW_JSON="$(cat packages/backend/amplify_outputs.json)"
-          elif [ -n "$AMPLIFY_OUTPUTS_JSON" ]; then
-            echo "Using secret AMPLIFY_OUTPUTS_JSON"
-            RAW_JSON="$AMPLIFY_OUTPUTS_JSON"
-          else
-            echo "Missing amplify_outputs.json. Provide one of:"
-            echo "1) Commit apps/mobile/assets/amplify_outputs.json"
-            echo "2) Commit packages/backend/amplify_outputs.json"
-            echo "3) Set GitHub secret AMPLIFY_OUTPUTS_JSON"
-            exit 1
-          fi
-
-          # Strip model_introspection: amplify_api 2.x crashes with LateInitializationError
-          # when model_introspection is present but AmplifyAPI() has no modelProvider.
-          printf '%s' "$RAW_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); r='model_introspection' in d.get('data',{}); d.get('data',{}).pop('model_introspection',None); sys.stderr.write('Stripped model_introspection\n') if r else None; print(json.dumps(d,indent=2),end='')" > apps/mobile/assets/amplify_outputs.json
-          echo "Written apps/mobile/assets/amplify_outputs.json"
-
       - name: Setup Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          BUNDLE_GEMFILE: ${{ github.workspace }}/mobile/ios/Gemfile
         with:
           ruby-version: '3.1'
           bundler-cache: true
 
       - name: Build and Upload
-        working-directory: apps/mobile/ios
+        working-directory: mobile/ios
         env:
-          BUNDLE_GEMFILE: ${{ github.workspace }}/apps/mobile/ios/Gemfile
+          BUNDLE_GEMFILE: ${{ github.workspace }}/mobile/ios/Gemfile
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
