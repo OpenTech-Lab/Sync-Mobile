@@ -113,6 +113,7 @@ if [ -f "${IOS_GENERATED_XCCONFIG}" ]; then
 fi
 
 COMMIT_MSG="chore(release): bump mobile to ${VERSION_FULL}"
+TAG_NAME="v${VERSION_NAME}"
 
 if git -C "${PROJECT_ROOT}" diff --cached --quiet; then
   echo "No staged changes to commit."
@@ -121,13 +122,22 @@ else
   echo "✓ Committed: ${COMMIT_MSG}"
 fi
 
-# 4) Push
+# 4) Create tag
+if git -C "${PROJECT_ROOT}" rev-parse "${TAG_NAME}" >/dev/null 2>&1; then
+  echo "Warning: tag ${TAG_NAME} already exists. Skipping tag creation."
+else
+  git -C "${PROJECT_ROOT}" tag "${TAG_NAME}"
+  echo "✓ Created tag: ${TAG_NAME}"
+fi
+
+# 5) Push
 CURRENT_BRANCH="$(git -C "${PROJECT_ROOT}" branch --show-current)"
 if [ -z "${CURRENT_BRANCH}" ]; then
   echo "Warning: could not determine current branch. Skipping push."
 else
   git -C "${PROJECT_ROOT}" push origin "${CURRENT_BRANCH}"
-  echo "✓ Pushed to origin/${CURRENT_BRANCH}"
+  git -C "${PROJECT_ROOT}" push origin "${TAG_NAME}"
+  echo "✓ Pushed to origin/${CURRENT_BRANCH} and tag ${TAG_NAME}"
 fi
 
 echo
