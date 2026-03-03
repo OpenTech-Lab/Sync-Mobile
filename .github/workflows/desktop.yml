@@ -1,4 +1,0 @@
-name: desktop
-
-on:
-  workflow_dispatch:
