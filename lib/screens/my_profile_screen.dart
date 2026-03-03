@@ -464,42 +464,197 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
   @override
   Widget build(BuildContext context) {
     final words = _wordCount(_ctrl.text);
-    return AlertDialog(
-      title: const Text('Edit description'),
-      content: Column(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isOverLimit = words > 100;
+    final isNearLimit = words > 80;
+
+    final counterColor = isOverLimit
+        ? cs.error
+        : isNearLimit
+            ? const Color(0xFFF59E0B)
+            : cs.onSurfaceVariant;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: _ctrl,
-            autofocus: true,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'Write about yourself (max 100 words)',
-              border: OutlineInputBorder(),
+          // ── Header ──────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 12, 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.edit_note_rounded,
+                    color: cs.onPrimaryContainer,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'About you',
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Let others know who you are',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  style: IconButton.styleFrom(
+                    backgroundColor: cs.surfaceContainerHighest,
+                    foregroundColor: cs.onSurfaceVariant,
+                    minimumSize: const Size(36, 36),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '$words / 100 words',
-              style: Theme.of(context).textTheme.labelSmall,
+
+          Divider(height: 1, color: cs.outlineVariant.withOpacity(0.5)),
+
+          // ── Text field ───────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _ctrl,
+                  autofocus: true,
+                  maxLines: 5,
+                  style: tt.bodyMedium?.copyWith(height: 1.5),
+                  decoration: InputDecoration(
+                    hintText: 'Write something about yourself…',
+                    hintStyle: tt.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant.withOpacity(0.55),
+                      height: 1.5,
+                    ),
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest.withOpacity(0.45),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: cs.outlineVariant,
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: cs.primary, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: cs.error, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // ── Word counter ───────────────────────────────────────────
+                Row(
+                  children: [
+                    if (isOverLimit) ...[
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 13,
+                        color: cs.error,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Over the 100‑word limit',
+                        style: tt.labelSmall?.copyWith(color: cs.error),
+                      ),
+                    ],
+                    const Spacer(),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: (tt.labelSmall ?? const TextStyle()).copyWith(
+                        color: counterColor,
+                        fontWeight: isNearLimit
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                      child: Text('$words / 100'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Actions ───────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      side: BorderSide(color: cs.outlineVariant),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: isOverLimit
+                        ? null
+                        : () => Navigator.of(context).pop(_ctrl.text.trim()),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: words > 100
-              ? null
-              : () => Navigator.of(context).pop(_ctrl.text.trim()),
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }
