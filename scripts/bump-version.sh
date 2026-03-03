@@ -31,7 +31,35 @@ fi
 
 VERSION_NAME="${INPUT_VERSION%%+*}"
 
-CURRENT_BUILD="$(grep '^version:' "${PUBSPEC}" | sed -E 's/version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)/\1/')"
+# Read current version from pubspec
+CURRENT_VERSION_FULL="$(grep '^version:' "${PUBSPEC}" | sed -E 's/version:[[:space:]]*//')"
+CURRENT_VERSION_NAME="${CURRENT_VERSION_FULL%%+*}"
+CURRENT_BUILD="${CURRENT_VERSION_FULL##*+}"
+
+# Compare semver: split into major.minor.patch and compare numerically
+semver_gt() {
+  # Returns 0 (true) if $1 > $2
+  local IFS=.
+  local a=($1) b=($2)
+  for i in 0 1 2; do
+    local av="${a[$i]:-0}" bv="${b[$i]:-0}"
+    if (( av > bv )); then return 0; fi
+    if (( av < bv )); then return 1; fi
+  done
+  return 1  # equal
+}
+
+if [ "${VERSION_NAME}" = "${CURRENT_VERSION_NAME}" ]; then
+  echo "Error: ${VERSION_NAME} is already the current version (${CURRENT_VERSION_FULL})."
+  echo "Use a higher version number."
+  exit 1
+fi
+
+if ! semver_gt "${VERSION_NAME}" "${CURRENT_VERSION_NAME}"; then
+  echo "Error: ${VERSION_NAME} is older than the current version (${CURRENT_VERSION_NAME})."
+  echo "You must bump to a version greater than ${CURRENT_VERSION_NAME}."
+  exit 1
+fi
 
 if echo "${INPUT_VERSION}" | grep -q '+'; then
   BUILD_NUMBER="${INPUT_VERSION#*+}"
