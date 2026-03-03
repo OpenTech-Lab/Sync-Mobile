@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../constants/planet_presets.dart';
@@ -212,11 +209,11 @@ class _PlanetInfoCard extends StatelessWidget {
     final planetName = (info.instanceName ?? '').trim().isEmpty
         ? info.host
         : info.instanceName!.trim();
-    final planetImageBytes = _decodeImageDataUrl(info.instanceImageBase64);
-    final countryLabel = [
-      if ((info.countryName ?? '').isNotEmpty) info.countryName!,
-      if ((info.countryCode ?? '').isNotEmpty) info.countryCode!,
-    ].join(' • ');
+    final planetImageUri = _resolvePlanetImageUri(
+      info.baseUrl,
+      info.instanceImageUrl,
+    );
+    final countryLabel = (info.countryName ?? '').trim();
     final countryChipText = countryLabel.isEmpty
         ? 'Country unavailable'
         : countryLabel;
@@ -239,13 +236,21 @@ class _PlanetInfoCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: planetImageBytes == null
+                    child: planetImageUri == null
                         ? Icon(
                             Icons.public,
                             color: cs.onPrimaryContainer,
                             size: 20,
                           )
-                        : Image.memory(planetImageBytes, fit: BoxFit.cover),
+                        : Image.network(
+                            planetImageUri.toString(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Icon(
+                              Icons.public,
+                              color: cs.onPrimaryContainer,
+                              size: 20,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -293,17 +298,6 @@ class _PlanetInfoCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if ((info.instanceDomain ?? '').isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  info.instanceDomain!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ],
             ],
           ),
         ),
@@ -331,20 +325,16 @@ class _PlanetInfoCard extends StatelessWidget {
   }
 }
 
-Uint8List? _decodeImageDataUrl(String? dataUrl) {
-  if (dataUrl == null || dataUrl.trim().isEmpty) {
+Uri? _resolvePlanetImageUri(String baseUrl, String? instanceImageUrl) {
+  if (instanceImageUrl == null || instanceImageUrl.trim().isEmpty) {
     return null;
   }
-  final value = dataUrl.trim();
-  final comma = value.indexOf(',');
-  if (comma <= 0 || comma >= value.length - 1) {
+  final base = Uri.tryParse(baseUrl);
+  final raw = Uri.tryParse(instanceImageUrl.trim());
+  if (raw == null) {
     return null;
   }
-  try {
-    return base64Decode(value.substring(comma + 1));
-  } catch (_) {
-    return null;
-  }
+  return raw.hasScheme ? raw : base?.resolveUri(raw);
 }
 
 class _InfoChip extends StatelessWidget {

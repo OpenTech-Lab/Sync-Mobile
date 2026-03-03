@@ -12,7 +12,7 @@ class PlanetInfo {
     required this.scheme,
     required this.instanceName,
     required this.instanceDescription,
-    required this.instanceImageBase64,
+    required this.instanceImageUrl,
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
@@ -26,7 +26,7 @@ class PlanetInfo {
   final String scheme;
   final String? instanceName;
   final String? instanceDescription;
-  final String? instanceImageBase64;
+  final String? instanceImageUrl;
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
@@ -66,7 +66,7 @@ class ServerHealthService {
     var healthStatus = 'ok';
     String? instanceName;
     String? instanceDescription;
-    String? instanceImageBase64;
+    String? instanceImageUrl;
     String? instanceDomain;
     String? countryCode;
     String? countryName;
@@ -86,10 +86,10 @@ class ServerHealthService {
             rawInstanceDescription.trim().isNotEmpty) {
           instanceDescription = rawInstanceDescription.trim();
         }
-        final rawInstanceImageBase64 = decoded['instance_image_base64'];
-        if (rawInstanceImageBase64 is String &&
-            rawInstanceImageBase64.trim().isNotEmpty) {
-          instanceImageBase64 = rawInstanceImageBase64.trim();
+        final rawInstanceImageUrl = decoded['instance_image_url'];
+        if (rawInstanceImageUrl is String &&
+            rawInstanceImageUrl.trim().isNotEmpty) {
+          instanceImageUrl = rawInstanceImageUrl.trim();
         }
         final rawInstanceDomain = decoded['instance_domain'];
         if (rawInstanceDomain is String &&
@@ -115,7 +115,7 @@ class ServerHealthService {
       scheme: parsedBase.scheme,
       instanceName: instanceName,
       instanceDescription: instanceDescription,
-      instanceImageBase64: instanceImageBase64,
+      instanceImageUrl: instanceImageUrl,
       instanceDomain: instanceDomain,
       countryCode: countryCode,
       countryName: countryName,
