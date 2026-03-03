@@ -1,4 +1,4 @@
-package com.example.mobile
+package com.sync.icyanstudio
 
 import io.flutter.embedding.android.FlutterActivity
 
