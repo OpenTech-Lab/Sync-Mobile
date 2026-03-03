@@ -41,10 +41,6 @@ class SettingsTab extends ConsumerWidget {
     final host = Uri.tryParse(serverUrl)?.host ?? serverUrl;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        automaticallyImplyLeading: false,
-      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
@@ -147,10 +143,9 @@ class SettingsTab extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
                 child: Text(
                   backupState!.statusMessage!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ),
           ],
@@ -217,10 +212,10 @@ class _SectionHeader extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                ),
+              color: cs.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+            ),
           ),
           const SizedBox(height: 6),
           Divider(
@@ -254,9 +249,7 @@ class _BackupButton extends StatelessWidget {
       label: Text(label, style: const TextStyle(fontSize: 12)),
       onPressed: busy ? null : onPressed,
       style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -303,7 +296,10 @@ class _PlanetCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(host, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                    host,
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                   Text(
                     serverUrl,
                     style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
@@ -318,15 +314,25 @@ class _PlanetCard extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            _StatusDot(active: isConnected, label: isConnected ? 'Online' : 'Offline'),
+            _StatusDot(
+              active: isConnected,
+              label: isConnected ? 'Online' : 'Offline',
+            ),
             const SizedBox(width: 12),
-            _StatusDot(active: notifActive, label: notifActive ? 'Notifs on' : 'Notifs off'),
+            _StatusDot(
+              active: notifActive,
+              label: notifActive ? 'Notifs on' : 'Notifs off',
+            ),
           ],
         ),
         const SizedBox(height: 14),
         Row(
           children: [
-            _PlanetStat(icon: Icons.people_outline, value: '$memberCount', label: 'Residents'),
+            _PlanetStat(
+              icon: Icons.people_outline,
+              value: '$memberCount',
+              label: 'Residents',
+            ),
             const SizedBox(width: 12),
             _PlanetStat(
               icon: Icons.emoji_emotions_outlined,
@@ -380,7 +386,11 @@ class _StatusDot extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -409,10 +419,14 @@ class _PlanetStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: highlight ? cs.primaryContainer.withValues(alpha: .4) : cs.surface,
+          color: highlight
+              ? cs.primaryContainer.withValues(alpha: .4)
+              : cs.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: highlight ? cs.primary.withValues(alpha: .3) : cs.outlineVariant,
+            color: highlight
+                ? cs.primary.withValues(alpha: .3)
+                : cs.outlineVariant,
           ),
         ),
         child: Column(
@@ -421,9 +435,16 @@ class _PlanetStat extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
-            Text(label, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+            ),
           ],
         ),
       ),

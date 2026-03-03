@@ -31,17 +31,18 @@ class HomeTab extends ConsumerWidget {
 
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final totalUnread = unreadCounts.values.fold(0, (sum, count) => sum + count);
+    final totalUnread = unreadCounts.values.fold(
+      0,
+      (sum, count) => sum + count,
+    );
     final friendIds = unreadCounts.keys.toList();
 
-    String shortId(String uuid) => uuid.length >= 8 ? uuid.substring(0, 8) : uuid;
-    String initials(String uuid) => uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
+    String shortId(String uuid) =>
+        uuid.length >= 8 ? uuid.substring(0, 8) : uuid;
+    String initials(String uuid) =>
+        uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        automaticallyImplyLeading: false,
-      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
@@ -62,8 +63,11 @@ class HomeTab extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.mark_chat_unread_outlined,
-                      size: 18, color: cs.onPrimaryContainer),
+                  Icon(
+                    Icons.mark_chat_unread_outlined,
+                    size: 18,
+                    color: cs.onPrimaryContainer,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
@@ -84,12 +88,20 @@ class HomeTab extends ConsumerWidget {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.people_outline, size: 40, color: cs.onSurfaceVariant),
+                    Icon(
+                      Icons.people_outline,
+                      size: 40,
+                      color: cs.onSurfaceVariant,
+                    ),
                     const SizedBox(height: 8),
-                    Text('No friends yet',
-                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                    Text('Open Chats and start a conversation',
-                        style: tt.labelSmall?.copyWith(color: cs.outlineVariant)),
+                    Text(
+                      'No friends yet',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    Text(
+                      'Open Chats and start a conversation',
+                      style: tt.labelSmall?.copyWith(color: cs.outlineVariant),
+                    ),
                   ],
                 ),
               ),
@@ -105,8 +117,11 @@ class HomeTab extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: friendIds.length,
-                separatorBuilder: (_, _) =>
-                    Divider(height: 1, indent: 60, color: cs.outlineVariant.withValues(alpha: .45)),
+                separatorBuilder: (_, _) => Divider(
+                  height: 1,
+                  indent: 60,
+                  color: cs.outlineVariant.withValues(alpha: .45),
+                ),
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
                   final unread = unreadCounts[id] ?? 0;
@@ -146,7 +161,10 @@ class HomeTab extends ConsumerWidget {
                       children: [
                         if (unread > 0)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: cs.primary,
                               borderRadius: BorderRadius.circular(20),
@@ -162,8 +180,11 @@ class HomeTab extends ConsumerWidget {
                           ),
                         if (unread > 0) const SizedBox(width: 6),
                         IconButton(
-                          icon: Icon(Icons.copy_outlined,
-                              size: 15, color: cs.onSurfaceVariant),
+                          icon: Icon(
+                            Icons.copy_outlined,
+                            size: 15,
+                            color: cs.onSurfaceVariant,
+                          ),
                           tooltip: 'Copy ID',
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: id));
@@ -218,10 +239,10 @@ class _SectionLabel extends StatelessWidget {
           Text(
             text.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                ),
+              color: cs.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+            ),
           ),
           const SizedBox(height: 6),
           Divider(
@@ -252,9 +273,13 @@ class _ProfileCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final avatarBase64 = ref.watch(userAvatarBase64Provider(currentUserId)).value;
+    final avatarBase64 = ref
+        .watch(userAvatarBase64Provider(currentUserId))
+        .value;
     final displayName = (currentUsername ?? '').trim().isEmpty
-        ? (currentUserId.length >= 8 ? currentUserId.substring(0, 8) : currentUserId)
+        ? (currentUserId.length >= 8
+              ? currentUserId.substring(0, 8)
+              : currentUserId)
         : currentUsername!.trim();
 
     const palette = [
@@ -320,7 +345,9 @@ class _ProfileCard extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       displayName,
-                      style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      style: tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -346,7 +373,11 @@ class _ProfileCard extends ConsumerWidget {
                     height: 26,
                     child: IconButton(
                       padding: EdgeInsets.zero,
-                      icon: Icon(Icons.copy_outlined, size: 13, color: cs.onSurfaceVariant),
+                      icon: Icon(
+                        Icons.copy_outlined,
+                        size: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
                       tooltip: 'Copy ID',
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: currentUserId));

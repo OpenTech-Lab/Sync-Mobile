@@ -412,43 +412,40 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
-    final activePartnerName = _activePartnerId == null
-        ? null
-        : ref.watch(userDisplayNameProvider(_activePartnerId!)).value;
 
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        backgroundColor: inConversation ? Colors.transparent : cs.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        forceMaterialTransparency: inConversation,
-        title: _activePartnerId == null
-            ? const Text('Chats')
-            : Text(
-                (activePartnerName ?? '').trim().isEmpty
-                    ? 'Conversation'
-                    : activePartnerName!.trim(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-        leading: _activePartnerId != null
-            ? IconButton(
+      appBar: inConversation
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              forceMaterialTransparency: true,
+              leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
                   setState(() => _activePartnerId = null);
                   widget.onPartnerChanged(null);
                 },
-              )
-            : null,
-        automaticallyImplyLeading: false,
-        actions: [
-          if (_activePartnerId == null)
-            PopupMenuButton<_ChatQuickAction>(
-              tooltip: 'New chat or add friend',
-              icon: const Icon(Icons.add),
-              onSelected: (action) {
+              ),
+              automaticallyImplyLeading: false,
+              actions: [
+                if (activeUnread > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: _UnreadBadge(count: activeUnread),
+                  ),
+              ],
+            )
+          : null,
+      body: _activePartnerId == null
+          ? _ConversationStarter(
+              controller: _partnerController,
+              focusNode: _partnerFocusNode,
+              unreadCounts: unreadCounts,
+              summaries: filteredSummaries,
+              onQuickAction: (action) {
                 switch (action) {
                   case _ChatQuickAction.newFriendOrChat:
                     _openNewFriendOrChat();
@@ -456,30 +453,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     _scanQrAndOpen();
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.newFriendOrChat,
-                  child: Text('New friend / start chat'),
-                ),
-                PopupMenuItem<_ChatQuickAction>(
-                  value: _ChatQuickAction.scanFriendQr,
-                  child: Text('Scan friend QR'),
-                ),
-              ],
-            ),
-          if (_activePartnerId != null && activeUnread > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: _UnreadBadge(count: activeUnread),
-            ),
-        ],
-      ),
-      body: _activePartnerId == null
-          ? _ConversationStarter(
-              controller: _partnerController,
-              focusNode: _partnerFocusNode,
-              unreadCounts: unreadCounts,
-              summaries: filteredSummaries,
               onOpenConversation: (id) async {
                 await _openPartner(id);
               },
@@ -646,6 +619,7 @@ class _ConversationStarter extends ConsumerWidget {
     required this.focusNode,
     required this.unreadCounts,
     required this.summaries,
+    required this.onQuickAction,
     required this.onOpenConversation,
     required this.onRefresh,
     required this.onStartNewChat,
@@ -656,6 +630,7 @@ class _ConversationStarter extends ConsumerWidget {
   final FocusNode focusNode;
   final Map<String, int> unreadCounts;
   final List<ConversationSummary> summaries;
+  final ValueChanged<_ChatQuickAction> onQuickAction;
   final ValueChanged<String> onOpenConversation;
   final VoidCallback onRefresh;
   final VoidCallback onStartNewChat;
@@ -667,8 +642,26 @@ class _ConversationStarter extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: PopupMenuButton<_ChatQuickAction>(
+            tooltip: 'New chat or add friend',
+            onSelected: onQuickAction,
+            icon: const Icon(Icons.add),
+            itemBuilder: (context) => const [
+              PopupMenuItem<_ChatQuickAction>(
+                value: _ChatQuickAction.newFriendOrChat,
+                child: Text('New friend / start chat'),
+              ),
+              PopupMenuItem<_ChatQuickAction>(
+                value: _ChatQuickAction.scanFriendQr,
+                child: Text('Scan friend QR'),
+              ),
+            ],
+          ),
+        ),
         TextField(
           controller: controller,
           focusNode: focusNode,
