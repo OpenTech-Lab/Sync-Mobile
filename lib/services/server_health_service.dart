@@ -8,6 +8,10 @@ class PlanetInfo {
     required this.baseUrl,
     required this.host,
     required this.scheme,
+    required this.instanceName,
+    required this.instanceDomain,
+    required this.countryCode,
+    required this.countryName,
     required this.healthStatus,
     required this.latencyMs,
     required this.checkedAt,
@@ -16,6 +20,10 @@ class PlanetInfo {
   final String baseUrl;
   final String host;
   final String scheme;
+  final String? instanceName;
+  final String? instanceDomain;
+  final String? countryCode;
+  final String? countryName;
   final String healthStatus;
   final int latencyMs;
   final DateTime checkedAt;
@@ -43,12 +51,33 @@ class ServerHealthService {
     }
 
     var healthStatus = 'ok';
+    String? instanceName;
+    String? instanceDomain;
+    String? countryCode;
+    String? countryName;
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
         final rawStatus = decoded['status'];
         if (rawStatus is String && rawStatus.trim().isNotEmpty) {
           healthStatus = rawStatus.trim();
+        }
+        final rawInstanceName = decoded['instance_name'];
+        if (rawInstanceName is String && rawInstanceName.trim().isNotEmpty) {
+          instanceName = rawInstanceName.trim();
+        }
+        final rawInstanceDomain = decoded['instance_domain'];
+        if (rawInstanceDomain is String &&
+            rawInstanceDomain.trim().isNotEmpty) {
+          instanceDomain = rawInstanceDomain.trim();
+        }
+        final rawCountryCode = decoded['country_code'];
+        if (rawCountryCode is String && rawCountryCode.trim().isNotEmpty) {
+          countryCode = rawCountryCode.trim();
+        }
+        final rawCountryName = decoded['country_name'];
+        if (rawCountryName is String && rawCountryName.trim().isNotEmpty) {
+          countryName = rawCountryName.trim();
         }
       }
     } catch (_) {
@@ -59,6 +88,10 @@ class ServerHealthService {
       baseUrl: normalized,
       host: parsedBase.host,
       scheme: parsedBase.scheme,
+      instanceName: instanceName,
+      instanceDomain: instanceDomain,
+      countryCode: countryCode,
+      countryName: countryName,
       healthStatus: healthStatus,
       latencyMs: latencyMs,
       checkedAt: DateTime.now(),

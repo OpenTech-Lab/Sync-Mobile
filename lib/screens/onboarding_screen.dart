@@ -252,8 +252,22 @@ class _PlanetInfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _InfoLine(label: 'Server', value: info.baseUrl),
+          if ((info.instanceName ?? '').isNotEmpty)
+            _InfoLine(label: 'Planet', value: info.instanceName!),
+          if ((info.instanceDomain ?? '').isNotEmpty)
+            _InfoLine(label: 'Domain', value: info.instanceDomain!),
           _InfoLine(label: 'Host', value: info.host),
           _InfoLine(label: 'Protocol', value: info.scheme.toUpperCase()),
+          if ((info.countryName ?? '').isNotEmpty ||
+              (info.countryCode ?? '').isNotEmpty)
+            _InfoLine(
+              label: 'Country',
+              value: [
+                if ((info.countryName ?? '').isNotEmpty) info.countryName!,
+                if ((info.countryCode ?? '').isNotEmpty)
+                  '(${info.countryCode!})',
+              ].join(' '),
+            ),
           _InfoLine(label: 'Health', value: info.healthStatus),
           _InfoLine(label: 'Latency', value: '${info.latencyMs} ms'),
           _InfoLine(label: 'Checked', value: '$hh:$mm:$ss'),
