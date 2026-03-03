@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/planet_presets.dart';
+import '../services/server_health_service.dart';
 import '../state/app_controller.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -9,6 +10,7 @@ class OnboardingScreen extends StatefulWidget {
     required this.initialUrl,
     required this.connectionStatus,
     required this.errorMessage,
+    required this.planetInfo,
     required this.onValidate,
     required this.onContinue,
   });
@@ -16,6 +18,7 @@ class OnboardingScreen extends StatefulWidget {
   final String? initialUrl;
   final ConnectionStatus connectionStatus;
   final String? errorMessage;
+  final PlanetInfo? planetInfo;
   final Future<void> Function(String url) onValidate;
   final Future<void> Function(String url) onContinue;
 
@@ -58,8 +61,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 24),
             Text(
               'Welcome to Sync',
-              style: tt.headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -100,8 +102,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     .map(
                       (preset) => ActionChip(
                         avatar: Icon(Icons.public, size: 15, color: cs.primary),
-                        label: Text(preset.name,
-                            style: const TextStyle(fontSize: 12)),
+                        label: Text(
+                          preset.name,
+                          style: const TextStyle(fontSize: 12),
+                        ),
                         onPressed: () {
                           _serverUrlController.text = preset.url;
                         },
@@ -124,12 +128,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.wifi_tethering, size: 18),
-                label: Text(isValidating
-                    ? 'Checking connection…'
-                    : 'Check connection'),
+                label: Text(
+                  isValidating ? 'Checking connection…' : 'Check connection',
+                ),
                 style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -150,14 +156,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle,
-                        color: Colors.green.shade700, size: 18),
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.green.shade700,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
-                    Text('Connection successful',
-                        style: TextStyle(color: Colors.green.shade800)),
+                    Text(
+                      'Connection successful',
+                      style: TextStyle(color: Colors.green.shade800),
+                    ),
                   ],
                 ),
               ),
+              if (widget.planetInfo != null) ...[
+                const SizedBox(height: 10),
+                _PlanetInfoCard(info: widget.planetInfo!),
+              ],
             ],
             if (isFailure) ...[
               const SizedBox(height: 14),
@@ -201,6 +216,81 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlanetInfoCard extends StatelessWidget {
+  const _PlanetInfoCard({required this.info});
+
+  final PlanetInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final checked = info.checkedAt.toLocal();
+    final hh = checked.hour.toString().padLeft(2, '0');
+    final mm = checked.minute.toString().padLeft(2, '0');
+    final ss = checked.second.toString().padLeft(2, '0');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: .5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Planet Information',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _InfoLine(label: 'Server', value: info.baseUrl),
+          _InfoLine(label: 'Host', value: info.host),
+          _InfoLine(label: 'Protocol', value: info.scheme.toUpperCase()),
+          _InfoLine(label: 'Health', value: info.healthStatus),
+          _InfoLine(label: 'Latency', value: '${info.latencyMs} ms'),
+          _InfoLine(label: 'Checked', value: '$hh:$mm:$ss'),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 74,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: TextStyle(color: cs.onSurface)),
+          ),
+        ],
       ),
     );
   }

@@ -12,6 +12,7 @@ void main() {
           initialUrl: '',
           connectionStatus: ConnectionStatus.idle,
           errorMessage: null,
+          planetInfo: null,
           onValidate: (_) async {},
           onContinue: (_) async {},
         ),

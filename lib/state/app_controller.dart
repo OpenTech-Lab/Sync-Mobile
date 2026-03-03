@@ -21,6 +21,7 @@ class AppState {
     required this.savedEmail,
     required this.connectionStatus,
     required this.connectionError,
+    required this.planetInfo,
     required this.isSubmitting,
     required this.authError,
   });
@@ -32,6 +33,7 @@ class AppState {
   final String? savedEmail;
   final ConnectionStatus connectionStatus;
   final String? connectionError;
+  final PlanetInfo? planetInfo;
   final bool isSubmitting;
   final String? authError;
 
@@ -55,6 +57,8 @@ class AppState {
     ConnectionStatus? connectionStatus,
     String? connectionError,
     bool clearConnectionError = false,
+    PlanetInfo? planetInfo,
+    bool clearPlanetInfo = false,
     bool? isSubmitting,
     String? authError,
     bool clearAuthError = false,
@@ -66,16 +70,19 @@ class AppState {
       currentUsername: currentUsername ?? this.currentUsername,
       savedEmail: clearSavedEmail ? null : savedEmail ?? this.savedEmail,
       connectionStatus: connectionStatus ?? this.connectionStatus,
-      connectionError:
-          clearConnectionError ? null : connectionError ?? this.connectionError,
+      connectionError: clearConnectionError
+          ? null
+          : connectionError ?? this.connectionError,
+      planetInfo: clearPlanetInfo ? null : planetInfo ?? this.planetInfo,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       authError: clearAuthError ? null : authError ?? this.authError,
     );
   }
 }
 
-final appControllerProvider =
-    AsyncNotifierProvider<AppController, AppState>(AppController.new);
+final appControllerProvider = AsyncNotifierProvider<AppController, AppState>(
+  AppController.new,
+);
 
 class AppController extends AsyncNotifier<AppState> {
   final _serverPreferences = ServerPreferences();
@@ -168,6 +175,7 @@ class AppController extends AsyncNotifier<AppState> {
       savedEmail: savedEmail,
       connectionStatus: ConnectionStatus.idle,
       connectionError: null,
+      planetInfo: null,
       isSubmitting: false,
       authError: null,
     );
@@ -183,15 +191,17 @@ class AppController extends AsyncNotifier<AppState> {
       current.copyWith(
         connectionStatus: ConnectionStatus.validating,
         clearConnectionError: true,
+        clearPlanetInfo: true,
       ),
     );
 
     try {
-      await _serverHealthService.validate(rawUrl);
+      final planetInfo = await _serverHealthService.validate(rawUrl);
       state = AsyncData(
         current.copyWith(
           connectionStatus: ConnectionStatus.success,
           clearConnectionError: true,
+          planetInfo: planetInfo,
         ),
       );
     } catch (error) {
@@ -199,6 +209,7 @@ class AppController extends AsyncNotifier<AppState> {
         current.copyWith(
           connectionStatus: ConnectionStatus.failure,
           connectionError: error.toString(),
+          clearPlanetInfo: true,
         ),
       );
     }
@@ -218,6 +229,7 @@ class AppController extends AsyncNotifier<AppState> {
         serverUrl: normalized,
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
+        clearPlanetInfo: true,
         clearAuthError: true,
       ),
     );
@@ -230,10 +242,7 @@ class AppController extends AsyncNotifier<AppState> {
     }
 
     state = AsyncData(
-      current.copyWith(
-        isSubmitting: true,
-        clearAuthError: true,
-      ),
+      current.copyWith(isSubmitting: true, clearAuthError: true),
     );
 
     try {
@@ -255,7 +264,9 @@ class AppController extends AsyncNotifier<AppState> {
             baseUrl: current.serverUrl!,
             accessToken: tokens.accessToken,
           );
-          username = profile.username.trim().isEmpty ? username : profile.username.trim();
+          username = profile.username.trim().isEmpty
+              ? username
+              : profile.username.trim();
           await _userProfilePreferences.writeAvatarBase64(
             userId,
             profile.avatarBase64,
@@ -264,7 +275,10 @@ class AppController extends AsyncNotifier<AppState> {
       }
 
       final normalizedEmail = email.trim().toLowerCase();
-      await _serverPreferences.writeSavedEmail(current.serverUrl!, normalizedEmail);
+      await _serverPreferences.writeSavedEmail(
+        current.serverUrl!,
+        normalizedEmail,
+      );
 
       state = AsyncData(
         current.copyWith(
@@ -282,10 +296,7 @@ class AppController extends AsyncNotifier<AppState> {
       }
     } catch (error) {
       state = AsyncData(
-        current.copyWith(
-          isSubmitting: false,
-          authError: error.toString(),
-        ),
+        current.copyWith(isSubmitting: false, authError: error.toString()),
       );
     }
   }
@@ -301,10 +312,7 @@ class AppController extends AsyncNotifier<AppState> {
     }
 
     state = AsyncData(
-      current.copyWith(
-        isSubmitting: true,
-        clearAuthError: true,
-      ),
+      current.copyWith(isSubmitting: true, clearAuthError: true),
     );
 
     try {
@@ -337,8 +345,9 @@ class AppController extends AsyncNotifier<AppState> {
             baseUrl: current.serverUrl!,
             accessToken: tokens.accessToken,
           );
-          resolvedName =
-              profile.username.trim().isEmpty ? resolvedName : profile.username.trim();
+          resolvedName = profile.username.trim().isEmpty
+              ? resolvedName
+              : profile.username.trim();
           await _userProfilePreferences.writeAvatarBase64(
             userId,
             profile.avatarBase64,
@@ -362,10 +371,7 @@ class AppController extends AsyncNotifier<AppState> {
       }
     } catch (error) {
       state = AsyncData(
-        current.copyWith(
-          isSubmitting: false,
-          authError: error.toString(),
-        ),
+        current.copyWith(isSubmitting: false, authError: error.toString()),
       );
     }
   }

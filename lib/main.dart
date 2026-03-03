@@ -40,6 +40,7 @@ class SyncMobileApp extends ConsumerWidget {
                 initialUrl: state.serverUrl,
                 connectionStatus: state.connectionStatus,
                 errorMessage: state.connectionError,
+                planetInfo: state.planetInfo,
                 onValidate: (url) => ref
                     .read(appControllerProvider.notifier)
                     .validateServer(url),
@@ -53,20 +54,18 @@ class SyncMobileApp extends ConsumerWidget {
                 savedEmail: state.savedEmail,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
-                onSignIn: (email, password) =>
-                    ref.read(appControllerProvider.notifier).login(
-                          email: email,
-                          password: password,
-                        ),
-                onSignUp: (username, email, password) =>
-                    ref.read(appControllerProvider.notifier).signUp(
-                          username: username,
-                          email: email,
-                          password: password,
-                        ),
-                onBackToUrl: () => ref
+                onSignIn: (email, password) => ref
                     .read(appControllerProvider.notifier)
-                    .resetServerUrl(),
+                    .login(email: email, password: password),
+                onSignUp: (username, email, password) => ref
+                    .read(appControllerProvider.notifier)
+                    .signUp(
+                      username: username,
+                      email: email,
+                      password: password,
+                    ),
+                onBackToUrl: () =>
+                    ref.read(appControllerProvider.notifier).resetServerUrl(),
                 onForgotPassword: (email) => AuthService().forgotPassword(
                   baseUrl: state.serverUrl!,
                   email: email,
@@ -78,8 +77,7 @@ class SyncMobileApp extends ConsumerWidget {
                 accessToken: state.accessToken!,
                 currentUserId: state.currentUserId!,
                 currentUsername: state.currentUsername,
-                onSignOut:
-                    ref.read(appControllerProvider.notifier).logout,
+                onSignOut: ref.read(appControllerProvider.notifier).logout,
               );
           }
         },
@@ -100,9 +98,7 @@ class SyncMobileApp extends ConsumerWidget {
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
-        iconTheme: WidgetStateProperty.all(
-          const IconThemeData(size: 22),
-        ),
+        iconTheme: WidgetStateProperty.all(const IconThemeData(size: 22)),
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -115,11 +111,11 @@ class SyncMobileApp extends ConsumerWidget {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 14),
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -193,10 +189,7 @@ class _ErrorScreen extends StatelessWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
-            'Failed to start: $message',
-            textAlign: TextAlign.center,
-          ),
+          child: Text('Failed to start: $message', textAlign: TextAlign.center),
         ),
       ),
     );
