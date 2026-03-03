@@ -10,57 +10,62 @@ class ChatTargetProfileScreen extends StatelessWidget {
     required this.displayName,
     required this.displayHandle,
     required this.avatarBase64,
+    this.isFriend = false,
     this.showActions = true,
   });
 
   final String displayName;
   final String displayHandle;
   final String? avatarBase64;
+  final bool isFriend;
   final bool showActions;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final title = displayName.trim().isEmpty ? 'Profile' : displayName.trim();
     final initials = displayName.trim().isEmpty
         ? '?'
         : displayName.trim().substring(0, 1).toUpperCase();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Target Profile')),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: SizedBox(
+          width: double.infinity,
           child: Column(
             children: [
-              const SizedBox(height: 16),
-              CircleAvatar(
-                radius: 48,
-                backgroundColor: cs.secondaryContainer,
-                child: avatarBase64 == null
-                    ? Text(
-                        initials,
-                        style: TextStyle(
-                          color: cs.onSecondaryContainer,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 28,
-                        ),
-                      )
-                    : ClipOval(
-                        child: SizedBox.expand(
-                          child: Image.memory(
-                            base64Decode(avatarBase64!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Text(
-                              initials,
-                              style: TextStyle(
-                                color: cs.onSecondaryContainer,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 28,
+              const SizedBox(height: 24),
+              Center(
+                child: CircleAvatar(
+                  radius: 48,
+                  backgroundColor: cs.secondaryContainer,
+                  child: avatarBase64 == null
+                      ? Text(
+                          initials,
+                          style: TextStyle(
+                            color: cs.onSecondaryContainer,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 28,
+                          ),
+                        )
+                      : ClipOval(
+                          child: SizedBox.expand(
+                            child: Image.memory(
+                              base64Decode(avatarBase64!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Text(
+                                initials,
+                                style: TextStyle(
+                                  color: cs.onSecondaryContainer,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 28,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -70,13 +75,55 @@ class ChatTargetProfileScreen extends StatelessWidget {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
-              Text(
-                displayHandle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: _TargetProfileQuickAction(
+                        icon: isFriend
+                            ? Icons.how_to_reg_outlined
+                            : Icons.person_add_alt_1_outlined,
+                        label: isFriend ? 'Friend' : 'Add to friend',
+                        onTap: isFriend
+                            ? null
+                            : () {
+                                Navigator.of(
+                                  context,
+                                ).pop(ChatTargetProfileAction.addFriend);
+                              },
+                      ),
+                    ),
+                    Expanded(
+                      child: _TargetProfileQuickAction(
+                        icon: Icons.notifications_off_outlined,
+                        label: 'Mute',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Mute is not available yet'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: _TargetProfileQuickAction(
+                        icon: Icons.block_outlined,
+                        label: 'Block',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Block is not available yet'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (showActions) ...[
                 const SizedBox(height: 28),
@@ -89,19 +136,54 @@ class ChatTargetProfileScreen extends StatelessWidget {
                     child: const Text('Start chat'),
                   ),
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).pop(ChatTargetProfileAction.addFriend),
-                    child: const Text('Add friend'),
-                  ),
-                ),
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TargetProfileQuickAction extends StatelessWidget {
+  const _TargetProfileQuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    final enabled = onTap != null;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: enabled ? cs.onSurfaceVariant : cs.outline),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(
+                color: enabled ? cs.onSurfaceVariant : cs.outline,
+              ),
+            ),
+          ],
         ),
       ),
     );

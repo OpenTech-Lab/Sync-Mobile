@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/planet_presets.dart';
+import 'chat_target_profile_screen.dart';
 import 'my_profile_screen.dart';
 import '../state/unread_counts_controller.dart';
 import '../state/user_profile_controller.dart';
@@ -36,6 +37,7 @@ class HomeTab extends ConsumerWidget {
       (sum, count) => sum + count,
     );
     final friendIds = ref.watch(friendIdsProvider).value ?? const <String>[];
+    final planetLabel = _planetNameFromServerUrl(serverUrl);
 
     String initials(String uuid) =>
         uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
@@ -113,97 +115,79 @@ class HomeTab extends ConsumerWidget {
                 ),
               )
             else
-              Container(
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cs.outlineVariant),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: friendIds.length,
+                separatorBuilder: (_, _) => Divider(
+                  height: 1,
+                  indent: 60,
+                  color: cs.outlineVariant.withValues(alpha: .45),
                 ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: friendIds.length,
-                  separatorBuilder: (_, _) => Divider(
-                    height: 1,
-                    indent: 60,
-                    color: cs.outlineVariant.withValues(alpha: .45),
-                  ),
-                  itemBuilder: (ctx, i) {
-                    final id = friendIds[i];
-                    final displayName = _displayNameOrFallback(
-                      id,
-                      ref.watch(userDisplayNameProvider(id)).value,
-                    );
-                    final avatarBase64 = ref
-                        .watch(userAvatarBase64Provider(id))
-                        .value;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _avatarColor(id, cs),
-                        child: avatarBase64 == null
-                            ? Text(
-                                initials(id),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : ClipOval(
-                                child: SizedBox.expand(
-                                  child: Image.memory(
-                                    base64Decode(avatarBase64),
-                                    fit: BoxFit.cover,
-                                  ),
+                itemBuilder: (ctx, i) {
+                  final id = friendIds[i];
+                  final displayName = _displayNameOrFallback(
+                    id,
+                    ref.watch(userDisplayNameProvider(id)).value,
+                  );
+                  final avatarBase64 = ref
+                      .watch(userAvatarBase64Provider(id))
+                      .value;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: _avatarColor(id, cs),
+                      child: avatarBase64 == null
+                          ? Text(
+                              initials(id),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            )
+                          : ClipOval(
+                              child: SizedBox.expand(
+                                child: Image.memory(
+                                  base64Decode(avatarBase64),
+                                  fit: BoxFit.cover,
                                 ),
                               ),
-                      ),
-                      title: Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        id,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          color: cs.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.copy_outlined,
-                              size: 15,
-                              color: cs.onSurfaceVariant,
                             ),
-                            tooltip: 'Copy ID',
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: id));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Friend ID copied'),
-                                  duration: Duration(seconds: 1),
-                                  behavior: SnackBarBehavior.floating,
-                                  width: 160,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                    ),
+                    title: Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
-                      onTap: () => onOpenChat?.call(id),
-                    );
-                  },
-                ),
+                    ),
+                    subtitle: Text(
+                      planetLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () async {
+                      await Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ChatTargetProfileScreen(
+                            displayName: displayName,
+                            displayHandle: id,
+                            avatarBase64: avatarBase64,
+                            isFriend: true,
+                            showActions: false,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
           ],
         ),
@@ -231,6 +215,22 @@ String _displayNameOrFallback(String userId, String? displayName) {
     return normalized;
   }
   return userId.length >= 8 ? userId.substring(0, 8) : userId;
+}
+
+String _planetNameFromServerUrl(String serverUrl) {
+  final normalized = serverUrl.trim();
+  final preset = officialPlanetPresets.firstWhere(
+    (item) => item.url.toLowerCase() == normalized.toLowerCase(),
+    orElse: () => PlanetPreset(name: '', url: ''),
+  );
+  if (preset.name.isNotEmpty) {
+    return preset.name;
+  }
+  final host = Uri.tryParse(normalized)?.host.trim() ?? '';
+  if (host.isNotEmpty) {
+    return host;
+  }
+  return normalized;
 }
 
 class _SectionLabel extends StatelessWidget {

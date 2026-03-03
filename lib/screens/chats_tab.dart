@@ -291,6 +291,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted || resolved == null) {
         return;
       }
+      final isFriend = (await ref
+              .read(userProfilePreferencesProvider)
+              .readFriendIds())
+          .contains(resolved.partnerId);
+      if (!mounted) {
+        return;
+      }
 
       final action = await Navigator.of(context).push<ChatTargetProfileAction>(
         MaterialPageRoute<ChatTargetProfileAction>(
@@ -298,6 +305,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             displayName: resolved.displayName,
             displayHandle: resolved.displayHandle,
             avatarBase64: resolved.avatarBase64,
+            isFriend: isFriend,
           ),
         ),
       );
@@ -393,16 +401,35 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       ref.read(userDisplayNameProvider(partnerId)).value,
     );
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
+    final isFriend = (await ref
+            .read(userProfilePreferencesProvider)
+            .readFriendIds())
+        .contains(partnerId);
+    if (!mounted) {
+      return;
+    }
+    final action = await Navigator.of(context).push<ChatTargetProfileAction>(
+      MaterialPageRoute<ChatTargetProfileAction>(
         builder: (_) => ChatTargetProfileScreen(
           displayName: displayName,
           displayHandle: partnerId,
           avatarBase64: avatarBase64,
+          isFriend: isFriend,
           showActions: false,
         ),
       ),
     );
+    if (!mounted || action != ChatTargetProfileAction.addFriend) {
+      return;
+    }
+    await ref.read(userProfilePreferencesProvider).addFriendId(partnerId);
+    ref.invalidate(friendIdsProvider);
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Friend added')));
   }
 
   Future<void> _markAllUnreadAsRead(Map<String, int> unreadCounts) async {
