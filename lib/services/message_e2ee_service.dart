@@ -11,19 +11,31 @@ class MessageE2eeService {
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _cryptography = cryptography ?? Cryptography.instance,
        _cipher = AesGcm.with256bits(),
-       _kdf = Pbkdf2(
+       // PBKDF2 is kept only for the one-time password-based seed derivation.
+       _passwordKdf = Pbkdf2(
          macAlgorithm: Hmac.sha256(),
          iterations: 210000,
          bits: 256,
-       );
+       ),
+       // HKDF is used for per-message AES key derivation from the X25519
+       // shared secret: single-pass, appropriate for strong key material,
+       // and orders of magnitude faster than PBKDF2.
+       _hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
 
   static const _seedKey = 'chat_e2ee_seed_v1';
   static const _metaKey = 'chat_e2ee_meta_v1';
 
+  /// Algorithm tag written into every new envelope.
+  static const _currentAlg = 'x25519_hkdf_aes_gcm_256';
+
+  /// Legacy algorithm tag produced by older clients (PBKDF2-based).
+  static const _legacyAlg = 'x25519_aes_gcm_256';
+
   final FlutterSecureStorage _secureStorage;
   final Cryptography _cryptography;
   final Cipher _cipher;
-  final Pbkdf2 _kdf;
+  final Pbkdf2 _passwordKdf;
+  final Hkdf _hkdf;
 
   KeyExchangeAlgorithm get _x25519 => _cryptography.x25519();
 
@@ -81,7 +93,7 @@ class MessageE2eeService {
 
     return jsonEncode({
       'v': 1,
-      'alg': 'x25519_aes_gcm_256',
+      'alg': _currentAlg,
       'recipient': recipientPayload,
       'sender': senderPayload,
     });
@@ -105,6 +117,9 @@ class MessageE2eeService {
     if (decoded is! Map<String, dynamic>) {
       return null;
     }
+
+    // Detect algorithm so we can use the matching KDF for backward compat.
+    final alg = decoded['alg'] as String? ?? _legacyAlg;
 
     final block = decoded[sentByCurrentUser ? 'sender' : 'recipient'];
     if (block is! Map<String, dynamic>) {
@@ -138,7 +153,7 @@ class MessageE2eeService {
           type: KeyPairType.x25519,
         ),
       );
-      final aesKey = await _deriveAesKey(sharedSecret);
+      final aesKey = await _deriveAesKey(sharedSecret, alg: alg);
       final plainBytes = await _cipher.decrypt(
         SecretBox(
           base64Decode(cipherText),
@@ -198,8 +213,24 @@ class MessageE2eeService {
     };
   }
 
-  Future<SecretKey> _deriveAesKey(SecretKey sharedSecret) async {
-    return _kdf.deriveKey(
+  /// Derives the per-message AES-256 key from an X25519 shared secret.
+  ///
+  /// New messages use HKDF (fast, single-pass, appropriate for strong key
+  /// material). Legacy messages fall back to PBKDF2 so they can still be
+  /// decrypted.
+  Future<SecretKey> _deriveAesKey(
+    SecretKey sharedSecret, {
+    String alg = _currentAlg,
+  }) async {
+    if (alg == _legacyAlg) {
+      // Backward compat: old clients encrypted with PBKDF2.
+      return _passwordKdf.deriveKey(
+        secretKey: sharedSecret,
+        nonce: utf8.encode('sync-chat-e2ee-v1'),
+      );
+    }
+    // Fast path: HKDF — appropriate when key material is already strong.
+    return _hkdf.deriveKey(
       secretKey: sharedSecret,
       nonce: utf8.encode('sync-chat-e2ee-v1'),
     );
@@ -265,7 +296,8 @@ class MessageE2eeService {
       'sync-e2ee:${serverUrl.trim().toLowerCase()}:${email.trim().toLowerCase()}',
     );
     final secret = SecretKey(utf8.encode(password));
-    final derived = await _kdf.deriveKey(secretKey: secret, nonce: salt);
+    // PBKDF2 is appropriate here: we are stretching a user-supplied password.
+    final derived = await _passwordKdf.deriveKey(secretKey: secret, nonce: salt);
     return derived.extractBytes();
   }
 

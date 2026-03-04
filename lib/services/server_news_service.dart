@@ -16,7 +16,9 @@ class ServerNewsService {
     required String accessToken,
     int limit = 30,
   }) async {
-    final uri = Uri.parse('${_normalizeBaseUrl(baseUrl)}/api/planet-news?limit=$limit');
+    final uri = Uri.parse(
+      '${_normalizeBaseUrl(baseUrl)}/api/planet-news?limit=$limit',
+    );
     final response = await _httpClient
         .get(uri, headers: _headers(accessToken))
         .timeout(const Duration(seconds: 10));
@@ -41,7 +43,9 @@ class ServerNewsService {
     required String accessToken,
     required String newsId,
   }) async {
-    final uri = Uri.parse('${_normalizeBaseUrl(baseUrl)}/api/planet-news/$newsId');
+    final uri = Uri.parse(
+      '${_normalizeBaseUrl(baseUrl)}/api/planet-news/$newsId',
+    );
     final response = await _httpClient
         .get(uri, headers: _headers(accessToken))
         .timeout(const Duration(seconds: 10));

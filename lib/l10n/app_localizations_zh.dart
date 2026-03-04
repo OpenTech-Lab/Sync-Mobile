@@ -24,6 +24,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabHome => '首頁';
 
   @override
+  String get tabPlanet => '星球';
+
+  @override
   String get tabChats => '聊天';
 
   @override
@@ -205,6 +208,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get friendAdded => '已新增好友';
+
+  @override
+  String get planetLoading => '正在載入星球資料…';
+
+  @override
+  String get planetLoadFailed => '載入星球資料失敗。';
+
+  @override
+  String get planetNewsTitle => '伺服器公告';
+
+  @override
+  String get planetNewsEmpty => '目前尚無公告';
+
+  @override
+  String get planetNewsDetailTitle => '公告內容';
 
   @override
   String get settingsMyPlanet => '我的 Planet';
@@ -644,6 +662,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get tabHome => '首頁';
 
   @override
+  String get tabPlanet => '星球';
+
+  @override
   String get tabChats => '聊天';
 
   @override
@@ -825,6 +846,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get friendAdded => '已新增好友';
+
+  @override
+  String get planetLoading => '正在載入星球資料…';
+
+  @override
+  String get planetLoadFailed => '載入星球資料失敗。';
+
+  @override
+  String get planetNewsTitle => '伺服器公告';
+
+  @override
+  String get planetNewsEmpty => '目前尚無公告';
+
+  @override
+  String get planetNewsDetailTitle => '公告內容';
 
   @override
   String get settingsMyPlanet => '我的 Planet';

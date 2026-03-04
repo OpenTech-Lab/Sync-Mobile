@@ -12,6 +12,7 @@ import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../home/home_page.dart';
+import '../planet/planet_page.dart';
 import '../chats/chats_page.dart';
 import '../settings/settings_page.dart';
 
@@ -140,7 +141,7 @@ class _MainShellState extends ConsumerState<MainShell>
         return;
       }
       ref.read(chatVisibilityProvider.notifier).state = ChatVisibilityState(
-        isChatsTabSelected: _selectedIndex == 1,
+        isChatsTabSelected: _selectedIndex == 2,
         activePartnerId: _activePartnerId,
       );
     });
@@ -149,7 +150,7 @@ class _MainShellState extends ConsumerState<MainShell>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hideTabs = _selectedIndex == 1 && _activePartnerId != null;
+    final hideTabs = _selectedIndex == 2 && _activePartnerId != null;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final totalUnread = unreadCounts.values.fold(0, (s, v) => s + v);
@@ -163,12 +164,13 @@ class _MainShellState extends ConsumerState<MainShell>
         onOpenChat: (friendId) {
           // Switch to Chats tab and pre-select the friend
           setState(() {
-            _selectedIndex = 1;
+            _selectedIndex = 2;
             _activePartnerId = friendId;
           });
           _syncChatVisibility();
         },
       ),
+      PlanetTab(serverUrl: widget.serverUrl, accessToken: widget.accessToken),
       ChatsTab(
         serverUrl: widget.serverUrl,
         accessToken: widget.accessToken,

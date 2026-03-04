@@ -24,6 +24,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabHome => 'home';
 
   @override
+  String get tabPlanet => 'planet';
+
+  @override
   String get tabChats => 'chats';
 
   @override
@@ -205,6 +208,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get friendAdded => 'Friend added';
+
+  @override
+  String get planetLoading => 'Loading planet data…';
+
+  @override
+  String get planetLoadFailed => 'Failed to load planet data.';
+
+  @override
+  String get planetNewsTitle => 'Server News';
+
+  @override
+  String get planetNewsEmpty => 'No server news yet';
+
+  @override
+  String get planetNewsDetailTitle => 'News';
 
   @override
   String get settingsMyPlanet => 'My Planet';

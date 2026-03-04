@@ -126,6 +126,12 @@ abstract class AppLocalizations {
   /// **'home'**
   String get tabHome;
 
+  /// No description provided for @tabPlanet.
+  ///
+  /// In en, this message translates to:
+  /// **'planet'**
+  String get tabPlanet;
+
   /// No description provided for @tabChats.
   ///
   /// In en, this message translates to:
@@ -479,6 +485,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Friend added'**
   String get friendAdded;
+
+  /// No description provided for @planetLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading planet data…'**
+  String get planetLoading;
+
+  /// No description provided for @planetLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load planet data.'**
+  String get planetLoadFailed;
+
+  /// No description provided for @planetNewsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server News'**
+  String get planetNewsTitle;
+
+  /// No description provided for @planetNewsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No server news yet'**
+  String get planetNewsEmpty;
+
+  /// No description provided for @planetNewsDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get planetNewsDetailTitle;
 
   /// No description provided for @settingsMyPlanet.
   ///

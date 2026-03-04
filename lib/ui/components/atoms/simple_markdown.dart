@@ -83,9 +83,7 @@ class SimpleMarkdownText extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(
-                child: _buildRichText(trimmed.substring(2), baseStyle),
-              ),
+              Expanded(child: _buildRichText(trimmed.substring(2), baseStyle)),
             ],
           ),
         );
@@ -100,20 +98,17 @@ class SimpleMarkdownText extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: widgets
-          .map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: item,
-              ))
+          .map(
+            (item) =>
+                Padding(padding: const EdgeInsets.only(bottom: 6), child: item),
+          )
           .toList(growable: false),
     );
   }
 
   Widget _buildRichText(String input, TextStyle style) {
     return RichText(
-      text: TextSpan(
-        style: style,
-        children: _parseInline(input, style),
-      ),
+      text: TextSpan(style: style, children: _parseInline(input, style)),
     );
   }
 
@@ -163,7 +158,7 @@ class SimpleMarkdownText extends StatelessWidget {
               text: raw.substring(next + 1, end),
               style: style.copyWith(
                 fontFamily: 'monospace',
-                backgroundColor: AppPalette.neutral200,
+                backgroundColor: AppPalette.neutral300,
               ),
             ),
           );
