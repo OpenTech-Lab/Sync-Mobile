@@ -130,12 +130,17 @@ EOF
 
 echo "✓ Created ${VERSION_FILE}"
 
+# 2.1) Keep only latest version note file
+find "${VERSION_DIR}" -maxdepth 1 -type f -name '*.md' ! -name "${VERSION_NAME}.md" -delete
+echo "✓ Removed old version notes in ${VERSION_DIR} (kept ${VERSION_NAME}.md)"
+
 # 3) Add and commit
 git -C "${PROJECT_ROOT}" add \
   "${PUBSPEC}" \
   "${ANDROID_LOCAL_PROPERTIES}" \
   "${IOS_PBXPROJ}" \
   "${VERSION_FILE}" || true
+git -C "${PROJECT_ROOT}" add -A "${VERSION_DIR}" || true
 
 if [ -f "${IOS_GENERATED_XCCONFIG}" ]; then
   git -C "${PROJECT_ROOT}" add "${IOS_GENERATED_XCCONFIG}" || true
