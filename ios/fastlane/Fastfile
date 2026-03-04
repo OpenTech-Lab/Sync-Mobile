@@ -24,11 +24,13 @@ platform :ios do
       xcodeproj:    "Runner.xcodeproj",
     )
 
-    # --- Prepare Flutter dependencies only ---
-    # Avoid `flutter build ios*` here; it can require device-signing context
-    # on CI before gym runs. Keep gym as the single iOS archive/sign step.
+    # --- Prepare Flutter iOS build config without signing ---
+    # `xcode_backend.sh build` can fail in archive when iOS config artifacts are
+    # not prepared up front on CI. Generate config only, no archive/signing here.
     Dir.chdir("..") do
       sh("flutter pub get")
+      sh("flutter precache --ios")
+      sh("flutter build ios --release --no-codesign --config-only")
     end
 
     # --- Archive & export (manual signing; profile already installed by CI) ---
