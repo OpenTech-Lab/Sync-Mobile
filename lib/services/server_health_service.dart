@@ -18,6 +18,7 @@ class PlanetInfo {
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
+    required this.serverCreatedAt,
     required this.healthStatus,
     required this.latencyMs,
     required this.checkedAt,
@@ -34,6 +35,7 @@ class PlanetInfo {
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
+  final DateTime? serverCreatedAt;
   final String healthStatus;
   final int latencyMs;
   final DateTime checkedAt;
@@ -76,6 +78,7 @@ class ServerHealthService {
     String? instanceDomain;
     String? countryCode;
     String? countryName;
+    DateTime? serverCreatedAt;
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
@@ -122,6 +125,10 @@ class ServerHealthService {
         if (rawCountryName is String && rawCountryName.trim().isNotEmpty) {
           countryName = rawCountryName.trim();
         }
+        final rawServerCreatedAt = decoded['server_created_at'];
+        if (rawServerCreatedAt is String && rawServerCreatedAt.trim().isNotEmpty) {
+          serverCreatedAt = DateTime.tryParse(rawServerCreatedAt.trim())?.toUtc();
+        }
       }
     } catch (_) {
       // Keep default "ok" if body is not parseable JSON.
@@ -139,6 +146,7 @@ class ServerHealthService {
       instanceDomain: instanceDomain,
       countryCode: countryCode,
       countryName: countryName,
+      serverCreatedAt: serverCreatedAt,
       healthStatus: healthStatus,
       latencyMs: latencyMs,
       checkedAt: DateTime.now(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/realtime_event.dart';
@@ -58,6 +59,7 @@ class SettingsTab extends ConsumerWidget {
       planetInfo: planetInfo,
       l10n: l10n,
     );
+    final serverCreatedDate = _serverCreatedDateFromData(planetInfo: planetInfo);
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -98,6 +100,7 @@ class SettingsTab extends ConsumerWidget {
               memberCount: unreadCounts.keys.length,
               isConnected: isConnected,
               notifActive: notifActive,
+              serverCreatedDate: serverCreatedDate,
               inkColor: inkColor,
               mutedColor: AppPalette.neutral500,
             ),
@@ -590,6 +593,14 @@ String _planetDescriptionFromData({
   return l10n.settingsPlanetNoDescription;
 }
 
+String _serverCreatedDateFromData({required PlanetInfo? planetInfo}) {
+  final value = planetInfo?.serverCreatedAt;
+  if (value == null) {
+    return '--';
+  }
+  return DateFormat('yyyy-MM-dd').format(value.toLocal());
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.label, required this.ruleColor});
   final String label;
@@ -731,6 +742,7 @@ class _PlanetCard extends StatelessWidget {
     required this.memberCount,
     required this.isConnected,
     required this.notifActive,
+    required this.serverCreatedDate,
     required this.inkColor,
     required this.mutedColor,
   });
@@ -741,6 +753,7 @@ class _PlanetCard extends StatelessWidget {
   final int memberCount;
   final bool isConnected;
   final bool notifActive;
+  final String serverCreatedDate;
   final Color inkColor;
   final Color mutedColor;
 
@@ -809,6 +822,13 @@ class _PlanetCard extends StatelessWidget {
             _TextStat(
               value: 'E2EE',
               label: l10n.settingsEncrypted,
+              inkColor: inkColor,
+              mutedColor: mutedColor,
+            ),
+            const SizedBox(width: 28),
+            _TextStat(
+              value: serverCreatedDate,
+              label: l10n.settingsCreated,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),

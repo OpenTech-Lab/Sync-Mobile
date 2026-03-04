@@ -502,6 +502,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEncrypted => 'encrypted';
 
   @override
+  String get settingsCreated => 'created';
+
+  @override
   String get profileTitle => 'profile';
 
   @override

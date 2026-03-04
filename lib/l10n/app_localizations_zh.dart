@@ -502,6 +502,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsEncrypted => '已加密';
 
   @override
+  String get settingsCreated => '建立日期';
+
+  @override
   String get profileTitle => '個人檔案';
 
   @override
@@ -1172,6 +1175,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsEncrypted => '已加密';
+
+  @override
+  String get settingsCreated => '建立日期';
 
   @override
   String get profileTitle => '個人檔案';

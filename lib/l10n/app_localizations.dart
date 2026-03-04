@@ -1050,6 +1050,12 @@ abstract class AppLocalizations {
   /// **'encrypted'**
   String get settingsEncrypted;
 
+  /// No description provided for @settingsCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'created'**
+  String get settingsCreated;
+
   /// No description provided for @profileTitle.
   ///
   /// In en, this message translates to:

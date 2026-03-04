@@ -218,6 +218,7 @@
   "settingsResidents": "residents",
   "settingsStickers": "stickers",
   "settingsEncrypted": "encrypted",
+  "settingsCreated": "created",
   "profileTitle": "profile",
   "profileNoDescriptionYet": "no description yet",
   "profileFriendLinkCopied": "Friend link copied",
