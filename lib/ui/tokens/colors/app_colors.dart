@@ -31,30 +31,30 @@ class AppColors {
   factory AppColors.light() {
     return const AppColors(
       primary: AppPalette.blue600,
-      onPrimary: Colors.white,
-      background: AppPalette.mujiPaper,
-      surface: AppPalette.mujiPaper,
-      onSurface: AppPalette.mujiInk,
-      muted: AppPalette.mujiMuted,
-      border: AppPalette.mujiRule,
+      onPrimary: AppPalette.white,
+      background: AppPalette.neutral50,
+      surface: AppPalette.neutral50,
+      onSurface: AppPalette.neutral800,
+      muted: AppPalette.neutral500,
+      border: AppPalette.neutral300,
       success: AppPalette.green600,
-      error: AppPalette.mujiRed,
-      onError: Colors.white,
+      error: AppPalette.danger700,
+      onError: AppPalette.white,
     );
   }
 
   factory AppColors.dark() {
     return const AppColors(
       primary: AppPalette.blue700,
-      onPrimary: Colors.white,
-      background: AppPalette.mujiPaperDark,
-      surface: AppPalette.mujiPaperDark,
-      onSurface: AppPalette.mujiInkDark,
-      muted: AppPalette.mujiMuted,
-      border: AppPalette.mujiRuleDark,
+      onPrimary: AppPalette.white,
+      background: AppPalette.neutral900,
+      surface: AppPalette.neutral900,
+      onSurface: AppPalette.neutral100,
+      muted: AppPalette.neutral500,
+      border: AppPalette.neutral700,
       success: AppPalette.green600,
       error: AppPalette.red600,
-      onError: Colors.white,
+      onError: AppPalette.white,
     );
   }
 }

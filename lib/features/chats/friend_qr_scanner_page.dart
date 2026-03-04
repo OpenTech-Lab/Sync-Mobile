@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -17,13 +18,12 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiMuted = Color(0xFF8A8680);
-    final inkColor = isDark ? const Color(0xFFE8E4DC) : const Color(0xFF2C2A27);
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppPalette.black,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -43,7 +43,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
               },
             ),
 
-            // ── Muji scan overlay ─────────────────────────────────────────
+            // ── Minimal scan overlay ─────────────────────────────────────────
             const _ScanOverlay(),
 
             // ── top bar ───────────────────────────────────────────────────
@@ -83,7 +83,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w300,
-                      color: mujiMuted,
+                      color: AppPalette.neutral500,
                       letterSpacing: 0.4,
                     ),
                   ),
@@ -113,7 +113,7 @@ class _ScanOverlay extends StatelessWidget {
 class _OverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    const dimColor = Color(0xBB000000);
+    const dimColor = AppPalette.dimOverlay;
     const frameSize = 220.0;
     const strokeWidth = 1.0;
 
@@ -135,7 +135,7 @@ class _OverlayPainter extends CustomPainter {
 
     // hairline frame
     final linePaint = Paint()
-      ..color = const Color(0xFFDDD8CF)
+      ..color = AppPalette.neutral300
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawRect(rect, linePaint);

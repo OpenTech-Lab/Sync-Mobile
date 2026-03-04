@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/realtime_event.dart';
@@ -46,19 +47,9 @@ class SettingsTab extends ConsumerWidget {
       planetInfo: planetInfo,
     );
 
-    // ── Muji warm-neutral palette ────────────────────────────────────────
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    const mujiRed = Color(0xFF9B3A2A);
-
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final themeModes = [
       (ThemeMode.light, 'Light'),
@@ -82,7 +73,7 @@ class SettingsTab extends ConsumerWidget {
               isConnected: isConnected,
               notifActive: notifActive,
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: AppPalette.neutral500,
             ),
 
             const SizedBox(height: 32),
@@ -95,7 +86,7 @@ class SettingsTab extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -117,7 +108,9 @@ class SettingsTab extends ConsumerWidget {
                               fontWeight: themeMode == mode
                                   ? FontWeight.w500
                                   : FontWeight.w300,
-                              color: themeMode == mode ? inkColor : mujiMuted,
+                              color: themeMode == mode
+                                  ? inkColor
+                                  : AppPalette.neutral500,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -127,7 +120,7 @@ class SettingsTab extends ConsumerWidget {
                             width: 24,
                             color: themeMode == mode
                                 ? inkColor
-                                : Colors.transparent,
+                                : AppPalette.transparent,
                           ),
                         ],
                       ),
@@ -161,16 +154,16 @@ class SettingsTab extends ConsumerWidget {
                       'Locally encrypted · AES-GCM',
                       style: TextStyle(
                         fontSize: 11,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.2,
                       ),
                     ),
                   ],
                 ),
-                _MujiSwitch(
+                _SettingsToggle(
                   value: backupState?.enabled ?? false,
                   activeColor: inkColor,
-                  inactiveColor: mujiMuted,
+                  inactiveColor: AppPalette.neutral500,
                   trackColor: ruleColor,
                   onChanged: (v) => ref
                       .read(backupControllerProvider.notifier)
@@ -188,7 +181,7 @@ class SettingsTab extends ConsumerWidget {
                     label: 'Create backup',
                     busy: backupState?.isBusy == true,
                     inkColor: inkColor,
-                    mujiMuted: mujiMuted,
+                    mutedColor: AppPalette.neutral500,
                     onPressed: () => ref
                         .read(backupControllerProvider.notifier)
                         .createBackup(),
@@ -198,7 +191,7 @@ class SettingsTab extends ConsumerWidget {
                     label: 'Restore',
                     busy: backupState?.isBusy == true,
                     inkColor: inkColor,
-                    mujiMuted: mujiMuted,
+                    mutedColor: AppPalette.neutral500,
                     onPressed: () async {
                       await ref
                           .read(backupControllerProvider.notifier)
@@ -217,7 +210,7 @@ class SettingsTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
                     backupState!.statusMessage!,
-                    style: TextStyle(fontSize: 12, color: mujiMuted),
+                    style: TextStyle(fontSize: 12, color: AppPalette.neutral500),
                   ),
                 ),
             ],
@@ -233,7 +226,7 @@ class SettingsTab extends ConsumerWidget {
                 onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
-                    builder: (ctx) => _MujiConfirmDialog(
+                    builder: (ctx) => _ConfirmDialog(
                       title: 'Sign out',
                       message:
                           'You will be signed out of this account.\nLocal messages remain on device.',
@@ -249,7 +242,7 @@ class SettingsTab extends ConsumerWidget {
                     'sign out',
                     style: TextStyle(
                       fontSize: 13,
-                      color: mujiRed,
+                      color: AppPalette.danger700,
                       letterSpacing: 0.3,
                       fontWeight: FontWeight.w300,
                     ),
@@ -298,7 +291,7 @@ class _SectionHeader extends StatelessWidget {
               fontSize: 10,
               letterSpacing: 2.8,
               fontWeight: FontWeight.w400,
-              color: Color(0xFF8A8680),
+              color: AppPalette.neutral500,
             ),
           ),
           const SizedBox(height: 8),
@@ -314,14 +307,14 @@ class _BackupTextButton extends StatelessWidget {
     required this.label,
     required this.busy,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.onPressed,
   });
 
   final String label;
   final bool busy;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final VoidCallback onPressed;
 
   @override
@@ -336,7 +329,7 @@ class _BackupTextButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w300,
-              color: busy ? mujiMuted.withValues(alpha: 0.4) : inkColor,
+              color: busy ? mutedColor.withValues(alpha: 0.4) : inkColor,
               letterSpacing: 0.2,
             ),
           ),
@@ -355,8 +348,8 @@ class _BackupTextButton extends StatelessWidget {
   }
 }
 
-class _MujiSwitch extends StatelessWidget {
-  const _MujiSwitch({
+class _SettingsToggle extends StatelessWidget {
+  const _SettingsToggle({
     required this.value,
     required this.activeColor,
     required this.inactiveColor,
@@ -422,7 +415,7 @@ class _PlanetCard extends StatelessWidget {
     required this.isConnected,
     required this.notifActive,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
   });
 
   final String planetName;
@@ -432,7 +425,7 @@ class _PlanetCard extends StatelessWidget {
   final bool isConnected;
   final bool notifActive;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
 
   @override
   Widget build(BuildContext context) {
@@ -453,7 +446,7 @@ class _PlanetCard extends StatelessWidget {
           planetDescription,
           style: TextStyle(
             fontSize: 12,
-            color: mujiMuted,
+            color: mutedColor,
             letterSpacing: 0.2,
             height: 1.4,
           ),
@@ -466,13 +459,13 @@ class _PlanetCard extends StatelessWidget {
             _InlineStatus(
               active: isConnected,
               label: isConnected ? 'online' : 'offline',
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
             const SizedBox(width: 20),
             _InlineStatus(
               active: notifActive,
               label: notifActive ? 'notifications on' : 'notifications off',
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
           ],
         ),
@@ -483,21 +476,21 @@ class _PlanetCard extends StatelessWidget {
               value: '$memberCount',
               label: 'residents',
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             _TextStat(
               value: '$stickerCount',
               label: 'stickers',
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             _TextStat(
               value: 'E2EE',
               label: 'encrypted',
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
           ],
         ),
@@ -510,17 +503,17 @@ class _InlineStatus extends StatelessWidget {
   const _InlineStatus({
     required this.active,
     required this.label,
-    required this.mujiMuted,
+    required this.mutedColor,
   });
   final bool active;
   final String label;
-  final Color mujiMuted;
+  final Color mutedColor;
 
   @override
   Widget build(BuildContext context) {
     final dotColor = active
-        ? const Color(0xFF6B8F6B)
-        : mujiMuted.withValues(alpha: 0.5);
+        ? AppPalette.success700
+        : mutedColor.withValues(alpha: 0.5);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -534,7 +527,7 @@ class _InlineStatus extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: active ? const Color(0xFF6B8F6B) : mujiMuted,
+            color: active ? AppPalette.success700 : mutedColor,
             letterSpacing: 0.2,
           ),
         ),
@@ -548,13 +541,13 @@ class _TextStat extends StatelessWidget {
     required this.value,
     required this.label,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
   });
 
   final String value;
   final String label;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
 
   @override
   Widget build(BuildContext context) {
@@ -572,15 +565,15 @@ class _TextStat extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 10, color: mujiMuted, letterSpacing: 0.3),
+          style: TextStyle(fontSize: 10, color: mutedColor, letterSpacing: 0.3),
         ),
       ],
     );
   }
 }
 
-class _MujiConfirmDialog extends StatelessWidget {
-  const _MujiConfirmDialog({
+class _ConfirmDialog extends StatelessWidget {
+  const _ConfirmDialog({
     required this.title,
     required this.message,
     required this.confirmLabel,
@@ -594,22 +587,13 @@ class _MujiConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    const mujiRed = Color(0xFF9B3A2A);
-
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     return Dialog(
       backgroundColor: bgColor,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: AppPalette.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
       child: Padding(
@@ -633,7 +617,7 @@ class _MujiConfirmDialog extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 height: 1.6,
               ),
             ),
@@ -654,7 +638,7 @@ class _MujiConfirmDialog extends StatelessWidget {
                       'cancel',
                       style: TextStyle(
                         fontSize: 13,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -674,7 +658,7 @@ class _MujiConfirmDialog extends StatelessWidget {
                         fontSize: 11,
                         letterSpacing: 2.2,
                         fontWeight: FontWeight.w500,
-                        color: mujiRed,
+                        color: AppPalette.danger700,
                       ),
                     ),
                   ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -202,34 +203,27 @@ class MyProfileScreen extends ConsumerWidget {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     // warm muted avatar palette
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash2 = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
-    final mujiAvatarColor = palette[hash2.abs() % palette.length];
+    final avatarToneColor = palette[hash2.abs() % palette.length];
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: AppPalette.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
@@ -240,7 +234,7 @@ class MyProfileScreen extends ConsumerWidget {
             color: inkColor,
           ),
         ),
-        iconTheme: IconThemeData(color: mujiMuted),
+        iconTheme: IconThemeData(color: AppPalette.neutral500),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(28, 20, 28, 40),
@@ -255,7 +249,7 @@ class MyProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: mujiAvatarColor,
+                      backgroundColor: avatarToneColor,
                       child: avatarBase64 == null
                           ? Text(
                               currentUserId.length >= 2
@@ -264,7 +258,7 @@ class MyProfileScreen extends ConsumerWidget {
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w300,
-                                color: Colors.white,
+                                color: AppPalette.white,
                               ),
                             )
                           : ClipOval(
@@ -307,7 +301,7 @@ class MyProfileScreen extends ConsumerWidget {
                               'edit',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: mujiMuted,
+                                color: AppPalette.neutral500,
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -321,7 +315,7 @@ class MyProfileScreen extends ConsumerWidget {
                       planetLabel,
                       style: const TextStyle(
                         fontSize: 11,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         fontWeight: FontWeight.w300,
                       ),
                     ),
@@ -339,7 +333,7 @@ class MyProfileScreen extends ConsumerWidget {
                               fontSize: 13,
                               fontWeight: FontWeight.w300,
                               color: oneLineDescription.isEmpty
-                                  ? mujiMuted
+                                  ? AppPalette.neutral500
                                   : inkColor,
                               height: 1.5,
                             ),
@@ -355,7 +349,7 @@ class MyProfileScreen extends ConsumerWidget {
                               'edit',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: mujiMuted,
+                                color: AppPalette.neutral500,
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -385,7 +379,7 @@ class MyProfileScreen extends ConsumerWidget {
                         'copy friend link',
                         style: TextStyle(
                           fontSize: 11,
-                          color: mujiMuted,
+                          color: AppPalette.neutral500,
                           letterSpacing: 0.3,
                           decoration: TextDecoration.underline,
                           decorationColor: ruleColor,
@@ -408,7 +402,7 @@ class MyProfileScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               letterSpacing: 2.8,
-              color: mujiMuted,
+              color: AppPalette.neutral500,
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -418,14 +412,14 @@ class MyProfileScreen extends ConsumerWidget {
               data: myQrPayload,
               version: QrVersions.auto,
               size: 200,
-              backgroundColor: Colors.white,
+              backgroundColor: AppPalette.white,
               eyeStyle: const QrEyeStyle(
                 eyeShape: QrEyeShape.square,
-                color: Colors.black,
+                color: AppPalette.black,
               ),
               dataModuleStyle: const QrDataModuleStyle(
                 dataModuleShape: QrDataModuleShape.square,
-                color: Colors.black,
+                color: AppPalette.black,
               ),
             ),
           ),
@@ -436,7 +430,7 @@ class MyProfileScreen extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w300,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
               ),
             ),
           ),
@@ -458,7 +452,7 @@ class MyProfileScreen extends ConsumerWidget {
                 'copy qr payload',
                 style: TextStyle(
                   fontSize: 12,
-                  color: mujiMuted,
+                  color: AppPalette.neutral500,
                   letterSpacing: 0.3,
                   decoration: TextDecoration.underline,
                   decorationColor: ruleColor,
@@ -510,25 +504,17 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
     final isOverLimit = words > 100;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // ── Muji warm-neutral palette ────────────────────────────────────────
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    const mujiRed = Color(0xFF9B3A2A);
+    // ── Minimal warm-neutral palette ────────────────────────────────────────
 
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
-    final counterColor = isOverLimit ? mujiRed : mujiMuted;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final counterColor = isOverLimit ? AppPalette.danger700 : AppPalette.neutral500;
 
     return Dialog(
       backgroundColor: bgColor,
-      surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.black26,
+      surfaceTintColor: AppPalette.transparent,
+      shadowColor: AppPalette.black26,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Padding(
@@ -544,7 +530,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 2.8,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
               ),
             ),
             const SizedBox(height: 10),
@@ -577,7 +563,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                 hintStyle: TextStyle(
                   fontSize: 14,
                   height: 1.8,
-                  color: mujiMuted.withValues(alpha: 0.65),
+                  color: AppPalette.neutral500.withValues(alpha: 0.65),
                   fontWeight: FontWeight.w300,
                 ),
                 filled: false,
@@ -588,7 +574,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                   borderSide: BorderSide(color: ruleColor),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: mujiMuted),
+                  borderSide: BorderSide(color: AppPalette.neutral500),
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 isDense: true,
@@ -605,7 +591,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                     style: TextStyle(
                       fontSize: 10,
                       letterSpacing: 0.4,
-                      color: mujiRed,
+                      color: AppPalette.danger700,
                     ),
                   ),
                 const Spacer(),
@@ -639,7 +625,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                       'cancel',
                       style: TextStyle(
                         fontSize: 13,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -662,7 +648,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                         letterSpacing: 2.5,
                         fontWeight: FontWeight.w500,
                         color: isOverLimit
-                            ? mujiMuted.withValues(alpha: 0.35)
+                            ? AppPalette.neutral500.withValues(alpha: 0.35)
                             : inkColor,
                       ),
                     ),
@@ -726,20 +712,13 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     return Dialog(
       backgroundColor: bgColor,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: AppPalette.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Padding(
@@ -753,7 +732,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -770,7 +749,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 hintText: '3–32 chars, a-zA-Z0-9._-',
                 hintStyle: TextStyle(
                   fontSize: 13,
-                  color: mujiMuted.withValues(alpha: 0.55),
+                  color: AppPalette.neutral500.withValues(alpha: 0.55),
                   fontWeight: FontWeight.w300,
                 ),
                 border: UnderlineInputBorder(
@@ -780,7 +759,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                   borderSide: BorderSide(color: ruleColor),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: mujiMuted),
+                  borderSide: BorderSide(color: AppPalette.neutral500),
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 isDense: true,
@@ -801,7 +780,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                       'cancel',
                       style: TextStyle(
                         fontSize: 13,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.3,
                       ),
                     ),

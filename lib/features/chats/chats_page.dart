@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -186,23 +187,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   Future<_ChatTargetInput?> _promptForChatTarget() async {
     final targetController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
         return Dialog(
           backgroundColor: bgColor,
-          surfaceTintColor: Colors.transparent,
+          surfaceTintColor: AppPalette.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 32,
@@ -219,7 +213,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   style: TextStyle(
                     fontSize: 10,
                     letterSpacing: 2.8,
-                    color: mujiMuted,
+                    color: AppPalette.neutral500,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -236,7 +230,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     hintText: 'Paste friend link or user ID…',
                     hintStyle: TextStyle(
                       fontSize: 13,
-                      color: mujiMuted.withValues(alpha: 0.55),
+                      color: AppPalette.neutral500.withValues(alpha: 0.55),
                       fontWeight: FontWeight.w300,
                     ),
                     border: UnderlineInputBorder(
@@ -246,7 +240,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       borderSide: BorderSide(color: ruleColor),
                     ),
                     focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: mujiMuted),
+                      borderSide: BorderSide(color: AppPalette.neutral500),
                     ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     isDense: true,
@@ -267,7 +261,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                           'cancel',
                           style: TextStyle(
                             fontSize: 13,
-                            color: mujiMuted,
+                            color: AppPalette.neutral500,
                             letterSpacing: 0.3,
                           ),
                         ),
@@ -637,9 +631,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
 
     final cs = Theme.of(context).colorScheme;
     final stickers =
@@ -713,8 +705,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       backgroundColor: bgColor,
       appBar: inConversation
           ? AppBar(
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
+              backgroundColor: AppPalette.transparent,
+              surfaceTintColor: AppPalette.transparent,
               elevation: 0,
               scrolledUnderElevation: 0,
               forceMaterialTransparency: true,
@@ -946,17 +938,10 @@ class _ConversationStarter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final unreadConversationIds = orderedConversationIds
         .where((id) => (unreadCounts[id] ?? 0) > 0)
@@ -981,9 +966,9 @@ class _ConversationStarter extends ConsumerWidget {
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.zero,
                 ),
-                builder: (_) => _MujiQuickActionSheet(
+                builder: (_) => _QuickActionSheet(
                   inkColor: inkColor,
-                  mujiMuted: mujiMuted,
+                  mutedColor: AppPalette.neutral500,
                   ruleColor: ruleColor,
                 ),
               );
@@ -1009,7 +994,7 @@ class _ConversationStarter extends ConsumerWidget {
             hintText: 'search…',
             hintStyle: TextStyle(
               fontSize: 14,
-              color: mujiMuted.withValues(alpha: 0.55),
+              color: AppPalette.neutral500.withValues(alpha: 0.55),
               fontWeight: FontWeight.w300,
             ),
             border: UnderlineInputBorder(
@@ -1019,7 +1004,7 @@ class _ConversationStarter extends ConsumerWidget {
               borderSide: BorderSide(color: ruleColor),
             ),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: mujiMuted),
+              borderSide: BorderSide(color: AppPalette.neutral500),
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
             isDense: true,
@@ -1036,7 +1021,7 @@ class _ConversationStarter extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.4,
-                  color: mujiMuted,
+                  color: AppPalette.neutral500,
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -1047,7 +1032,7 @@ class _ConversationStarter extends ConsumerWidget {
                   'mark all read',
                   style: TextStyle(
                     fontSize: 11,
-                    color: mujiMuted,
+                    color: AppPalette.neutral500,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -1065,7 +1050,7 @@ class _ConversationStarter extends ConsumerWidget {
               summariesById,
               ruleColor,
               inkColor,
-              mujiMuted,
+              AppPalette.neutral500,
             ),
           ),
         ],
@@ -1077,7 +1062,7 @@ class _ConversationStarter extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               letterSpacing: 2.4,
-              color: mujiMuted,
+              color: AppPalette.neutral500,
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -1094,7 +1079,7 @@ class _ConversationStarter extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
               ),
             ),
           )
@@ -1107,7 +1092,7 @@ class _ConversationStarter extends ConsumerWidget {
               summariesById,
               ruleColor,
               inkColor,
-              mujiMuted,
+              AppPalette.neutral500,
             ),
           ),
       ],
@@ -1121,7 +1106,7 @@ class _ConversationStarter extends ConsumerWidget {
     Map<String, ConversationSummary> summariesById,
     Color ruleColor,
     Color inkColor,
-    Color mujiMuted,
+    Color mutedColor,
   ) {
     final summary = summariesById[userId];
     final unreadCount = unreadCounts[userId] ?? 0;
@@ -1131,12 +1116,12 @@ class _ConversationStarter extends ConsumerWidget {
 
     // avatar warm palette
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash = userId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarColor = palette[hash.abs() % palette.length];
@@ -1159,7 +1144,7 @@ class _ConversationStarter extends ConsumerWidget {
                               ? userId.substring(0, 2).toUpperCase()
                               : '?',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w300,
                           ),
@@ -1195,7 +1180,7 @@ class _ConversationStarter extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: mujiMuted,
+                            color: mutedColor,
                             fontWeight: FontWeight.w300,
                           ),
                         ),
@@ -1209,7 +1194,7 @@ class _ConversationStarter extends ConsumerWidget {
                     if (summary != null)
                       Text(
                         _timeLabel(summary.lastAt),
-                        style: TextStyle(fontSize: 11, color: mujiMuted),
+                        style: TextStyle(fontSize: 11, color: mutedColor),
                       ),
                     if (unreadCount > 0) ...[
                       const SizedBox(height: 4),
@@ -1220,7 +1205,7 @@ class _ConversationStarter extends ConsumerWidget {
                             width: 6,
                             height: 6,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF9B3A2A),
+                              color: AppPalette.danger700,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1229,7 +1214,7 @@ class _ConversationStarter extends ConsumerWidget {
                             '$unreadCount',
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF9B3A2A),
+                              color: AppPalette.danger700,
                             ),
                           ),
                         ],
@@ -1292,13 +1277,8 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     return Container(
       color: bgColor,
@@ -1330,7 +1310,7 @@ class _Composer extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w300,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                       ),
                     ),
                   ),
@@ -1338,7 +1318,11 @@ class _Composer extends StatelessWidget {
                     onTap: onClearMedia,
                     child: const Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(Icons.close, size: 16, color: mujiMuted),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: AppPalette.neutral500,
+                      ),
                     ),
                   ),
                 ],
@@ -1392,7 +1376,7 @@ class _Composer extends StatelessWidget {
                     decoration: InputDecoration(
                       hintText: 'Message…',
                       hintStyle: const TextStyle(
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         fontSize: 14,
                         fontWeight: FontWeight.w300,
                       ),
@@ -1422,7 +1406,7 @@ class _Composer extends StatelessWidget {
                     child: const Icon(
                       Icons.arrow_upward_rounded,
                       size: 22,
-                      color: mujiMuted,
+                      color: AppPalette.neutral500,
                     ),
                   ),
                 ),
@@ -1477,7 +1461,7 @@ class _StickerPicker extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w300,
-              color: Color(0xFF8A8680),
+              color: AppPalette.neutral500,
             ),
           ),
         ),
@@ -1498,12 +1482,12 @@ class _StickerPicker extends StatelessWidget {
                   fontSize: 10,
                   letterSpacing: 2.8,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF8A8680),
+                  color: AppPalette.neutral500,
                 ),
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFDDD8CF)),
+          const Divider(height: 1, color: AppPalette.neutral300),
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -1568,17 +1552,14 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
 
-    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
 
     // Warm bubble colours
-    final myBubble = isDark ? const Color(0xFF3A3428) : const Color(0xFFEDE8DF);
+    final myBubble = isDark ? AppPalette.chatBubbleSelfDark : AppPalette.chatBubbleSelfLight;
     final theirBubble = isDark
-        ? const Color(0xFF2A2926)
-        : const Color(0xFFF5F2EE);
+        ? AppPalette.chatBubblePeerDark
+        : AppPalette.chatBubblePeerLight;
 
     final bubbleColor = isMine ? myBubble : theirBubble;
     final onBubble = inkColor;
@@ -1587,12 +1568,12 @@ class _MessageBubble extends StatelessWidget {
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
 
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash = avatarId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
@@ -1654,7 +1635,10 @@ class _MessageBubble extends StatelessWidget {
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.fade,
-                  style: TextStyle(fontSize: 10, color: mujiMuted),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppPalette.neutral500,
+                  ),
                 ),
               ),
             ),
@@ -1717,16 +1701,9 @@ class _MessageDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final local = message.createdAt.toLocal();
     final dateStr =
@@ -1737,7 +1714,7 @@ class _MessageDetailScreen extends StatelessWidget {
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: AppPalette.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
@@ -1748,7 +1725,7 @@ class _MessageDetailScreen extends StatelessWidget {
             color: inkColor,
           ),
         ),
-        iconTheme: IconThemeData(color: mujiMuted),
+        iconTheme: const IconThemeData(color: AppPalette.neutral500),
         actions: [
           GestureDetector(
             onTap: () {
@@ -1768,7 +1745,7 @@ class _MessageDetailScreen extends StatelessWidget {
                 'copy',
                 style: TextStyle(
                   fontSize: 13,
-                  color: mujiMuted,
+                  color: AppPalette.neutral500,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -1797,7 +1774,7 @@ class _MessageDetailScreen extends StatelessWidget {
               dateStr,
               style: const TextStyle(
                 fontSize: 11,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 letterSpacing: 0.2,
               ),
             ),
@@ -1807,7 +1784,7 @@ class _MessageDetailScreen extends StatelessWidget {
                 message.senderId,
                 style: const TextStyle(
                   fontSize: 11,
-                  color: mujiMuted,
+                  color: AppPalette.neutral500,
                   letterSpacing: 0.2,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -1844,7 +1821,7 @@ class _MessageAvatar extends StatelessWidget {
           ? Text(
               initials,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppPalette.white,
                 fontSize: 8,
                 fontWeight: FontWeight.w300,
               ),
@@ -1862,18 +1839,18 @@ class _MessageAvatar extends StatelessWidget {
 }
 
 // —————————————————————————————————————————————————————
-// Quick action sheet (Muji)
+// Quick action sheet (Minimal)
 // —————————————————————————————————————————————————————
 
-class _MujiQuickActionSheet extends StatelessWidget {
-  const _MujiQuickActionSheet({
+class _QuickActionSheet extends StatelessWidget {
+  const _QuickActionSheet({
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.ruleColor,
   });
 
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final Color ruleColor;
 
   @override
@@ -1891,7 +1868,7 @@ class _MujiQuickActionSheet extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
-                color: mujiMuted,
+                color: mutedColor,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -1920,7 +1897,7 @@ class _MujiQuickActionSheet extends StatelessWidget {
                   'cancel',
                   style: TextStyle(
                     fontSize: 12,
-                    color: mujiMuted,
+                    color: mutedColor,
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -1981,7 +1958,7 @@ class _UnreadBadge extends StatelessWidget {
           width: 6,
           height: 6,
           decoration: const BoxDecoration(
-            color: Color(0xFF9B3A2A),
+            color: AppPalette.danger700,
             shape: BoxShape.circle,
           ),
         ),
@@ -1989,7 +1966,7 @@ class _UnreadBadge extends StatelessWidget {
         Text(
           count > 99 ? '99+' : '$count',
           style: const TextStyle(
-            color: Color(0xFF9B3A2A),
+            color: AppPalette.danger700,
             fontSize: 11,
             fontWeight: FontWeight.w300,
           ),

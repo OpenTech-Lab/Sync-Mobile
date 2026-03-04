@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
@@ -30,17 +31,9 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
@@ -67,7 +60,7 @@ class HomeTab extends ConsumerWidget {
               currentUserId: currentUserId,
               currentUsername: currentUsername,
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: AppPalette.neutral500,
             ),
             const SizedBox(height: 32),
             if (totalUnread > 0) ...[
@@ -79,7 +72,7 @@ class HomeTab extends ConsumerWidget {
                     width: 6,
                     height: 6,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF9B3A2A),
+                      color: AppPalette.danger700,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -88,7 +81,7 @@ class HomeTab extends ConsumerWidget {
                     '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9B3A2A),
+                      color: AppPalette.danger700,
                       fontWeight: FontWeight.w300,
                       letterSpacing: 0.2,
                     ),
@@ -120,7 +113,7 @@ class HomeTab extends ConsumerWidget {
                       'Open Chats and start a conversation',
                       style: TextStyle(
                         fontSize: 12,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.1,
                       ),
                     ),
@@ -150,14 +143,14 @@ class HomeTab extends ConsumerWidget {
                     contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     leading: CircleAvatar(
                       radius: 18,
-                      backgroundColor: _mujiAvatarColor(id),
+                      backgroundColor: _avatarToneColor(id),
                       child: avatarBase64 == null
                           ? Text(
                               initials(id),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
-                                color: Colors.white,
+                                color: AppPalette.white,
                               ),
                             )
                           : ClipOval(
@@ -188,7 +181,7 @@ class HomeTab extends ConsumerWidget {
                           planetLabel,
                           style: TextStyle(
                             fontSize: 10,
-                            color: mujiMuted,
+                            color: AppPalette.neutral500,
                             letterSpacing: 0.3,
                           ),
                           maxLines: 1,
@@ -200,7 +193,7 @@ class HomeTab extends ConsumerWidget {
                       description.trim().isEmpty ? '' : description.trim(),
                       style: TextStyle(
                         fontSize: 12,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         fontWeight: FontWeight.w300,
                       ),
                       maxLines: 1,
@@ -255,15 +248,15 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  Color _mujiAvatarColor(String id) {
-    // Warm muted tones consistent with Muji palette
+  Color _avatarToneColor(String id) {
+    // Warm muted tones consistent with Minimal palette
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
     return palette[hash.abs() % palette.length];
@@ -312,7 +305,7 @@ class _SectionLabel extends StatelessWidget {
               fontSize: 10,
               letterSpacing: 2.8,
               fontWeight: FontWeight.w400,
-              color: Color(0xFF8A8680),
+              color: AppPalette.neutral500,
             ),
           ),
           const SizedBox(height: 8),
@@ -330,7 +323,7 @@ class _ProfileCard extends ConsumerWidget {
     required this.currentUserId,
     required this.currentUsername,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
   });
 
   final String serverUrl;
@@ -338,7 +331,7 @@ class _ProfileCard extends ConsumerWidget {
   final String currentUserId;
   final String? currentUsername;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -352,12 +345,12 @@ class _ProfileCard extends ConsumerWidget {
         : currentUsername!.trim();
 
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarColor = palette[hash.abs() % palette.length];
@@ -390,7 +383,7 @@ class _ProfileCard extends ConsumerWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w300,
-                      color: Colors.white,
+                      color: AppPalette.white,
                     ),
                   )
                 : ClipOval(
@@ -423,7 +416,7 @@ class _ProfileCard extends ConsumerWidget {
                   'View profile',
                   style: TextStyle(
                     fontSize: 11,
-                    color: mujiMuted,
+                    color: mutedColor,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -466,21 +459,14 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     return Dialog(
       backgroundColor: bgColor,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: AppPalette.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Padding(
@@ -494,7 +480,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
               style: const TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -511,7 +497,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 hintText: '3–32 characters, a-z A-Z 0-9 . _ -',
                 hintStyle: TextStyle(
                   fontSize: 13,
-                  color: mujiMuted.withValues(alpha: 0.55),
+                  color: AppPalette.neutral500.withValues(alpha: 0.55),
                   fontWeight: FontWeight.w300,
                 ),
                 border: UnderlineInputBorder(
@@ -521,7 +507,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                   borderSide: BorderSide(color: ruleColor),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: mujiMuted),
+                  borderSide: BorderSide(color: AppPalette.neutral500),
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 isDense: true,
@@ -545,7 +531,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                       'cancel',
                       style: TextStyle(
                         fontSize: 13,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.3,
                       ),
                     ),

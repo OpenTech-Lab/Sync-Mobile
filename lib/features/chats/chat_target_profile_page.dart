@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 
 enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
 
@@ -29,24 +30,17 @@ class ChatTargetProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     const palette = [
-      Color(0xFF8A8069),
-      Color(0xFF7A9080),
-      Color(0xFF9B7B6E),
-      Color(0xFF7D8A74),
-      Color(0xFF8E8278),
-      Color(0xFF7B8A8A),
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
     ];
     final hash = displayHandle.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
@@ -59,10 +53,10 @@ class ChatTargetProfileScreen extends StatelessWidget {
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: AppPalette.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: IconThemeData(color: mujiMuted),
+        iconTheme: IconThemeData(color: AppPalette.neutral500),
         actions: [
           if (isFriend)
             GestureDetector(
@@ -75,7 +69,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   'cancel friend',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF9B3A2A),
+                    color: AppPalette.danger700,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -95,7 +89,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   ? Text(
                       initials,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppPalette.white,
                         fontWeight: FontWeight.w300,
                         fontSize: 22,
                       ),
@@ -108,7 +102,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                           errorBuilder: (_, _, _) => Text(
                             initials,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppPalette.white,
                               fontWeight: FontWeight.w300,
                               fontSize: 22,
                             ),
@@ -134,7 +128,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w300,
-              color: mujiMuted,
+              color: AppPalette.neutral500,
             ),
             textAlign: TextAlign.center,
           ),
@@ -168,7 +162,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w300,
-                    color: Color(0xFF6B8F6B),
+                    color: AppPalette.success700,
                   ),
                 ),
               if (showActions) ...[
@@ -201,7 +195,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -226,7 +220,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -251,7 +245,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),

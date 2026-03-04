@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../services/server_health_service.dart';
@@ -44,18 +45,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRed = Color(0xFF9B3A2A);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final isValidating = widget.connectionStatus == ConnectionStatus.validating;
     final isSuccess = widget.connectionStatus == ConnectionStatus.success;
@@ -88,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 height: 1.6,
               ),
               textAlign: TextAlign.center,
@@ -101,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -121,7 +114,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 hintText: 'https://my-planet.example.com',
                 hintStyle: TextStyle(
                   fontSize: 14,
-                  color: mujiMuted.withValues(alpha: 0.5),
+                  color: AppPalette.neutral500.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w300,
                 ),
                 border: UnderlineInputBorder(
@@ -131,7 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderSide: BorderSide(color: ruleColor),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: mujiMuted),
+                  borderSide: BorderSide(color: AppPalette.neutral500),
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 isDense: true,
@@ -147,7 +140,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.8,
-                  color: mujiMuted,
+                  color: AppPalette.neutral500,
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -193,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       height: 13,
                       child: CircularProgressIndicator(
                         strokeWidth: 1.5,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                       ),
                     ),
                   if (isValidating) const SizedBox(width: 10),
@@ -205,7 +198,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       fontSize: isValidating ? 13 : 10,
                       letterSpacing: isValidating ? 0.2 : 2.2,
                       fontWeight: FontWeight.w500,
-                      color: isValidating ? mujiMuted : inkColor,
+                      color: isValidating ? AppPalette.neutral500 : inkColor,
                     ),
                   ),
                 ],
@@ -219,7 +212,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _PlanetInfoCard(
                   info: widget.planetInfo!,
                   inkColor: inkColor,
-                  mujiMuted: mujiMuted,
+                  mutedColor: AppPalette.neutral500,
                   ruleColor: ruleColor,
                 ),
               const SizedBox(height: 28),
@@ -250,7 +243,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w300,
-                  color: mujiRed,
+                  color: AppPalette.danger700,
                   height: 1.5,
                 ),
               ),
@@ -266,13 +259,13 @@ class _PlanetInfoCard extends StatelessWidget {
   const _PlanetInfoCard({
     required this.info,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.ruleColor,
   });
 
   final PlanetInfo info;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final Color ruleColor;
 
   @override
@@ -299,7 +292,7 @@ class _PlanetInfoCard extends StatelessWidget {
               height: 28,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: mujiMuted.withValues(alpha: 0.15),
+                color: mutedColor.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: planetImageUri == null
@@ -311,7 +304,7 @@ class _PlanetInfoCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w300,
-                          color: mujiMuted,
+                          color: mutedColor,
                         ),
                       ),
                     )
@@ -326,7 +319,7 @@ class _PlanetInfoCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w300,
-                            color: mujiMuted,
+                            color: mutedColor,
                           ),
                         ),
                       ),
@@ -353,7 +346,7 @@ class _PlanetInfoCard extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF6B8F6B),
+                    color: AppPalette.success700,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -362,7 +355,7 @@ class _PlanetInfoCard extends StatelessWidget {
                   'connected',
                   style: TextStyle(
                     fontSize: 11,
-                    color: mujiMuted,
+                    color: mutedColor,
                     fontWeight: FontWeight.w300,
                   ),
                 ),
@@ -380,7 +373,7 @@ class _PlanetInfoCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w300,
-              color: mujiMuted,
+              color: mutedColor,
               height: 1.5,
             ),
           ),
@@ -397,7 +390,7 @@ class _PlanetInfoCard extends StatelessWidget {
               label: 'LATENCY',
               value: '${info.latencyMs} ms',
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             if (countryLabel.isNotEmpty)
@@ -405,14 +398,14 @@ class _PlanetInfoCard extends StatelessWidget {
                 label: 'REGION',
                 value: countryLabel,
                 inkColor: inkColor,
-                mujiMuted: mujiMuted,
+                mutedColor: mutedColor,
               ),
             const SizedBox(width: 28),
             _Stat(
               label: 'SECURITY',
               value: isSecure ? 'HTTPS' : 'HTTP',
               inkColor: inkColor,
-              mujiMuted: mujiMuted,
+              mutedColor: mutedColor,
             ),
           ],
         ),
@@ -438,13 +431,13 @@ class _Stat extends StatelessWidget {
     required this.label,
     required this.value,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
   });
 
   final String label;
   final String value;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
 
   @override
   Widget build(BuildContext context) {
@@ -456,7 +449,7 @@ class _Stat extends StatelessWidget {
           style: TextStyle(
             fontSize: 9,
             letterSpacing: 2.2,
-            color: mujiMuted,
+            color: mutedColor,
             fontWeight: FontWeight.w400,
           ),
         ),

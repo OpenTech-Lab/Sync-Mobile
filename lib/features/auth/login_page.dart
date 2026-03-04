@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -63,17 +64,9 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const mujiPaper = Color(0xFFFAF9F6);
-    const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk = Color(0xFF2C2A27);
-    const mujiInkDk = Color(0xFFE8E4DC);
-    const mujiMuted = Color(0xFF8A8680);
-    const mujiRule = Color(0xFFDDD8CF);
-    const mujiRuleDk = Color(0xFF3A3730);
-
-    final bgColor = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor = isDark ? mujiInkDk : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk : mujiRule;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final hasAccount = widget.savedEmail != null;
 
@@ -91,7 +84,11 @@ class _LoginScreenState extends State<LoginScreen>
                     onTap: widget.isSubmitting ? null : widget.onBackToUrl,
                     child: Padding(
                       padding: const EdgeInsets.all(8),
-                      child: Icon(Icons.arrow_back, size: 20, color: mujiMuted),
+                      child: Icon(
+                        Icons.arrow_back,
+                        size: 20,
+                        color: AppPalette.neutral500,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -100,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
                       _hostLabel(widget.serverUrl),
                       style: TextStyle(
                         fontSize: 12,
-                        color: mujiMuted,
+                        color: AppPalette.neutral500,
                         letterSpacing: 0.2,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -130,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen>
               'Your private messenger',
               style: TextStyle(
                 fontSize: 12,
-                color: mujiMuted,
+                color: AppPalette.neutral500,
                 letterSpacing: 0.3,
               ),
             ),
@@ -142,19 +139,19 @@ class _LoginScreenState extends State<LoginScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Row(
                   children: [
-                    _MujiTab(
+                    _AuthTab(
                       label: 'Sign in',
                       selected: _tabs.index == 0,
                       inkColor: inkColor,
-                      mujiMuted: mujiMuted,
+                      mutedColor: AppPalette.neutral500,
                       onTap: () => setState(() => _tabs.index = 0),
                     ),
                     const SizedBox(width: 32),
-                    _MujiTab(
+                    _AuthTab(
                       label: 'Sign up',
                       selected: _tabs.index == 1,
                       inkColor: inkColor,
-                      mujiMuted: mujiMuted,
+                      mutedColor: AppPalette.neutral500,
                       onTap: () => setState(() => _tabs.index = 1),
                     ),
                   ],
@@ -173,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen>
                   'Account found for this server',
                   style: TextStyle(
                     fontSize: 12,
-                    color: mujiMuted,
+                    color: AppPalette.neutral500,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -193,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen>
                       width: 6,
                       height: 6,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF9B3A2A),
+                        color: AppPalette.danger700,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -203,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen>
                         widget.errorMessage!,
                         style: const TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF9B3A2A),
+                          color: AppPalette.danger700,
                           fontWeight: FontWeight.w300,
                           height: 1.5,
                         ),
@@ -232,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     onForgotPassword: widget.onForgotPassword,
                     inkColor: inkColor,
-                    mujiMuted: mujiMuted,
+                    mutedColor: AppPalette.neutral500,
                     ruleColor: ruleColor,
                     isDark: isDark,
                   ),
@@ -251,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen>
                         _signUpPassword.text,
                       ),
                       inkColor: inkColor,
-                      mujiMuted: mujiMuted,
+                      mutedColor: AppPalette.neutral500,
                       ruleColor: ruleColor,
                       isDark: isDark,
                     ),
@@ -284,7 +281,7 @@ class _SignInForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.ruleColor,
     required this.isDark,
     this.onForgotPassword,
@@ -299,7 +296,7 @@ class _SignInForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final Future<void> Function(String email)? onForgotPassword;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final Color ruleColor;
   final bool isDark;
 
@@ -314,9 +311,9 @@ class _SignInForm extends StatelessWidget {
           builder: (ctx, setState) {
             return Dialog(
               backgroundColor: isDark
-                  ? const Color(0xFF1E1C19)
-                  : const Color(0xFFFAF9F6),
-              surfaceTintColor: Colors.transparent,
+                  ? AppPalette.neutral900
+                  : AppPalette.neutral50,
+              surfaceTintColor: AppPalette.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -345,7 +342,7 @@ class _SignInForm extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w300,
-                          color: mujiMuted,
+                          color: mutedColor,
                           height: 1.6,
                         ),
                       )
@@ -355,7 +352,7 @@ class _SignInForm extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w300,
-                          color: mujiMuted,
+                          color: mutedColor,
                           height: 1.6,
                         ),
                       ),
@@ -365,7 +362,7 @@ class _SignInForm extends StatelessWidget {
                         label: 'Email',
                         keyboardType: TextInputType.emailAddress,
                         inkColor: inkColor,
-                        mujiMuted: mujiMuted,
+                        mutedColor: mutedColor,
                         ruleColor: ruleColor,
                       ),
                     ],
@@ -386,7 +383,7 @@ class _SignInForm extends StatelessWidget {
                               'close',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: mujiMuted,
+                                color: mutedColor,
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -410,7 +407,7 @@ class _SignInForm extends StatelessWidget {
                                 'cancel',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: mujiMuted,
+                                  color: mutedColor,
                                   letterSpacing: 0.3,
                                 ),
                               ),
@@ -480,7 +477,7 @@ class _SignInForm extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           readOnly: emailLocked,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
           ruleColor: ruleColor,
         ),
         const SizedBox(height: 24),
@@ -490,7 +487,7 @@ class _SignInForm extends StatelessWidget {
           obscure: obscure,
           toggleObscure: onToggleObscure,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
           ruleColor: ruleColor,
         ),
         if (onForgotPassword != null)
@@ -504,7 +501,7 @@ class _SignInForm extends StatelessWidget {
                   'Forgot password?',
                   style: TextStyle(
                     fontSize: 12,
-                    color: mujiMuted,
+                    color: mutedColor,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -517,7 +514,7 @@ class _SignInForm extends StatelessWidget {
           busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
         ),
       ],
     );
@@ -534,7 +531,7 @@ class _SignUpForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.ruleColor,
     required this.isDark,
   });
@@ -547,7 +544,7 @@ class _SignUpForm extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onSubmit;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final Color ruleColor;
   final bool isDark;
 
@@ -560,7 +557,7 @@ class _SignUpForm extends StatelessWidget {
           controller: usernameController,
           label: 'Username',
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
           ruleColor: ruleColor,
         ),
         const SizedBox(height: 24),
@@ -569,7 +566,7 @@ class _SignUpForm extends StatelessWidget {
           label: 'Email',
           keyboardType: TextInputType.emailAddress,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
           ruleColor: ruleColor,
         ),
         const SizedBox(height: 24),
@@ -579,7 +576,7 @@ class _SignUpForm extends StatelessWidget {
           obscure: obscure,
           toggleObscure: onToggleObscure,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
           ruleColor: ruleColor,
         ),
         const SizedBox(height: 32),
@@ -590,7 +587,7 @@ class _SignUpForm extends StatelessWidget {
           busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
-          mujiMuted: mujiMuted,
+          mutedColor: mutedColor,
         ),
       ],
     );
@@ -602,7 +599,7 @@ class _AuthField extends StatelessWidget {
     required this.controller,
     required this.label,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.ruleColor,
     this.keyboardType,
     this.readOnly = false,
@@ -613,7 +610,7 @@ class _AuthField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final Color ruleColor;
   final TextInputType? keyboardType;
   final bool readOnly;
@@ -623,7 +620,7 @@ class _AuthField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveInk = readOnly
-        ? mujiMuted.withValues(alpha: 0.45)
+        ? mutedColor.withValues(alpha: 0.45)
         : inkColor;
     return TextField(
       controller: controller,
@@ -642,20 +639,20 @@ class _AuthField extends StatelessWidget {
         labelStyle: TextStyle(
           fontSize: 12,
           letterSpacing: 0.4,
-          color: mujiMuted,
+          color: mutedColor,
           fontWeight: FontWeight.w400,
         ),
         floatingLabelStyle: TextStyle(
           fontSize: 11,
           letterSpacing: 1.0,
-          color: mujiMuted,
+          color: mutedColor,
         ),
         border: UnderlineInputBorder(borderSide: BorderSide(color: ruleColor)),
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: ruleColor),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: mujiMuted),
+          borderSide: BorderSide(color: mutedColor),
         ),
         suffixIcon: toggleObscure != null
             ? GestureDetector(
@@ -667,7 +664,7 @@ class _AuthField extends StatelessWidget {
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                     size: 18,
-                    color: mujiMuted,
+                    color: mutedColor,
                   ),
                 ),
               )
@@ -683,14 +680,14 @@ class _SubmitButton extends StatelessWidget {
   const _SubmitButton({
     required this.label,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.busy,
     this.onPressed,
   });
 
   final String label;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final bool busy;
   final VoidCallback? onPressed;
 
@@ -709,7 +706,7 @@ class _SubmitButton extends StatelessWidget {
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: mujiMuted,
+                  color: mutedColor,
                 ),
               ),
             ),
@@ -720,7 +717,7 @@ class _SubmitButton extends StatelessWidget {
               letterSpacing: busy ? 0.2 : 2.4,
               fontWeight: FontWeight.w500,
               color: onPressed == null
-                  ? mujiMuted.withValues(alpha: 0.4)
+                  ? mutedColor.withValues(alpha: 0.4)
                   : inkColor,
             ),
           ),
@@ -730,18 +727,18 @@ class _SubmitButton extends StatelessWidget {
   }
 }
 
-class _MujiTab extends StatelessWidget {
-  const _MujiTab({
+class _AuthTab extends StatelessWidget {
+  const _AuthTab({
     required this.label,
     required this.selected,
     required this.inkColor,
-    required this.mujiMuted,
+    required this.mutedColor,
     required this.onTap,
   });
   final String label;
   final bool selected;
   final Color inkColor;
-  final Color mujiMuted;
+  final Color mutedColor;
   final VoidCallback onTap;
 
   @override
@@ -755,7 +752,7 @@ class _MujiTab extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
-            color: selected ? inkColor : mujiMuted,
+            color: selected ? inkColor : mutedColor,
             letterSpacing: 0.2,
           ),
         ),
