@@ -251,11 +251,16 @@ class AppController extends AsyncNotifier<AppState> {
     }
 
     final normalized = _normalizeBaseUrl(rawUrl);
-    await _serverPreferences.writeServerUrl(normalized);
+    final candidateFromHealth = current.planetInfo?.baseUrl;
+    final resolvedServerUrl =
+        candidateFromHealth != null && candidateFromHealth.isNotEmpty
+        ? candidateFromHealth
+        : normalized;
+    await _serverPreferences.writeServerUrl(resolvedServerUrl);
 
     state = AsyncData(
       current.copyWith(
-        serverUrl: normalized,
+        serverUrl: resolvedServerUrl,
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
@@ -359,11 +364,15 @@ class AppController extends AsyncNotifier<AppState> {
     }
 
     await _sessionStorage.clearTokens();
+    await _serverPreferences.writeServerUrl('');
     state = AsyncData(
       current.copyWith(
+        serverUrl: '',
         accessToken: '',
         currentUserId: null,
         currentUsername: null,
+        connectionStatus: ConnectionStatus.idle,
+        clearConnectionError: true,
         clearAuthError: true,
       ),
     );

@@ -296,28 +296,99 @@ class AuthService {
     required Map<String, String> body,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
-    final firstUri = Uri.parse('$normalized/auth/$path');
+    final candidates = _candidateAuthBaseUrls(normalized);
+    Object? lastError;
+    http.Response? lastResponse;
 
-    var response = await _httpClient
-        .post(
-          firstUri,
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 8));
-
-    if (response.statusCode == 404 && normalized.endsWith('/api')) {
-      final fallbackBase = _stripApiSuffix(normalized);
-      final fallbackUri = Uri.parse('$fallbackBase/auth/$path');
-      response = await _httpClient
-          .post(
-            fallbackUri,
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 8));
+    for (final candidate in candidates) {
+      try {
+        final uri = Uri.parse('$candidate/auth/$path');
+        final response = await _httpClient
+            .post(
+              uri,
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 8));
+        if (response.statusCode == 404) {
+          lastResponse = response;
+          continue;
+        }
+        return response;
+      } catch (error) {
+        lastError = error;
+      }
     }
 
-    return response;
+    final response = lastResponse;
+    if (response != null) {
+      return response;
+    }
+
+    final parsed = Uri.tryParse(normalized);
+    final host = parsed?.host.toLowerCase();
+    if (host == 'localhost' || host == '127.0.0.1' || host == '::1') {
+      throw StateError(
+        'Local auth connection failed. Try http://10.0.2.2:8080 (or 10.0.3.2:8080) on Android emulator, or include explicit local server port.',
+      );
+    }
+
+    throw StateError('Auth request failed: $lastError');
+  }
+
+  List<String> _candidateAuthBaseUrls(String normalizedBaseUrl) {
+    final candidates = <String>[];
+
+    void push(String value) {
+      final normalized = _normalizeBaseUrl(value);
+      if (normalized.isNotEmpty && !candidates.contains(normalized)) {
+        candidates.add(normalized);
+      }
+    }
+
+    push(normalizedBaseUrl);
+    final apiStripped = _stripApiSuffix(normalizedBaseUrl);
+    if (apiStripped != normalizedBaseUrl) {
+      push(apiStripped);
+    }
+
+    final parsed = Uri.tryParse(normalizedBaseUrl);
+    if (parsed == null) {
+      return candidates;
+    }
+
+    final host = parsed.host.toLowerCase();
+    final isLocalHost =
+        host == 'localhost' || host == '127.0.0.1' || host == '::1';
+    if (!isLocalHost) {
+      return candidates;
+    }
+
+    if (parsed.scheme == 'https') {
+      push(parsed.replace(scheme: 'http').toString());
+    }
+
+    if (!parsed.hasPort) {
+      push(parsed.replace(scheme: 'http', port: 8080).toString());
+      push(parsed.replace(scheme: 'http', port: 80).toString());
+    }
+
+    final emulatorHosts = ['10.0.2.2', '10.0.3.2'];
+    for (final emulatorHost in emulatorHosts) {
+      push(parsed.replace(host: emulatorHost, scheme: 'http').toString());
+      if (!parsed.hasPort) {
+        push(
+          parsed
+              .replace(host: emulatorHost, scheme: 'http', port: 8080)
+              .toString(),
+        );
+        push(
+          parsed
+              .replace(host: emulatorHost, scheme: 'http', port: 80)
+              .toString(),
+        );
+      }
+    }
+    return candidates;
   }
 }
