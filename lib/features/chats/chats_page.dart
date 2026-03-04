@@ -227,108 +227,144 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final result = await showDialog<_ChatTargetInput>(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: bgColor,
-          surfaceTintColor: AppPalette.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 32,
-            vertical: 48,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'NEW FRIEND',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 2.8,
-                    color: AppPalette.neutral500,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: targetController,
-                  autofocus: true,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Paste friend link or user ID…',
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      color: AppPalette.neutral500.withValues(alpha: 0.55),
-                      fontWeight: FontWeight.w300,
-                    ),
-                    border: UnderlineInputBorder(
-                      borderSide: BorderSide(color: ruleColor),
-                    ),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: ruleColor),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppPalette.neutral500),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final hasValue = targetController.text.trim().isNotEmpty;
+            return Dialog(
+              backgroundColor: bgColor,
+              surfaceTintColor: AppPalette.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 44,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          'cancel',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppPalette.neutral500,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
+                    const Text(
+                      'ADD FRIEND',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 2.6,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                    const SizedBox(width: 28),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(
-                        _parseChatTargetInput(
-                          targetController.text.trim(),
-                          defaultServerUrl: widget.serverUrl,
-                        ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Paste a friend link or user ID',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                        height: 1.35,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Supported format: https://server.tld/<user-id>',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w300,
+                        color: AppPalette.neutral500,
+                        letterSpacing: 0.15,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: targetController,
+                      autofocus: true,
+                      onChanged: (_) => setState(() {}),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'friend link or user ID',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: AppPalette.neutral500.withValues(alpha: 0.55),
+                          fontWeight: FontWeight.w300,
                         ),
-                        child: Text(
-                          'N E X T',
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2.5,
-                            fontWeight: FontWeight.w500,
-                            color: inkColor,
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppPalette.neutral500),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Divider(height: 1, thickness: 1, color: ruleColor),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'cancel',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppPalette.neutral500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          onTap: hasValue
+                              ? () => Navigator.of(context).pop(
+                                  _parseChatTargetInput(
+                                    targetController.text.trim(),
+                                    defaultServerUrl: widget.serverUrl,
+                                  ),
+                                )
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'N E X T',
+                              style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 2.4,
+                                fontWeight: FontWeight.w500,
+                                color: hasValue
+                                    ? inkColor
+                                    : AppPalette.neutral500.withValues(
+                                        alpha: 0.5,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -781,32 +817,35 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               ],
             )
           : null,
-      body: _activePartnerId == null
-          ? SafeArea(
-              child: _ConversationStarter(
-                controller: _partnerController,
-                focusNode: _partnerFocusNode,
-                unreadCounts: unreadCounts,
-                orderedConversationIds: orderedConversationIds,
-                summariesById: summariesById,
-                onQuickAction: (action) {
-                  switch (action) {
-                    case _ChatQuickAction.newFriendOrChat:
-                      _openNewFriendOrChat();
-                    case _ChatQuickAction.scanFriendQr:
-                      _scanQrAndOpen();
-                  }
-                },
-                onOpenConversation: (id) async {
-                  await _openPartner(id);
-                },
-                onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
-                onStartNewChat: _openNewFriendOrChat,
-                onAddFriend: _openNewFriendOrChat,
-              ),
-            )
-          : Column(
-              children: [
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: _activePartnerId == null
+            ? SafeArea(
+                child: _ConversationStarter(
+                  controller: _partnerController,
+                  focusNode: _partnerFocusNode,
+                  unreadCounts: unreadCounts,
+                  orderedConversationIds: orderedConversationIds,
+                  summariesById: summariesById,
+                  onQuickAction: (action) {
+                    switch (action) {
+                      case _ChatQuickAction.newFriendOrChat:
+                        _openNewFriendOrChat();
+                      case _ChatQuickAction.scanFriendQr:
+                        _scanQrAndOpen();
+                    }
+                  },
+                  onOpenConversation: (id) async {
+                    await _openPartner(id);
+                  },
+                  onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
+                  onStartNewChat: _openNewFriendOrChat,
+                  onAddFriend: _openNewFriendOrChat,
+                ),
+              )
+            : Column(
+                children: [
                 // Messages list
                 Expanded(
                   child: messagesAsync == null
@@ -853,18 +892,46 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                   itemCount: messages.length,
                                   separatorBuilder: (_, _) =>
                                       const SizedBox(height: 6),
-                                  itemBuilder: (ctx, i) => _MessageBubble(
-                                    message: messages[i],
-                                    isMine:
-                                        messages[i].senderId ==
-                                        widget.currentUserId,
-                                    currentUserId: widget.currentUserId,
-                                    currentUserAvatarBase64:
-                                        currentUserAvatarBase64,
-                                    partnerAvatarBase64: partnerAvatarBase64,
-                                    onPartnerAvatarTap:
-                                        _openActivePartnerProfile,
-                                  ),
+                                  itemBuilder: (ctx, i) {
+                                    final message = messages[i];
+                                    final showDayDivider =
+                                        i == messages.length - 1 ||
+                                        !_isSameDay(
+                                          message.createdAt,
+                                          messages[i + 1].createdAt,
+                                        );
+                                    return Column(
+                                      children: [
+                                        if (showDayDivider)
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              0,
+                                              8,
+                                              0,
+                                              6,
+                                            ),
+                                            child: _DayDivider(
+                                              label: _dayLabel(
+                                                message.createdAt,
+                                              ),
+                                            ),
+                                          ),
+                                        _MessageBubble(
+                                          message: message,
+                                          isMine:
+                                              message.senderId ==
+                                              widget.currentUserId,
+                                          currentUserId: widget.currentUserId,
+                                          currentUserAvatarBase64:
+                                              currentUserAvatarBase64,
+                                          partnerAvatarBase64:
+                                              partnerAvatarBase64,
+                                          onPartnerAvatarTap:
+                                              _openActivePartnerProfile,
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                         ),
                 ),
@@ -917,13 +984,62 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     },
                   ),
                 ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }
 
 enum _ChatQuickAction { newFriendOrChat, scanFriendQr }
+
+bool _isSameDay(DateTime a, DateTime b) {
+  final x = a.toLocal();
+  final y = b.toLocal();
+  return x.year == y.year && x.month == y.month && x.day == y.day;
+}
+
+String _dayLabel(DateTime dt) {
+  final local = dt.toLocal();
+  final now = DateTime.now();
+  if (local.year == now.year && local.month == now.month && local.day == now.day) {
+    return 'Today';
+  }
+  final m = local.month.toString().padLeft(2, '0');
+  final d = local.day.toString().padLeft(2, '0');
+  return '${local.year}-$m-$d';
+}
+
+class _DayDivider extends StatelessWidget {
+  const _DayDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Divider(height: 1, thickness: 1, color: AppPalette.neutral300),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppPalette.neutral500,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ),
+        const Expanded(
+          child: Divider(height: 1, thickness: 1, color: AppPalette.neutral300),
+        ),
+      ],
+    );
+  }
+}
 
 class _ChatTargetInput {
   const _ChatTargetInput({required this.friendId, required this.serverUrl});
@@ -1603,6 +1719,20 @@ class _MessageBubble extends StatelessWidget {
 
     final bubbleColor = isMine ? myBubble : theirBubble;
     final onBubble = inkColor;
+    const textMaxLines = 7;
+    final messageTextStyle = TextStyle(
+      color: onBubble,
+      fontSize: 14,
+      fontWeight: FontWeight.w300,
+      height: 1.5,
+    );
+    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.68;
+    final overflowProbe = TextPainter(
+      text: TextSpan(text: message.body, style: messageTextStyle),
+      textDirection: Directionality.of(context),
+      maxLines: textMaxLines,
+    )..layout(maxWidth: maxBubbleWidth - 24);
+    final isTruncated = overflowProbe.didExceedMaxLines;
 
     final avatarId = isMine ? currentUserId : message.senderId;
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
@@ -1621,7 +1751,7 @@ class _MessageBubble extends StatelessWidget {
     Widget bubble = Container(
       constraints: BoxConstraints(
         minWidth: 84,
-        maxWidth: MediaQuery.of(context).size.width * 0.68,
+        maxWidth: maxBubbleWidth,
         maxHeight: _kMaxBubbleHeight,
       ),
       decoration: BoxDecoration(
@@ -1640,16 +1770,11 @@ class _MessageBubble extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 26),
             child: Text(
               message.body,
-              maxLines: 7,
+              maxLines: textMaxLines,
               overflow: TextOverflow.fade,
               softWrap: true,
               textAlign: isMine ? TextAlign.right : TextAlign.left,
-              style: TextStyle(
-                color: onBubble,
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-                height: 1.5,
-              ),
+              style: messageTextStyle,
             ),
           ),
           Positioned(
@@ -1666,20 +1791,52 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ),
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-              child: Align(
-                alignment: isMine
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                child: Text(
-                  _timeLabel(message.createdAt),
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.fade,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppPalette.neutral500,
-                  ),
-                ),
+              child: Row(
+                children: isMine
+                    ? [
+                        if (isTruncated)
+                          const Text(
+                            'more',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppPalette.neutral500,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        const Spacer(),
+                        Text(
+                          _timeLabel(message.createdAt),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.fade,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppPalette.neutral500,
+                          ),
+                        ),
+                      ]
+                    : [
+                        Text(
+                          _timeLabel(message.createdAt),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.fade,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppPalette.neutral500,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isTruncated)
+                          const Text(
+                            'more',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppPalette.neutral500,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
               ),
             ),
           ),
