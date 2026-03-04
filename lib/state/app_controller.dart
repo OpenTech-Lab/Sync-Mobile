@@ -99,6 +99,11 @@ class AppController extends AsyncNotifier<AppState> {
   final _userProfilePreferences = UserProfilePreferences();
   final _remoteUserProfileService = RemoteUserProfileService();
 
+  bool _isAuthIdentityInvalidError(Object error) {
+    final raw = error.toString();
+    return raw.contains('(401)') || raw.contains('(404)');
+  }
+
   @override
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
@@ -132,7 +137,7 @@ class AppController extends AsyncNotifier<AppState> {
       } catch (_) {}
     }
 
-    final currentUserId = accessToken == null
+    var currentUserId = accessToken == null
         ? null
         : _jwtService.tryReadUserId(accessToken);
     final tokenDisplayName = accessToken == null
@@ -175,7 +180,14 @@ class AppController extends AsyncNotifier<AppState> {
           accessToken: accessToken,
           remoteProfilePublicKey: profile.messagePublicKey,
         );
-      } catch (_) {}
+      } catch (error) {
+        if (_isAuthIdentityInvalidError(error)) {
+          await _sessionStorage.clearTokens();
+          accessToken = null;
+          currentUserId = null;
+          currentUsername = null;
+        }
+      }
     }
 
     return AppState(
