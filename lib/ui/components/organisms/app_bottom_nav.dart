@@ -22,14 +22,14 @@ class AppBottomNav extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final tabIcons = [
       Icons.home_outlined,
-      Icons.public_outlined,
       Icons.chat_bubble_outline,
+      Icons.public_outlined,
       Icons.settings_outlined,
     ];
     final tabLabels = [
       l10n.tabHome,
-      l10n.tabPlanet,
       l10n.tabChats,
+      l10n.tabPlanet,
       l10n.tabSettings,
     ];
 
@@ -45,7 +45,7 @@ class AppBottomNav extends StatelessWidget {
               child: Row(
                 children: List.generate(tabIcons.length, (i) {
                   final selected = selectedIndex == i;
-                  final isChats = i == 2;
+                  final isChats = i == 1;
                   return Expanded(
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,

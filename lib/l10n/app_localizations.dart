@@ -552,6 +552,24 @@ abstract class AppLocalizations {
   /// **'Show messages with a typing animation'**
   String get settingsTypingStyleModeHint;
 
+  /// No description provided for @settingsTypingStyleSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Typing speed'**
+  String get settingsTypingStyleSpeed;
+
+  /// No description provided for @settingsTypingStyleSpeedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower is faster'**
+  String get settingsTypingStyleSpeedHint;
+
+  /// No description provided for @settingsTypingStyleSpeedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{ms} ms / char'**
+  String settingsTypingStyleSpeedValue(int ms);
+
   /// No description provided for @themeLight.
   ///
   /// In en, this message translates to:

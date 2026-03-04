@@ -243,6 +243,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTypingStyleModeHint => '以打字動畫顯示訊息';
 
   @override
+  String get settingsTypingStyleSpeed => '打字速度';
+
+  @override
+  String get settingsTypingStyleSpeedHint => '數值越小越快';
+
+  @override
+  String settingsTypingStyleSpeedValue(int ms) {
+    return '$ms 毫秒 / 字元';
+  }
+
+  @override
   String get themeLight => '淺色';
 
   @override
@@ -882,6 +893,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsTypingStyleModeHint => '以打字動畫顯示訊息';
+
+  @override
+  String get settingsTypingStyleSpeed => '打字速度';
+
+  @override
+  String get settingsTypingStyleSpeedHint => '數值越小越快';
+
+  @override
+  String settingsTypingStyleSpeedValue(int ms) {
+    return '$ms 毫秒 / 字元';
+  }
 
   @override
   String get themeLight => '淺色';

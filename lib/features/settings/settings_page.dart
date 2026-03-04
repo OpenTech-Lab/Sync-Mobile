@@ -5,6 +5,7 @@ import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/realtime_event.dart';
 import '../../services/server_health_service.dart';
+import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
@@ -46,6 +47,9 @@ class SettingsTab extends ConsumerWidget {
     final notifState = ref.watch(notificationControllerProvider).value;
     final typingStyleModeEnabled =
         ref.watch(typingStyleModeControllerProvider).value ?? false;
+    final typingStyleSpeedMs =
+        ref.watch(typingStyleSpeedControllerProvider).value ??
+        ChatUiPreferences.defaultTypingStyleSpeedMs;
     final isConnected =
         realtimeState?.status == RealtimeConnectionStatus.connected;
     final notifActive = notifState?.initialized == true;
@@ -206,6 +210,60 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ],
             ),
+            if (typingStyleModeEnabled) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(
+                    l10n.settingsTypingStyleSpeed,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    l10n.settingsTypingStyleSpeedValue(typingStyleSpeedMs),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: inkColor,
+                  inactiveTrackColor: ruleColor,
+                  thumbColor: inkColor,
+                  overlayColor: inkColor.withValues(alpha: 0.12),
+                  trackHeight: 2,
+                ),
+                child: Slider(
+                  min: ChatUiPreferences.minTypingStyleSpeedMs.toDouble(),
+                  max: ChatUiPreferences.maxTypingStyleSpeedMs.toDouble(),
+                  divisions:
+                      ChatUiPreferences.maxTypingStyleSpeedMs -
+                      ChatUiPreferences.minTypingStyleSpeedMs,
+                  value: typingStyleSpeedMs.toDouble().clamp(
+                    ChatUiPreferences.minTypingStyleSpeedMs.toDouble(),
+                    ChatUiPreferences.maxTypingStyleSpeedMs.toDouble(),
+                  ),
+                  onChanged: (value) => ref
+                      .read(typingStyleSpeedControllerProvider.notifier)
+                      .setSpeedMs(value.round()),
+                ),
+              ),
+              Text(
+                l10n.settingsTypingStyleSpeedHint,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppPalette.neutral500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 32),
 

@@ -97,6 +97,16 @@
   "settingsTheme": "THEME",
   "settingsTypingStyleMode": "Typing style mode",
   "settingsTypingStyleModeHint": "Show messages with a typing animation",
+  "settingsTypingStyleSpeed": "Typing speed",
+  "settingsTypingStyleSpeedHint": "Lower is faster",
+  "settingsTypingStyleSpeedValue": "{ms} ms / char",
+  "@settingsTypingStyleSpeedValue": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
   "themeLight": "Light",
   "themeSystem": "System",
   "themeDark": "Dark",

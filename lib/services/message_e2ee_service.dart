@@ -37,16 +37,37 @@ class MessageE2eeService {
   final Pbkdf2 _passwordKdf;
   final Hkdf _hkdf;
 
+  // In-memory cache to avoid repeated slow secure-storage/key-generation on every message
+  SimpleKeyPairData? _cachedKeyPair;
+  String? _cachedPublicKeyBase64;
+
   KeyExchangeAlgorithm get _x25519 => _cryptography.x25519();
 
-  Future<String?> readStoredPublicKey() async {
+  Future<SimpleKeyPairData?> _getLocalKeyPair() async {
+    if (_cachedKeyPair != null) {
+      return _cachedKeyPair;
+    }
     final seed = await _readSeed();
     if (seed == null) {
       return null;
     }
     final keyPair = await _keyPairFromSeed(seed);
+    final localPrivate = await keyPair.extractPrivateKeyBytes();
     final publicKey = await keyPair.extractPublicKey();
-    return base64Encode(publicKey.bytes);
+    _cachedKeyPair = SimpleKeyPairData(
+      localPrivate,
+      publicKey: publicKey,
+      type: KeyPairType.x25519,
+    );
+    _cachedPublicKeyBase64 = base64Encode(publicKey.bytes);
+    return _cachedKeyPair;
+  }
+
+  Future<String?> readStoredPublicKey() async {
+    final cached = _cachedPublicKeyBase64;
+    if (cached != null) return cached;
+    final pair = await _getLocalKeyPair();
+    return pair != null ? base64Encode((await pair.extractPublicKey()).bytes) : null;
   }
 
   Future<String> ensurePublicKeyBase64({
@@ -54,25 +75,39 @@ class MessageE2eeService {
     required String email,
     String? password,
   }) async {
+    final cached = _cachedPublicKeyBase64;
+    if (cached != null) return cached;
     final seed = await _ensureSeed(
       serverUrl: serverUrl,
       email: email,
       password: password,
     );
-    final keyPair = await _keyPairFromSeed(seed);
-    final publicKey = await keyPair.extractPublicKey();
-    return base64Encode(publicKey.bytes);
+    // After ensuring the seed is written, load the key pair to populate cache.
+    final pair = await _getLocalKeyPair();
+    // Use fallback to extract directly if pair is null (should normally not happen).
+    if (pair == null) {
+      final keyPair = await _keyPairFromSeed(seed);
+      final publicKey = await keyPair.extractPublicKey();
+      return base64Encode(publicKey.bytes);
+    }
+    return _cachedPublicKeyBase64!;
   }
 
   Future<String> ensureDevicePublicKeyBase64() async {
+    final cached = _cachedPublicKeyBase64;
+    if (cached != null) return cached;
     final seed = await _ensureSeed(
       serverUrl: 'device-local',
       email: 'device-local',
       password: null,
     );
-    final keyPair = await _keyPairFromSeed(seed);
-    final publicKey = await keyPair.extractPublicKey();
-    return base64Encode(publicKey.bytes);
+    final pair = await _getLocalKeyPair();
+    if (pair == null) {
+      final keyPair = await _keyPairFromSeed(seed);
+      final publicKey = await keyPair.extractPublicKey();
+      return base64Encode(publicKey.bytes);
+    }
+    return _cachedPublicKeyBase64!;
   }
 
   Future<String> encryptEnvelope({
@@ -82,20 +117,22 @@ class MessageE2eeService {
   }) async {
     final clearBytes = utf8.encode(clearText);
 
-    final recipientPayload = await _encryptForPublicKey(
-      clearBytes: clearBytes,
-      recipientPublicKeyBase64: recipientPublicKeyBase64,
-    );
-    final senderPayload = await _encryptForPublicKey(
-      clearBytes: clearBytes,
-      recipientPublicKeyBase64: senderPublicKeyBase64,
-    );
+    final results = await Future.wait([
+      _encryptForPublicKey(
+        clearBytes: clearBytes,
+        recipientPublicKeyBase64: recipientPublicKeyBase64,
+      ),
+      _encryptForPublicKey(
+        clearBytes: clearBytes,
+        recipientPublicKeyBase64: senderPublicKeyBase64,
+      ),
+    ]);
 
     return jsonEncode({
       'v': 1,
       'alg': _currentAlg,
-      'recipient': recipientPayload,
-      'sender': senderPayload,
+      'recipient': results[0],
+      'sender': results[1],
     });
   }
 
@@ -108,8 +145,8 @@ class MessageE2eeService {
       return normalized;
     }
 
-    final seed = await _readSeed();
-    if (seed == null) {
+    final localKeyPairData = await _getLocalKeyPair();
+    if (localKeyPairData == null) {
       return null;
     }
 
@@ -125,14 +162,6 @@ class MessageE2eeService {
     if (block is! Map<String, dynamic>) {
       return null;
     }
-
-    final keyPair = await _keyPairFromSeed(seed);
-    final localPrivate = await keyPair.extractPrivateKeyBytes();
-    final localKeyPairData = SimpleKeyPairData(
-      localPrivate,
-      publicKey: await keyPair.extractPublicKey(),
-      type: KeyPairType.x25519,
-    );
 
     final ephemeralPublic = block['ephemeral_public_key'] as String?;
     final nonce = block['nonce'] as String?;

@@ -243,6 +243,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTypingStyleModeHint => 'Show messages with a typing animation';
 
   @override
+  String get settingsTypingStyleSpeed => 'Typing speed';
+
+  @override
+  String get settingsTypingStyleSpeedHint => 'Lower is faster';
+
+  @override
+  String settingsTypingStyleSpeedValue(int ms) {
+    return '$ms ms / char';
+  }
+
+  @override
   String get themeLight => 'Light';
 
   @override

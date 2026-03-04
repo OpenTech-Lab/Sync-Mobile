@@ -13,6 +13,7 @@ import '../../models/friend_qr_payload.dart';
 import 'friend_qr_scanner_page.dart';
 import 'chat_target_profile_page.dart';
 import '../../services/local_chat_repository.dart';
+import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
@@ -838,7 +839,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       return;
     }
     if (failed.isEmpty) {
-      _showMinimalChatToast(context: context, message: _l10n.chatMarkedAllAsRead);
+      _showMinimalChatToast(
+        context: context,
+        message: _l10n.chatMarkedAllAsRead,
+      );
       return;
     }
     _showMinimalChatToast(
@@ -923,6 +927,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
     final typingStyleModeEnabled =
         ref.watch(typingStyleModeControllerProvider).value ?? false;
+    final typingStyleSpeedMs =
+        ref.watch(typingStyleSpeedControllerProvider).value ??
+        ChatUiPreferences.defaultTypingStyleSpeedMs;
     final isTargetTyping =
         _activePartnerId != null &&
         (realtimeState?.typingPartnerIds.contains(_activePartnerId!) ?? false);
@@ -1126,6 +1133,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                       ),
                                                 typingStyleModeEnabled:
                                                     typingStyleModeEnabled,
+                                                typingStyleSpeedMs:
+                                                    typingStyleSpeedMs,
+                                                animateAsDraft: draft != null,
                                               ),
                                             ],
                                           );
@@ -1946,6 +1956,8 @@ class _MessageBubble extends StatelessWidget {
     this.deliveryState,
     this.onRetryTap,
     this.typingStyleModeEnabled = false,
+    this.typingStyleSpeedMs = ChatUiPreferences.defaultTypingStyleSpeedMs,
+    this.animateAsDraft = false,
   });
 
   final LocalChatMessage message;
@@ -1957,6 +1969,8 @@ class _MessageBubble extends StatelessWidget {
   final _OutgoingDeliveryState? deliveryState;
   final VoidCallback? onRetryTap;
   final bool typingStyleModeEnabled;
+  final int typingStyleSpeedMs;
+  final bool animateAsDraft;
 
   static const double _kMaxBubbleHeight = 180;
 
@@ -2041,9 +2055,10 @@ class _MessageBubble extends StatelessWidget {
               messageId: message.id,
               body: message.body,
               createdAt: message.createdAt,
-              enabled: typingStyleModeEnabled,
+              enabled: typingStyleModeEnabled && (!isMine || animateAsDraft),
+              typingFrameMs: typingStyleSpeedMs,
               maxLines: textMaxLines,
-              textAlign: isMine ? TextAlign.right : TextAlign.left,
+              textAlign: TextAlign.left,
               style: messageTextStyle,
             ),
           ),
@@ -2175,6 +2190,7 @@ class _TypingStyleMessageText extends StatefulWidget {
     required this.body,
     required this.createdAt,
     required this.enabled,
+    required this.typingFrameMs,
     required this.maxLines,
     required this.textAlign,
     required this.style,
@@ -2184,6 +2200,7 @@ class _TypingStyleMessageText extends StatefulWidget {
   final String body;
   final DateTime createdAt;
   final bool enabled;
+  final int typingFrameMs;
   final int maxLines;
   final TextAlign textAlign;
   final TextStyle style;
@@ -2194,7 +2211,6 @@ class _TypingStyleMessageText extends StatefulWidget {
 }
 
 class _TypingStyleMessageTextState extends State<_TypingStyleMessageText> {
-  static const _typingFrame = Duration(milliseconds: 18);
   static const _typingWindow = Duration(seconds: 20);
 
   Timer? _timer;
@@ -2214,7 +2230,8 @@ class _TypingStyleMessageTextState extends State<_TypingStyleMessageText> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.messageId != widget.messageId ||
         oldWidget.body != widget.body ||
-        oldWidget.enabled != widget.enabled) {
+        oldWidget.enabled != widget.enabled ||
+        oldWidget.typingFrameMs != widget.typingFrameMs) {
       _configure();
     }
   }
@@ -2248,7 +2265,9 @@ class _TypingStyleMessageTextState extends State<_TypingStyleMessageText> {
       _display = '';
       _animating = true;
     });
-    _timer = Timer.periodic(_typingFrame, (timer) {
+    _timer = Timer.periodic(Duration(milliseconds: widget.typingFrameMs), (
+      timer,
+    ) {
       if (!mounted) {
         timer.cancel();
         return;

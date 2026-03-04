@@ -141,7 +141,7 @@ class _MainShellState extends ConsumerState<MainShell>
         return;
       }
       ref.read(chatVisibilityProvider.notifier).state = ChatVisibilityState(
-        isChatsTabSelected: _selectedIndex == 2,
+        isChatsTabSelected: _selectedIndex == 1,
         activePartnerId: _activePartnerId,
       );
     });
@@ -150,7 +150,7 @@ class _MainShellState extends ConsumerState<MainShell>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hideTabs = _selectedIndex == 2 && _activePartnerId != null;
+    final hideTabs = _selectedIndex == 1 && _activePartnerId != null;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final totalUnread = unreadCounts.values.fold(0, (s, v) => s + v);
@@ -164,13 +164,12 @@ class _MainShellState extends ConsumerState<MainShell>
         onOpenChat: (friendId) {
           // Switch to Chats tab and pre-select the friend
           setState(() {
-            _selectedIndex = 2;
+            _selectedIndex = 1;
             _activePartnerId = friendId;
           });
           _syncChatVisibility();
         },
       ),
-      PlanetTab(serverUrl: widget.serverUrl, accessToken: widget.accessToken),
       ChatsTab(
         serverUrl: widget.serverUrl,
         accessToken: widget.accessToken,
@@ -181,6 +180,7 @@ class _MainShellState extends ConsumerState<MainShell>
           _syncChatVisibility();
         },
       ),
+      PlanetTab(serverUrl: widget.serverUrl, accessToken: widget.accessToken),
       SettingsTab(
         serverUrl: widget.serverUrl,
         planetInfo: widget.planetInfo,
