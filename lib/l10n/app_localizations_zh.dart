@@ -216,6 +216,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTheme => '主題';
 
   @override
+  String get settingsTypingStyleMode => '打字樣式模式';
+
+  @override
+  String get settingsTypingStyleModeHint => '以打字動畫顯示訊息';
+
+  @override
   String get themeLight => '淺色';
 
   @override
@@ -828,6 +834,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsTheme => '主題';
+
+  @override
+  String get settingsTypingStyleMode => '打字樣式模式';
+
+  @override
+  String get settingsTypingStyleModeHint => '以打字動畫顯示訊息';
 
   @override
   String get themeLight => '淺色';

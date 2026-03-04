@@ -498,6 +498,18 @@ abstract class AppLocalizations {
   /// **'THEME'**
   String get settingsTheme;
 
+  /// No description provided for @settingsTypingStyleMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Typing style mode'**
+  String get settingsTypingStyleMode;
+
+  /// No description provided for @settingsTypingStyleModeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show messages with a typing animation'**
+  String get settingsTypingStyleModeHint;
+
   /// No description provided for @themeLight.
   ///
   /// In en, this message translates to:

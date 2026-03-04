@@ -216,6 +216,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTheme => 'THEME';
 
   @override
+  String get settingsTypingStyleMode => 'Typing style mode';
+
+  @override
+  String get settingsTypingStyleModeHint => 'Show messages with a typing animation';
+
+  @override
   String get themeLight => 'Light';
 
   @override

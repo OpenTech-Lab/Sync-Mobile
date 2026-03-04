@@ -74,6 +74,8 @@
   "settingsMyPlanet": "我的 Planet",
   "settingsAppearance": "外觀",
   "settingsTheme": "主題",
+  "settingsTypingStyleMode": "打字樣式模式",
+  "settingsTypingStyleModeHint": "以打字動畫顯示訊息",
   "themeLight": "淺色",
   "themeSystem": "系統",
   "themeDark": "深色",

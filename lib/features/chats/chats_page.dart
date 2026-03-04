@@ -18,6 +18,7 @@ import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
+import '../../state/typing_style_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 
@@ -924,6 +925,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
           );
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
+    final typingStyleModeEnabled =
+        ref.watch(typingStyleModeControllerProvider).value ?? false;
     final isTargetTyping =
         _activePartnerId != null &&
         (realtimeState?.typingPartnerIds.contains(_activePartnerId!) ?? false);
@@ -1106,6 +1109,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                   ),
                                                 ),
                                               _MessageBubble(
+                                                key: ValueKey(message.id),
                                                 message: message,
                                                 isMine:
                                                     message.senderId ==
@@ -1124,6 +1128,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                     : () => _retryOutgoingDraft(
                                                         draft,
                                                       ),
+                                                typingStyleModeEnabled:
+                                                    typingStyleModeEnabled,
                                               ),
                                             ],
                                           );
@@ -1933,6 +1939,7 @@ class _StickerPicker extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
+    super.key,
     required this.message,
     required this.isMine,
     required this.currentUserId,
@@ -1941,6 +1948,7 @@ class _MessageBubble extends StatelessWidget {
     required this.onPartnerAvatarTap,
     this.deliveryState,
     this.onRetryTap,
+    this.typingStyleModeEnabled = false,
   });
 
   final LocalChatMessage message;
@@ -1951,6 +1959,7 @@ class _MessageBubble extends StatelessWidget {
   final VoidCallback onPartnerAvatarTap;
   final _OutgoingDeliveryState? deliveryState;
   final VoidCallback? onRetryTap;
+  final bool typingStyleModeEnabled;
 
   static const double _kMaxBubbleHeight = 180;
 
@@ -2031,11 +2040,12 @@ class _MessageBubble extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 26),
-            child: Text(
-              message.body,
+            child: _TypingStyleMessageText(
+              messageId: message.id,
+              body: message.body,
+              createdAt: message.createdAt,
+              enabled: typingStyleModeEnabled,
               maxLines: textMaxLines,
-              overflow: TextOverflow.fade,
-              softWrap: true,
               textAlign: isMine ? TextAlign.right : TextAlign.left,
               style: messageTextStyle,
             ),
@@ -2159,6 +2169,119 @@ class _MessageBubble extends StatelessWidget {
     final h = local.hour.toString().padLeft(2, '0');
     final m = local.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+class _TypingStyleMessageText extends StatefulWidget {
+  const _TypingStyleMessageText({
+    required this.messageId,
+    required this.body,
+    required this.createdAt,
+    required this.enabled,
+    required this.maxLines,
+    required this.textAlign,
+    required this.style,
+  });
+
+  final String messageId;
+  final String body;
+  final DateTime createdAt;
+  final bool enabled;
+  final int maxLines;
+  final TextAlign textAlign;
+  final TextStyle style;
+
+  @override
+  State<_TypingStyleMessageText> createState() =>
+      _TypingStyleMessageTextState();
+}
+
+class _TypingStyleMessageTextState extends State<_TypingStyleMessageText> {
+  static const _typingFrame = Duration(milliseconds: 18);
+  static const _typingWindow = Duration(seconds: 20);
+
+  Timer? _timer;
+  List<String> _chars = const <String>[];
+  int _index = 0;
+  String _display = '';
+  bool _animating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _configure();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TypingStyleMessageText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.messageId != widget.messageId ||
+        oldWidget.body != widget.body ||
+        oldWidget.enabled != widget.enabled) {
+      _configure();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _configure() {
+    _timer?.cancel();
+    final shouldAnimate =
+        widget.enabled &&
+        DateTime.now().toUtc().difference(widget.createdAt.toUtc()) <=
+            _typingWindow &&
+        widget.body.trim().isNotEmpty;
+    if (!shouldAnimate) {
+      setState(() {
+        _chars = const <String>[];
+        _index = 0;
+        _display = widget.body;
+        _animating = false;
+      });
+      return;
+    }
+
+    _chars = widget.body.characters.toList(growable: false);
+    _index = 0;
+    setState(() {
+      _display = '';
+      _animating = true;
+    });
+    _timer = Timer.periodic(_typingFrame, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_index >= _chars.length) {
+        timer.cancel();
+        setState(() {
+          _animating = false;
+          _display = widget.body;
+        });
+        return;
+      }
+      _index += 1;
+      setState(() {
+        _display = _chars.take(_index).join();
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _animating ? '$_display▌' : _display;
+    return Text(
+      text,
+      maxLines: widget.maxLines,
+      overflow: TextOverflow.fade,
+      softWrap: true,
+      textAlign: widget.textAlign,
+      style: widget.style,
+    );
   }
 }
 

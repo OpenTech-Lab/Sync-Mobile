@@ -88,6 +88,8 @@
   "settingsMyPlanet": "My Planet",
   "settingsAppearance": "Appearance",
   "settingsTheme": "THEME",
+  "settingsTypingStyleMode": "Typing style mode",
+  "settingsTypingStyleModeHint": "Show messages with a typing animation",
   "themeLight": "Light",
   "themeSystem": "System",
   "themeDark": "Dark",

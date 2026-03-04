@@ -11,6 +11,7 @@ import '../../state/conversation_messages_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
+import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../ui/components/molecules/language_picker.dart';
@@ -43,6 +44,8 @@ class SettingsTab extends ConsumerWidget {
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
     final notifState = ref.watch(notificationControllerProvider).value;
+    final typingStyleModeEnabled =
+        ref.watch(typingStyleModeControllerProvider).value ?? false;
     final isConnected =
         realtimeState?.status == RealtimeConnectionStatus.connected;
     final notifActive = notifState?.initialized == true;
@@ -165,6 +168,43 @@ class SettingsTab extends ConsumerWidget {
             const Align(
               alignment: Alignment.centerLeft,
               child: LanguagePicker(),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsTypingStyleMode,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.settingsTypingStyleModeHint,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppPalette.neutral500,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+                _SettingsToggle(
+                  value: typingStyleModeEnabled,
+                  activeColor: inkColor,
+                  inactiveColor: AppPalette.neutral500,
+                  trackColor: ruleColor,
+                  onChanged: (v) => ref
+                      .read(typingStyleModeControllerProvider.notifier)
+                      .setEnabled(v),
+                ),
+              ],
             ),
 
             const SizedBox(height: 32),
