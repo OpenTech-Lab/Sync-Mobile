@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Usage: ./scripts/bump-version.sh <version|version+build>
+# Usage: ./scripts/bump-version.sh <version|version+build> [--force]
 # Example: ./scripts/bump-version.sh 1.1.9
 # Example: ./scripts/bump-version.sh 1.1.9+42
+# Example: ./scripts/bump-version.sh 0.1.0 --force
 
 set -euo pipefail
 
@@ -15,11 +16,30 @@ IOS_PBXPROJ="${PROJECT_ROOT}/ios/Runner.xcodeproj/project.pbxproj"
 VERSION_DIR="${SCRIPT_DIR}/version"
 
 INPUT_VERSION="${1:-}"
+FORCE=false
+
+if [ "$#" -gt 1 ]; then
+  shift
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --force)
+        FORCE=true
+        ;;
+      *)
+        echo "Error: unknown option '$1'"
+        echo "Usage: $0 <version|version+build> [--force]"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+fi
 
 if [ -z "${INPUT_VERSION}" ]; then
-  echo "Usage: $0 <version>"
+  echo "Usage: $0 <version|version+build> [--force]"
   echo "Example: $0 1.1.9"
   echo "Example: $0 1.1.9+42"
+  echo "Example: $0 0.1.0 --force"
   exit 1
 fi
 
@@ -56,10 +76,14 @@ if [ -n "${LATEST_TAG_VERSION}" ] && semver_gt "${LATEST_TAG_VERSION}" "${LATEST
   LATEST_VERSION="${LATEST_TAG_VERSION}"
 fi
 
-if ! semver_gt "${VERSION_NAME}" "${LATEST_VERSION}"; then
+if ! semver_gt "${VERSION_NAME}" "${LATEST_VERSION}" && [ "${FORCE}" != "true" ]; then
   echo "Error: ${VERSION_NAME} must be greater than latest version (${LATEST_VERSION})."
-  echo "Use a higher version number."
+  echo "Use a higher version number or pass --force to override."
   exit 1
+fi
+
+if [ "${FORCE}" = "true" ]; then
+  echo "Warning: --force enabled. Skipping latest-version check (latest: ${LATEST_VERSION}, requested: ${VERSION_NAME})."
 fi
 
 if echo "${INPUT_VERSION}" | grep -q '+'; then
