@@ -34,15 +34,34 @@ class FriendQrPayload {
     } catch (_) {
       // Fallback: sync://friend?user_id=...&server_url=...
       final uri = Uri.tryParse(trimmed);
-      if (uri == null || uri.scheme != 'sync' || uri.host != 'friend') {
+      if (uri == null) {
         return null;
       }
-      final userId = (uri.queryParameters['user_id'] ?? '').trim();
-      final serverUrl = (uri.queryParameters['server_url'] ?? '').trim();
-      if (userId.isEmpty || serverUrl.isEmpty) {
-        return null;
+
+      if (uri.scheme == 'sync' && uri.host == 'friend') {
+        final userId = (uri.queryParameters['user_id'] ?? '').trim();
+        final serverUrl = (uri.queryParameters['server_url'] ?? '').trim();
+        if (userId.isEmpty || serverUrl.isEmpty) {
+          return null;
+        }
+        return FriendQrPayload(userId: userId, serverUrl: serverUrl);
       }
-      return FriendQrPayload(userId: userId, serverUrl: serverUrl);
+
+      // Fallback: https://<server>/<user_id>
+      if ((uri.scheme == 'https' || uri.scheme == 'http') &&
+          uri.host.trim().isNotEmpty) {
+        final userId = uri.pathSegments
+            .map((segment) => segment.trim())
+            .firstWhere((segment) => segment.isNotEmpty, orElse: () => '');
+        if (userId.isEmpty) {
+          return null;
+        }
+        final serverUrl =
+            '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+        return FriendQrPayload(userId: userId, serverUrl: serverUrl);
+      }
+
+      return null;
     }
   }
 }
