@@ -14,6 +14,7 @@ class CachedPlanetInfo {
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
+    required this.serverCreatedAt,
     required this.healthStatus,
     required this.latencyMs,
     required this.checkedAt,
@@ -27,6 +28,7 @@ class CachedPlanetInfo {
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
+  final DateTime? serverCreatedAt;
   final String healthStatus;
   final int latencyMs;
   final DateTime checkedAt;
@@ -80,6 +82,7 @@ class ServerPreferences {
         return null;
       }
       final checkedAtMs = decoded['checked_at_ms'];
+      final rawServerCreatedAt = decoded['server_created_at'];
       return CachedPlanetInfo(
         instanceName: decoded['instance_name'] as String?,
         instanceDescription: decoded['instance_description'] as String?,
@@ -94,6 +97,9 @@ class ServerPreferences {
         instanceDomain: decoded['instance_domain'] as String?,
         countryCode: decoded['country_code'] as String?,
         countryName: decoded['country_name'] as String?,
+        serverCreatedAt: rawServerCreatedAt is String
+            ? DateTime.tryParse(rawServerCreatedAt)?.toUtc()
+            : null,
         healthStatus:
             (decoded['health_status'] as String?)?.trim().isNotEmpty == true
             ? (decoded['health_status'] as String).trim()
@@ -122,6 +128,7 @@ class ServerPreferences {
       'instance_domain': planetInfo.instanceDomain,
       'country_code': planetInfo.countryCode,
       'country_name': planetInfo.countryName,
+      'server_created_at': planetInfo.serverCreatedAt?.toIso8601String(),
       'health_status': planetInfo.healthStatus,
       'latency_ms': planetInfo.latencyMs,
       'checked_at_ms': planetInfo.checkedAt.millisecondsSinceEpoch,

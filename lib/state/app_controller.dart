@@ -203,6 +203,7 @@ class AppController extends AsyncNotifier<AppState> {
               instanceDomain: cachedPlanet.instanceDomain,
               countryCode: cachedPlanet.countryCode,
               countryName: cachedPlanet.countryName,
+              serverCreatedAt: cachedPlanet.serverCreatedAt,
               healthStatus: cachedPlanet.healthStatus,
               latencyMs: cachedPlanet.latencyMs,
               checkedAt: cachedPlanet.checkedAt,
