@@ -158,6 +158,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authQrUnavailable => 'QR 登入暫時不可用，請重試。';
 
   @override
+  String get authQrPressRefresh => '請按重新整理';
+
+  @override
   String get authQrRefresh => '重新整理 QR';
 
   @override
@@ -750,6 +753,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get authQrUnavailable => 'QR 登入暫時不可用，請重試。';
+
+  @override
+  String get authQrPressRefresh => '請按重新整理';
 
   @override
   String get authQrRefresh => '重新整理 QR';

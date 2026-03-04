@@ -390,6 +390,12 @@ abstract class AppLocalizations {
   /// **'QR login unavailable. try refresh.'**
   String get authQrUnavailable;
 
+  /// No description provided for @authQrPressRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'please press refresh'**
+  String get authQrPressRefresh;
+
   /// No description provided for @authQrRefresh.
   ///
   /// In en, this message translates to:

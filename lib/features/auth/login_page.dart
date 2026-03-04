@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _obscureSignUp = true;
   QrLoginSession? _qrSession;
   Timer? _qrPollingTimer;
+  Timer? _qrCountdownTimer;
+  DateTime? _qrExpiresAt;
+  int _qrRemainingSeconds = 0;
   bool _loadingQrSession = false;
   bool _qrSessionExpired = false;
   String? _qrSessionError;
@@ -75,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void dispose() {
     _qrPollingTimer?.cancel();
+    _qrCountdownTimer?.cancel();
     _tabs.dispose();
     _signInEmail.dispose();
     _signInPassword.dispose();
@@ -101,6 +106,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       _qrSessionError = null;
       _qrSessionExpired = false;
       _qrSession = null;
+      _qrExpiresAt = null;
+      _qrRemainingSeconds = 0;
     });
     _qrPollingTimer?.cancel();
     try {
@@ -113,7 +120,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       setState(() {
         _qrSession = session;
         _loadingQrSession = false;
+        _qrExpiresAt = DateTime.now().add(Duration(seconds: session.expiresIn));
+        _qrRemainingSeconds = session.expiresIn;
       });
+      _startQrCountdown();
       _qrPollingTimer = Timer.periodic(
         const Duration(seconds: 2),
         (_) => _pollQrSession(),
@@ -129,7 +139,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Future<void> _pollQrSession() async {
     final session = _qrSession;
-    if (session == null || _qrPollingBusy || widget.isSubmitting) {
+    if (session == null ||
+        _qrPollingBusy ||
+        widget.isSubmitting ||
+        _qrSessionExpired) {
       return;
     }
     final payload = QrLoginPayload.tryParse(session.qrPayload);
@@ -153,13 +166,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           status.accessToken != null &&
           status.refreshToken != null) {
         _qrPollingTimer?.cancel();
+        _qrCountdownTimer?.cancel();
         await widget.onQrSignIn(status.accessToken!, status.refreshToken!);
         return;
       }
       if (status.isExpired) {
         _qrPollingTimer?.cancel();
+        _qrCountdownTimer?.cancel();
         setState(() {
           _qrSessionExpired = true;
+          _qrRemainingSeconds = 0;
         });
       }
     } catch (_) {
@@ -170,6 +186,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } finally {
       _qrPollingBusy = false;
     }
+  }
+
+  void _startQrCountdown() {
+    _qrCountdownTimer?.cancel();
+    _qrCountdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final expiresAt = _qrExpiresAt;
+      if (expiresAt == null || !mounted || _qrSessionExpired) {
+        return;
+      }
+      final diff = expiresAt.difference(DateTime.now()).inSeconds;
+      final next = max(0, diff);
+      if (next != _qrRemainingSeconds) {
+        setState(() {
+          _qrRemainingSeconds = next;
+        });
+      }
+      if (next <= 0) {
+        _qrPollingTimer?.cancel();
+        _qrCountdownTimer?.cancel();
+        setState(() {
+          _qrSessionExpired = true;
+        });
+      }
+    });
   }
 
   @override
@@ -378,6 +418,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               Expanded(
                 child: _DesktopQrLoginPanel(
                   session: _qrSession,
+                  remainingSeconds: _qrRemainingSeconds,
                   loading: _loadingQrSession,
                   expired: _qrSessionExpired,
                   hasError: _qrSessionError != null,
@@ -735,6 +776,7 @@ class _SignUpForm extends StatelessWidget {
 class _DesktopQrLoginPanel extends StatelessWidget {
   const _DesktopQrLoginPanel({
     required this.session,
+    required this.remainingSeconds,
     required this.loading,
     required this.expired,
     required this.hasError,
@@ -746,6 +788,7 @@ class _DesktopQrLoginPanel extends StatelessWidget {
   });
 
   final QrLoginSession? session;
+  final int remainingSeconds;
   final bool loading;
   final bool expired;
   final bool hasError;
@@ -759,10 +802,10 @@ class _DesktopQrLoginPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final showQr = session != null && !loading;
     final statusText = expired
-        ? l10n.authQrExpired
+        ? '0 · ${l10n.authQrPressRefresh}'
         : hasError
         ? l10n.authQrUnavailable
-        : l10n.authQrWaitingForScan;
+        : '${l10n.authQrWaitingForScan} $remainingSeconds';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(28, 8, 28, 28),
@@ -812,7 +855,7 @@ class _DesktopQrLoginPanel extends StatelessWidget {
                     size: 180,
                     backgroundColor: AppPalette.white,
                   )
-                : Icon(Icons.qr_code_2, color: mutedColor, size: 28),
+                : Icon(Icons.warning_amber_rounded, color: mutedColor, size: 52),
           ),
         ),
         const SizedBox(height: 14),

@@ -158,6 +158,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authQrUnavailable => 'QR login unavailable. try refresh.';
 
   @override
+  String get authQrPressRefresh => 'please press refresh';
+
+  @override
   String get authQrRefresh => 'refresh qr';
 
   @override

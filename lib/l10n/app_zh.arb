@@ -49,6 +49,7 @@
   "authQrWaitingForScan": "等待手機確認…",
   "authQrExpired": "QR 已過期，請重新整理。",
   "authQrUnavailable": "QR 登入暫時不可用，請重試。",
+  "authQrPressRefresh": "請按重新整理",
   "authQrRefresh": "重新整理 QR",
   "creatingAccountProgress": "建立帳號中…",
   "createAccountAction": "建 立 帳 號",

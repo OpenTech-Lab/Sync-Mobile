@@ -56,6 +56,7 @@
   "authQrWaitingForScan": "waiting for phone approval…",
   "authQrExpired": "QR expired. refresh to continue.",
   "authQrUnavailable": "QR login unavailable. try refresh.",
+  "authQrPressRefresh": "please press refresh",
   "authQrRefresh": "refresh qr",
   "creatingAccountProgress": "creating account…",
   "createAccountAction": "C R E A T E   A C C O U N T",
