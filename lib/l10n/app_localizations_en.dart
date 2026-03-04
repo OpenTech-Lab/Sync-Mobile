@@ -190,6 +190,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeConnectedPlanetsTitle => 'Connected Planets';
 
   @override
+  String get planetOtherPlanetsTitle => 'OTHER PLANETS';
+
+  @override
   String get homeConnectedPlanetsEmpty => 'No connected planets yet';
 
   @override
@@ -216,7 +219,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planetLoadFailed => 'Failed to load planet data.';
 
   @override
-  String get planetNewsTitle => 'Server News';
+  String get planetNewsTitle => 'MY PLAENT';
 
   @override
   String get planetNewsEmpty => 'No server news yet';

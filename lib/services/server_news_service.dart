@@ -23,6 +23,10 @@ class ServerNewsService {
         .get(uri, headers: _headers(accessToken))
         .timeout(const Duration(seconds: 10));
 
+    if (response.statusCode == 204 || response.statusCode == 404) {
+      return const [];
+    }
+
     if (response.statusCode != 200) {
       throw StateError('Server news list failed (${response.statusCode})');
     }

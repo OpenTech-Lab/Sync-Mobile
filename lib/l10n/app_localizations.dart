@@ -450,6 +450,12 @@ abstract class AppLocalizations {
   /// **'Connected Planets'**
   String get homeConnectedPlanetsTitle;
 
+  /// No description provided for @planetOtherPlanetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'OTHER PLANETS'**
+  String get planetOtherPlanetsTitle;
+
   /// No description provided for @homeConnectedPlanetsEmpty.
   ///
   /// In en, this message translates to:
@@ -501,7 +507,7 @@ abstract class AppLocalizations {
   /// No description provided for @planetNewsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Server News'**
+  /// **'MY PLAENT'**
   String get planetNewsTitle;
 
   /// No description provided for @planetNewsEmpty.

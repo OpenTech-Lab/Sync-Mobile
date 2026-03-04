@@ -59,6 +59,7 @@
   "noFriendsYet": "尚無好友",
   "openChatsHint": "開啟聊天並開始對話",
   "homeConnectedPlanetsTitle": "已連線 Planet",
+  "planetOtherPlanetsTitle": "其他星球",
   "homeConnectedPlanetsEmpty": "尚未設定已連線 Planet",
   "homeConnectedPlanetsLoading": "正在載入已連線 Planet…",
   "homeConnectedPlanetsLoadFailed": "載入已連線 Planet 失敗",

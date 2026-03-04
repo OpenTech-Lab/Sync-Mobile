@@ -127,71 +127,6 @@ class _PlanetTabState extends State<PlanetTab> {
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                 children: [
                   _SectionLabel(
-                    text: l10n.homeConnectedPlanetsTitle,
-                    ruleColor: ruleColor,
-                  ),
-                  if (data.planets.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        l10n.homeConnectedPlanetsEmpty,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppPalette.neutral500,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: data.planets.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(height: 1, color: ruleColor),
-                      itemBuilder: (ctx, index) {
-                        final item = data.planets[index];
-                        final title =
-                            (item.instanceName ?? item.host).trim().isEmpty
-                            ? item.host
-                            : (item.instanceName ?? item.host).trim();
-                        final subtitle =
-                            item.countryName?.trim().isNotEmpty == true
-                            ? item.countryName!.trim()
-                            : item.host;
-                        final members = item.memberCount ?? 0;
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                          ),
-                          title: Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              color: inkColor,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '$subtitle · ${l10n.homePlanetMembers(members)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppPalette.neutral500,
-                              fontWeight: FontWeight.w300,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: AppPalette.neutral500,
-                          ),
-                          onTap: () => _showPlanetInfoDialog(context, item),
-                        );
-                      },
-                    ),
-                  const SizedBox(height: 32),
-                  _SectionLabel(
                     text: l10n.planetNewsTitle,
                     ruleColor: ruleColor,
                   ),
@@ -286,6 +221,71 @@ class _PlanetTabState extends State<PlanetTab> {
                               ),
                             );
                           },
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 32),
+                  _SectionLabel(
+                    text: l10n.planetOtherPlanetsTitle,
+                    ruleColor: ruleColor,
+                  ),
+                  if (data.planets.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        l10n.homeConnectedPlanetsEmpty,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: data.planets.length,
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: ruleColor),
+                      itemBuilder: (ctx, index) {
+                        final item = data.planets[index];
+                        final title =
+                            (item.instanceName ?? item.host).trim().isEmpty
+                            ? item.host
+                            : (item.instanceName ?? item.host).trim();
+                        final subtitle =
+                            item.countryName?.trim().isNotEmpty == true
+                            ? item.countryName!.trim()
+                            : item.host;
+                        final members = item.memberCount ?? 0;
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                          ),
+                          title: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w300,
+                              color: inkColor,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '$subtitle · ${l10n.homePlanetMembers(members)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppPalette.neutral500,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: AppPalette.neutral500,
+                          ),
+                          onTap: () => _showPlanetInfoDialog(context, item),
                         );
                       },
                     ),

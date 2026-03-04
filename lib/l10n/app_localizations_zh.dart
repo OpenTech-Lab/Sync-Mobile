@@ -190,6 +190,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeConnectedPlanetsTitle => '已連線 Planet';
 
   @override
+  String get planetOtherPlanetsTitle => '其他星球';
+
+  @override
   String get homeConnectedPlanetsEmpty => '尚未設定已連線 Planet';
 
   @override
@@ -826,6 +829,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get homeConnectedPlanetsTitle => '已連線 Planet';
+
+  @override
+  String get planetOtherPlanetsTitle => '其他星球';
 
   @override
   String get homeConnectedPlanetsEmpty => '尚未設定已連線 Planet';
