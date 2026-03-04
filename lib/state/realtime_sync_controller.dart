@@ -8,6 +8,7 @@ import '../services/realtime_sync_service.dart';
 import '../services/notification_service.dart';
 import 'chat_visibility_controller.dart';
 import 'conversation_messages_controller.dart';
+import 'backup_controller.dart';
 import 'unread_counts_controller.dart';
 
 class RealtimeSyncState {
@@ -155,6 +156,9 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         await ref
             .read(unreadCountsProvider.notifier)
             .refresh(baseUrl: baseUrl, accessToken: accessToken);
+        await ref
+            .read(backupControllerProvider.notifier)
+            .maybeAutoBackup(baseUrl: baseUrl, accessToken: accessToken);
       }
     });
 

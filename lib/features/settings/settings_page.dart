@@ -306,6 +306,75 @@ class SettingsTab extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Text(
+                'Auto backup runs every 24h or after ${backupState?.autoBackupMessageThreshold ?? 20} new messages (whichever comes first).',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppPalette.neutral500,
+                  letterSpacing: 0.15,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Text(
+                    'Auto backup threshold',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    onPressed: (backupState?.isBusy == true)
+                        ? null
+                        : () => ref
+                              .read(backupControllerProvider.notifier)
+                              .setAutoBackupMessageThreshold(
+                                (backupState?.autoBackupMessageThreshold ??
+                                        20) -
+                                    1,
+                              ),
+                    icon: const Icon(Icons.remove, size: 16),
+                    tooltip: 'Decrease threshold',
+                    color: AppPalette.neutral500,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  Text(
+                    '${backupState?.autoBackupMessageThreshold ?? 20}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: inkColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'messages',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: (backupState?.isBusy == true)
+                        ? null
+                        : () => ref
+                              .read(backupControllerProvider.notifier)
+                              .setAutoBackupMessageThreshold(
+                                (backupState?.autoBackupMessageThreshold ??
+                                        20) +
+                                    1,
+                              ),
+                    icon: const Icon(Icons.add, size: 16),
+                    tooltip: 'Increase threshold',
+                    color: AppPalette.neutral500,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
               if (backupState?.statusMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -764,8 +833,10 @@ class _ConfirmDialog extends StatelessWidget {
             const SizedBox(height: 28),
             Divider(height: 1, thickness: 1, color: ruleColor),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 28,
+              runSpacing: 10,
               children: [
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(false),
@@ -784,7 +855,6 @@ class _ConfirmDialog extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 28),
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(true),
                   child: Padding(

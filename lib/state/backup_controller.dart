@@ -10,17 +10,26 @@ class BackupState {
     required this.enabled,
     required this.isBusy,
     required this.statusMessage,
+    required this.autoBackupMessageThreshold,
   });
 
   final bool enabled;
   final bool isBusy;
   final String? statusMessage;
+  final int autoBackupMessageThreshold;
 
-  BackupState copyWith({bool? enabled, bool? isBusy, String? statusMessage}) {
+  BackupState copyWith({
+    bool? enabled,
+    bool? isBusy,
+    String? statusMessage,
+    int? autoBackupMessageThreshold,
+  }) {
     return BackupState(
       enabled: enabled ?? this.enabled,
       isBusy: isBusy ?? this.isBusy,
       statusMessage: statusMessage,
+      autoBackupMessageThreshold:
+          autoBackupMessageThreshold ?? this.autoBackupMessageThreshold,
     );
   }
 }
@@ -29,6 +38,8 @@ final backupControllerProvider =
     AsyncNotifierProvider<BackupController, BackupState>(BackupController.new);
 
 class BackupController extends AsyncNotifier<BackupState> {
+  static const Duration _autoBackupMaxInterval = Duration(hours: 24);
+
   final _backupPreferences = BackupPreferences();
   final _localCryptoService = EncryptedBackupService();
   final _remoteBackupService = RemoteBackupService();
@@ -36,7 +47,13 @@ class BackupController extends AsyncNotifier<BackupState> {
   @override
   Future<BackupState> build() async {
     final enabled = await _backupPreferences.readEnabled();
-    return BackupState(enabled: enabled, isBusy: false, statusMessage: null);
+    final threshold = await _backupPreferences.readAutoBackupMessageThreshold();
+    return BackupState(
+      enabled: enabled,
+      isBusy: false,
+      statusMessage: null,
+      autoBackupMessageThreshold: threshold,
+    );
   }
 
   Future<void> setEnabled(bool enabled) async {
@@ -47,6 +64,21 @@ class BackupController extends AsyncNotifier<BackupState> {
 
     await _backupPreferences.writeEnabled(enabled);
     state = AsyncData(current.copyWith(enabled: enabled, statusMessage: null));
+  }
+
+  Future<void> setAutoBackupMessageThreshold(int value) async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+    final normalized = value.clamp(1, 1000);
+    await _backupPreferences.writeAutoBackupMessageThreshold(normalized);
+    state = AsyncData(
+      current.copyWith(
+        autoBackupMessageThreshold: normalized,
+        statusMessage: null,
+      ),
+    );
   }
 
   Future<void> createBackup({
@@ -75,9 +107,67 @@ class BackupController extends AsyncNotifier<BackupState> {
           statusMessage: 'Encrypted backup uploaded to planet server.',
         ),
       );
+      await _backupPreferences.writeLastBackupMetadata(
+        backedAt: DateTime.now().toUtc(),
+        messageCount: messages.length,
+      );
     } catch (error) {
       state = AsyncData(
         current.copyWith(isBusy: false, statusMessage: 'Backup failed: $error'),
+      );
+    }
+  }
+
+  Future<void> maybeAutoBackup({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final current = state.value;
+    if (current == null || !current.enabled || current.isBusy) {
+      return;
+    }
+
+    final messages = await ref.read(chatRepositoryProvider).listAllMessages();
+    final currentCount = messages.length;
+    final lastCount = await _backupPreferences.readLastBackedMessageCount();
+    final lastBackupAt = await _backupPreferences.readLastBackupAt();
+    final unbackedCount = (currentCount - lastCount).clamp(0, currentCount);
+
+    final dueByCount = unbackedCount >= current.autoBackupMessageThreshold;
+    final dueByTime =
+        lastBackupAt == null ||
+        DateTime.now().toUtc().difference(lastBackupAt) >=
+            _autoBackupMaxInterval;
+
+    if (!dueByCount && !dueByTime) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
+    try {
+      final keyBytes = await _localCryptoService.readOrCreateSecretKeyBytes();
+      await _remoteBackupService.uploadBackup(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        messages: messages,
+        keyBytes: keyBytes,
+      );
+      await _backupPreferences.writeLastBackupMetadata(
+        backedAt: DateTime.now().toUtc(),
+        messageCount: currentCount,
+      );
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Auto backup uploaded to planet server.',
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Auto backup failed: $error',
+        ),
       );
     }
   }
@@ -101,6 +191,10 @@ class BackupController extends AsyncNotifier<BackupState> {
         keyBytes: keyBytes,
       );
       await ref.read(chatRepositoryProvider).replaceAllMessages(messages);
+      await _backupPreferences.writeLastBackupMetadata(
+        backedAt: DateTime.now().toUtc(),
+        messageCount: messages.length,
+      );
 
       state = AsyncData(
         current.copyWith(
@@ -134,6 +228,7 @@ class BackupController extends AsyncNotifier<BackupState> {
         baseUrl: baseUrl,
         accessToken: accessToken,
       );
+      await _backupPreferences.clearLastBackupMetadata();
       state = AsyncData(
         current.copyWith(
           isBusy: false,
@@ -161,6 +256,10 @@ class BackupController extends AsyncNotifier<BackupState> {
     try {
       await ref.read(chatRepositoryProvider).replaceAllMessages(const []);
       ref.invalidate(conversationSummariesProvider);
+      await _backupPreferences.writeLastBackupMetadata(
+        backedAt: DateTime.now().toUtc(),
+        messageCount: 0,
+      );
       state = AsyncData(
         current.copyWith(
           isBusy: false,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ui/components/organisms/app_bottom_nav.dart';
 import '../../services/server_health_service.dart';
 import '../../state/app_controller.dart';
+import '../../state/backup_controller.dart';
 import '../../state/chat_visibility_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
@@ -69,6 +70,12 @@ class _MainShellState extends ConsumerState<MainShell>
           currentUserId: widget.currentUserId,
         ),
       ]);
+      await ref
+          .read(backupControllerProvider.notifier)
+          .maybeAutoBackup(
+            baseUrl: widget.serverUrl,
+            accessToken: effectiveToken,
+          );
     });
   }
 
@@ -90,11 +97,20 @@ class _MainShellState extends ConsumerState<MainShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _realtimeSyncNotifier.connect(
-        baseUrl: widget.serverUrl,
-        accessTokenProvider: _effectiveAccessToken,
-        currentUserId: widget.currentUserId,
-      );
+      Future(() async {
+        _realtimeSyncNotifier.connect(
+          baseUrl: widget.serverUrl,
+          accessTokenProvider: _effectiveAccessToken,
+          currentUserId: widget.currentUserId,
+        );
+        final token = await _effectiveAccessToken();
+        if (token == null || token.isEmpty) {
+          return;
+        }
+        await ref
+            .read(backupControllerProvider.notifier)
+            .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: token);
+      });
       return;
     }
 

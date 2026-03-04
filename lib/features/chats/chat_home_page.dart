@@ -491,6 +491,12 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                   body:
                                       '[sticker:${selected.id}:${selected.name}]',
                                 );
+                            await ref
+                                .read(backupControllerProvider.notifier)
+                                .maybeAutoBackup(
+                                  baseUrl: widget.serverUrl,
+                                  accessToken: widget.accessToken,
+                                );
                           }
                         },
                         icon: const Icon(Icons.emoji_emotions_outlined),
@@ -541,6 +547,12 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                 accessToken: widget.accessToken,
                                 currentUserId: widget.currentUserId,
                                 body: content,
+                              );
+                          await ref
+                              .read(backupControllerProvider.notifier)
+                              .maybeAutoBackup(
+                                baseUrl: widget.serverUrl,
+                                accessToken: widget.accessToken,
                               );
                           _clearMedia();
                           await _refreshUnreadCounts();

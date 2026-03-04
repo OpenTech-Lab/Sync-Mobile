@@ -14,6 +14,7 @@ import 'friend_qr_scanner_page.dart';
 import 'chat_target_profile_page.dart';
 import '../../services/local_chat_repository.dart';
 import '../../state/app_controller.dart';
+import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
@@ -590,6 +591,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await ref
         .read(unreadCountsProvider.notifier)
         .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
+    await ref
+        .read(backupControllerProvider.notifier)
+        .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
   }
 
   Future<void> _openActivePartnerProfile() async {
@@ -999,6 +1003,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                               body: '[sticker:${sticker.id}:${sticker.name}]',
                               recipientServerUrl:
                                   _partnerServerUrlOverrides[_activePartnerId!],
+                            );
+                        await ref
+                            .read(backupControllerProvider.notifier)
+                            .maybeAutoBackup(
+                              baseUrl: widget.serverUrl,
+                              accessToken: accessToken,
                             );
                       },
                     ),
