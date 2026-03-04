@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/molecules/language_picker.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../services/server_health_service.dart';
 import '../../state/app_controller.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
     required this.initialUrl,
@@ -24,10 +27,10 @@ class OnboardingScreen extends StatefulWidget {
   final Future<void> Function(String url) onContinue;
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late final TextEditingController _serverUrlController;
 
   @override
@@ -44,6 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -60,13 +64,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(28, 48, 28, 40),
           children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: LanguagePicker(compact: true),
+            ),
+            const SizedBox(height: 16),
             // ── hero ──
             Center(
               child: Image.asset('assets/logo.png', width: 56, height: 56),
             ),
             const SizedBox(height: 28),
             Text(
-              'Welcome to Sync',
+              l10n.welcomeTitle,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w300,
@@ -77,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Connect to your planet server to get started.',
+              l10n.welcomeSubtitle,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
@@ -89,8 +98,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 44),
 
             // ── server URL label ──
-            const Text(
-              'SERVER URL',
+            Text(
+              l10n.serverUrlLabel,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
@@ -111,7 +120,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 color: inkColor,
               ),
               decoration: InputDecoration(
-                hintText: 'https://my-planet.example.com',
+                hintText: l10n.serverUrlHint,
                 hintStyle: TextStyle(
                   fontSize: 14,
                   color: AppPalette.neutral500.withValues(alpha: 0.5),
@@ -135,8 +144,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             if (officialPlanetPresets.isNotEmpty) ...[
               const SizedBox(height: 20),
               const SizedBox(height: 14),
-              const Text(
-                'QUICK CONNECT',
+              Text(
+                l10n.quickConnectLabel,
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.8,
@@ -192,8 +201,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (isValidating) const SizedBox(width: 10),
                   Text(
                     isValidating
-                        ? 'checking…'
-                        : 'C H E C K   C O N N E C T I O N',
+                        ? l10n.checkingConnection
+                        : l10n.checkConnectionAction,
                     style: TextStyle(
                       fontSize: isValidating ? 13 : 10,
                       letterSpacing: isValidating ? 0.2 : 2.2,
@@ -224,7 +233,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'C O N T I N U E',
+                    l10n.continueAction,
                     style: TextStyle(
                       fontSize: 10,
                       letterSpacing: 2.5,
@@ -239,7 +248,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             if (isFailure) ...[
               const SizedBox(height: 20),
               Text(
-                widget.errorMessage ?? 'Connection failed.',
+                widget.errorMessage ?? l10n.connectionFailed,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w300,
@@ -270,6 +279,7 @@ class _PlanetInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final planetName = (info.instanceName ?? '').trim().isEmpty
         ? info.host
         : info.instanceName!.trim();
@@ -352,7 +362,7 @@ class _PlanetInfoCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'connected',
+                  l10n.connectedStatus,
                   style: TextStyle(
                     fontSize: 11,
                     color: mutedColor,
@@ -387,23 +397,23 @@ class _PlanetInfoCard extends StatelessWidget {
         Row(
           children: [
             _Stat(
-              label: 'LATENCY',
-              value: '${info.latencyMs} ms',
+              label: l10n.planetCardLatency,
+              value: l10n.latencyValue(info.latencyMs.toString()),
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             if (countryLabel.isNotEmpty)
               _Stat(
-                label: 'REGION',
+                label: l10n.planetCardCountry,
                 value: countryLabel,
                 inkColor: inkColor,
                 mutedColor: mutedColor,
               ),
             const SizedBox(width: 28),
             _Stat(
-              label: 'SECURITY',
-              value: isSecure ? 'HTTPS' : 'HTTP',
+              label: l10n.planetCardProtocol,
+              value: isSecure ? l10n.secureStatus : l10n.publicStatus,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),

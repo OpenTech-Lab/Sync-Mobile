@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../core/extensions/context_extensions.dart';
 import '../atoms/app_icon.dart';
@@ -18,12 +19,13 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final tabIcons = [
       Icons.home_outlined,
       Icons.chat_bubble_outline,
       Icons.settings_outlined,
     ];
-    const tabLabels = ['home', 'chats', 'settings'];
+    final tabLabels = [l10n.tabHome, l10n.tabChats, l10n.tabSettings];
 
     return Container(
       color: context.colors.background,

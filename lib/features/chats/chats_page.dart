@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +54,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   final Set<String> _profileSyncInFlight = <String>{};
   final Set<String> _profileSyncedOnce = <String>{};
   final Map<String, String> _partnerServerUrlOverrides = <String, String>{};
+  AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -250,8 +252,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'ADD FRIEND',
+                    Text(
+                      _l10n.chatAddFriendHeader,
                       style: TextStyle(
                         fontSize: 10,
                         letterSpacing: 2.6,
@@ -261,7 +263,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Paste a friend link or user ID',
+                      _l10n.chatAddFriendTitle,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w300,
@@ -270,8 +272,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Supported format: https://server.tld/<user-id>',
+                    Text(
+                      _l10n.chatAddFriendFormatHint,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w300,
@@ -290,7 +292,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                         color: inkColor,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'friend link or user ID',
+                        hintText: _l10n.chatAddFriendInputHint,
                         hintStyle: TextStyle(
                           fontSize: 13,
                           color: AppPalette.neutral500.withValues(alpha: 0.55),
@@ -319,13 +321,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       children: [
                         GestureDetector(
                           onTap: () => Navigator.of(context).pop(),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.symmetric(
                               horizontal: 4,
                               vertical: 4,
                             ),
                             child: Text(
-                              'cancel',
+                              _l10n.actionCancel,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: AppPalette.neutral500,
@@ -350,7 +352,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                               vertical: 4,
                             ),
                             child: Text(
-                              'N E X T',
+                              _l10n.actionNext,
                               style: TextStyle(
                                 fontSize: 11,
                                 letterSpacing: 2.4,
@@ -415,9 +417,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
     if (friendId.isEmpty || serverUrl.isEmpty) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Friend ID and server URL are required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_l10n.chatAddFriendInputHint)));
       return null;
     }
 
@@ -507,7 +509,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Friend removed')));
+        ).showSnackBar(SnackBar(content: Text(_l10n.friendRemoved)));
         return;
       }
       if (action == ChatTargetProfileAction.addFriend && mounted) {
@@ -518,7 +520,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Friend added')));
+        ).showSnackBar(SnackBar(content: Text(_l10n.friendAdded)));
       }
       if (action == ChatTargetProfileAction.startChat ||
           action == ChatTargetProfileAction.addFriend) {
@@ -639,7 +641,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Friend added')));
+      ).showSnackBar(SnackBar(content: Text(_l10n.friendAdded)));
       return;
     }
     if (action == ChatTargetProfileAction.cancelFriend) {
@@ -650,7 +652,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Friend removed')));
+      ).showSnackBar(SnackBar(content: Text(_l10n.friendRemoved)));
     }
   }
 
@@ -696,7 +698,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     if (failed.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Marked all as read')));
+      ).showSnackBar(SnackBar(content: Text(_l10n.chatMarkedAllAsRead)));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -799,7 +801,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 borderRadius: BorderRadius.circular(8),
                 onTap: _openActivePartnerProfile,
                 child: Text(
-                  activeDisplayName ?? 'Chat',
+                  activeDisplayName ?? _l10n.chatDefaultTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -883,7 +885,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          'No messages yet.\nSay hello!',
+                                          _l10n.chatNoMessagesYet,
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             color: cs.onSurfaceVariant,
@@ -925,6 +927,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                   ),
                                               child: _DayDivider(
                                                 label: _dayLabel(
+                                                  context,
                                                   message.createdAt,
                                                 ),
                                               ),
@@ -956,7 +959,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          '${activeDisplayName ?? 'Partner'} is typing…',
+                          _l10n.chatTypingIndicator(
+                            activeDisplayName ?? _l10n.chatDefaultPartner,
+                          ),
                           style: TextStyle(
                             fontSize: 12,
                             color: cs.onSurfaceVariant,
@@ -1013,13 +1018,13 @@ bool _isSameDay(DateTime a, DateTime b) {
   return x.year == y.year && x.month == y.month && x.day == y.day;
 }
 
-String _dayLabel(DateTime dt) {
+String _dayLabel(BuildContext context, DateTime dt) {
   final local = dt.toLocal();
   final now = DateTime.now();
   if (local.year == now.year &&
       local.month == now.month &&
       local.day == now.day) {
-    return 'Today';
+    return AppLocalizations.of(context)!.chatToday;
   }
   final m = local.month.toString().padLeft(2, '0');
   final d = local.day.toString().padLeft(2, '0');
@@ -1113,6 +1118,7 @@ class _ConversationStarter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -1167,7 +1173,7 @@ class _ConversationStarter extends ConsumerWidget {
             color: inkColor,
           ),
           decoration: InputDecoration(
-            hintText: 'search…',
+            hintText: l10n.chatSearchHint,
             hintStyle: TextStyle(
               fontSize: 14,
               color: AppPalette.neutral500.withValues(alpha: 0.55),
@@ -1193,7 +1199,7 @@ class _ConversationStarter extends ConsumerWidget {
           Row(
             children: [
               Text(
-                'UNREAD',
+                l10n.chatUnreadHeader,
                 style: const TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.4,
@@ -1204,8 +1210,8 @@ class _ConversationStarter extends ConsumerWidget {
               const Spacer(),
               GestureDetector(
                 onTap: onMarkAllRead,
-                child: const Text(
-                  'mark all read',
+                child: Text(
+                  l10n.chatMarkAllRead,
                   style: TextStyle(
                     fontSize: 11,
                     color: AppPalette.neutral500,
@@ -1232,8 +1238,8 @@ class _ConversationStarter extends ConsumerWidget {
 
         if (hasAnyRows && chatConversationIds.isNotEmpty) ...[
           const SizedBox(height: 16),
-          const Text(
-            'CHATS',
+          Text(
+            l10n.chatChatsHeader,
             style: TextStyle(
               fontSize: 10,
               letterSpacing: 2.4,
@@ -1250,7 +1256,7 @@ class _ConversationStarter extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 20),
             child: Text(
-              'No chats yet.',
+              l10n.chatNoChatsYet,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
@@ -1448,6 +1454,7 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
@@ -1512,13 +1519,13 @@ class _Composer extends StatelessWidget {
                 // Attach
                 _ComposerIconButton(
                   icon: Icons.attach_file_outlined,
-                  tooltip: 'Attach image',
+                  tooltip: l10n.chatAttachImageTooltip,
                   onPressed: onPickMedia,
                 ),
                 // Stickers
                 _ComposerIconButton(
                   icon: Icons.tag_faces_outlined,
-                  tooltip: 'Stickers',
+                  tooltip: l10n.chatStickersTooltip,
                   onPressed: () async {
                     final selected = await showModalBottomSheet<Sticker>(
                       context: context,
@@ -1546,7 +1553,7 @@ class _Composer extends StatelessWidget {
                       fontWeight: FontWeight.w300,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Message…',
+                      hintText: l10n.chatMessageHint,
                       hintStyle: const TextStyle(
                         color: AppPalette.neutral500,
                         fontSize: 14,
@@ -1624,12 +1631,13 @@ class _StickerPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (stickers.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 140,
         child: Center(
           child: Text(
-            'No stickers yet.',
+            l10n.chatNoStickersYet,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w300,
@@ -1644,12 +1652,12 @@ class _StickerPicker extends StatelessWidget {
       height: 260,
       child: Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'STICKERS',
+                l10n.chatStickersHeader,
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.8,
@@ -1723,6 +1731,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -1813,8 +1822,8 @@ class _MessageBubble extends StatelessWidget {
                 children: isMine
                     ? [
                         if (isTruncated)
-                          const Text(
-                            'more',
+                          Text(
+                            l10n.chatMore,
                             style: TextStyle(
                               fontSize: 10,
                               color: AppPalette.neutral500,
@@ -1846,8 +1855,8 @@ class _MessageBubble extends StatelessWidget {
                         ),
                         const Spacer(),
                         if (isTruncated)
-                          const Text(
-                            'more',
+                          Text(
+                            l10n.chatMore,
                             style: TextStyle(
                               fontSize: 10,
                               color: AppPalette.neutral500,

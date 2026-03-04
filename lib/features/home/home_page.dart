@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,6 +30,7 @@ class HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -53,7 +55,7 @@ class HomeTab extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           children: [
-            _SectionLabel(text: 'My Profile', ruleColor: ruleColor),
+            _SectionLabel(text: l10n.myProfileTitle, ruleColor: ruleColor),
             _ProfileCard(
               serverUrl: serverUrl,
               accessToken: accessToken,
@@ -91,7 +93,7 @@ class HomeTab extends ConsumerWidget {
               const SizedBox(height: 20),
             ],
             _SectionLabel(
-              text: 'Friends (${friendIds.length})',
+              text: l10n.friendsTitle(friendIds.length),
               ruleColor: ruleColor,
             ),
             if (friendIds.isEmpty)
@@ -101,7 +103,7 @@ class HomeTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'No friends yet',
+                      l10n.noFriendsYet,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w300,
@@ -110,7 +112,7 @@ class HomeTab extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Open Chats and start a conversation',
+                      l10n.openChatsHint,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppPalette.neutral500,
@@ -236,7 +238,7 @@ class HomeTab extends ConsumerWidget {
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Friend removed')),
+                        SnackBar(content: Text(l10n.friendRemoved)),
                       );
                     },
                   );

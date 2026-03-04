@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/realtime_event.dart';
 import '../../services/server_health_service.dart';
@@ -12,6 +13,7 @@ import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/theme_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
+import '../../ui/components/molecules/language_picker.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({
@@ -31,6 +33,7 @@ class SettingsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeMode = ref.watch(themeModeProvider);
     final backupAsync = ref.watch(backupControllerProvider);
@@ -53,9 +56,9 @@ class SettingsTab extends ConsumerWidget {
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final themeModes = [
-      (ThemeMode.light, 'Light'),
-      (ThemeMode.system, 'System'),
-      (ThemeMode.dark, 'Dark'),
+      (ThemeMode.light, l10n.themeLight),
+      (ThemeMode.system, l10n.themeSystem),
+      (ThemeMode.dark, l10n.themeDark),
     ];
 
     Future<String?> resolveAccessToken() async {
@@ -79,7 +82,7 @@ class SettingsTab extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
           children: [
             // ── My Planet ────────────────────────────────────────────────
-            _SectionHeader(label: 'My Planet', ruleColor: ruleColor),
+            _SectionHeader(label: l10n.settingsMyPlanet, ruleColor: ruleColor),
             _PlanetCard(
               planetName: planetName,
               planetDescription: planetDescription,
@@ -94,10 +97,13 @@ class SettingsTab extends ConsumerWidget {
             const SizedBox(height: 32),
 
             // ── Appearance ───────────────────────────────────────────────
-            _SectionHeader(label: 'Appearance', ruleColor: ruleColor),
+            _SectionHeader(
+              label: l10n.settingsAppearance,
+              ruleColor: ruleColor,
+            ),
             const SizedBox(height: 4),
             Text(
-              'THEME',
+              l10n.settingsTheme,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
@@ -144,11 +150,29 @@ class SettingsTab extends ConsumerWidget {
                 ],
               ],
             ),
+            const SizedBox(height: 14),
+            Text(
+              l10n.languageLabel,
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.4,
+                color: AppPalette.neutral500,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: LanguagePicker(),
+            ),
 
             const SizedBox(height: 32),
 
             // ── Encrypted backups ─────────────────────────────────────────
-            _SectionHeader(label: 'Encrypted Backups', ruleColor: ruleColor),
+            _SectionHeader(
+              label: l10n.settingsEncryptedBackups,
+              ruleColor: ruleColor,
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -157,7 +181,7 @@ class SettingsTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Enable backups',
+                      l10n.settingsEnableBackups,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w300,
@@ -166,7 +190,7 @@ class SettingsTab extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'End-to-end encrypted on planet server',
+                      l10n.settingsBackupSubtitle,
                       style: TextStyle(
                         fontSize: 11,
                         color: AppPalette.neutral500,
@@ -180,9 +204,8 @@ class SettingsTab extends ConsumerWidget {
                   activeColor: inkColor,
                   inactiveColor: AppPalette.neutral500,
                   trackColor: ruleColor,
-                  onChanged: (v) => ref
-                      .read(backupControllerProvider.notifier)
-                      .setEnabled(v),
+                  onChanged: (v) =>
+                      ref.read(backupControllerProvider.notifier).setEnabled(v),
                 ),
               ],
             ),
@@ -195,7 +218,7 @@ class SettingsTab extends ConsumerWidget {
                 runSpacing: 10,
                 children: [
                   _BackupTextButton(
-                    label: 'Create backup',
+                    label: l10n.settingsCreateBackup,
                     busy: backupState?.isBusy == true,
                     inkColor: inkColor,
                     mutedColor: AppPalette.neutral500,
@@ -212,14 +235,11 @@ class SettingsTab extends ConsumerWidget {
                       }
                       await ref
                           .read(backupControllerProvider.notifier)
-                          .createBackup(
-                            baseUrl: serverUrl,
-                            accessToken: token,
-                          );
+                          .createBackup(baseUrl: serverUrl, accessToken: token);
                     },
                   ),
                   _BackupTextButton(
-                    label: 'Restore',
+                    label: l10n.settingsRestore,
                     busy: backupState?.isBusy == true,
                     inkColor: inkColor,
                     mutedColor: AppPalette.neutral500,
@@ -236,7 +256,10 @@ class SettingsTab extends ConsumerWidget {
                       }
                       await ref
                           .read(backupControllerProvider.notifier)
-                          .restoreBackup(baseUrl: serverUrl, accessToken: token);
+                          .restoreBackup(
+                            baseUrl: serverUrl,
+                            accessToken: token,
+                          );
                       if (activePartnerId != null) {
                         ref.invalidate(
                           conversationMessagesProvider(activePartnerId!),
@@ -245,7 +268,7 @@ class SettingsTab extends ConsumerWidget {
                     },
                   ),
                   _BackupTextButton(
-                    label: 'Delete backup data',
+                    label: l10n.settingsDeleteBackupData,
                     busy: backupState?.isBusy == true,
                     inkColor: AppPalette.danger700,
                     mutedColor: AppPalette.neutral500,
@@ -290,7 +313,10 @@ class SettingsTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
                     backupState!.statusMessage!,
-                    style: TextStyle(fontSize: 12, color: AppPalette.neutral500),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                    ),
                   ),
                 ),
             ],
@@ -298,11 +324,11 @@ class SettingsTab extends ConsumerWidget {
             const SizedBox(height: 18),
             Divider(height: 1, thickness: 1, color: ruleColor),
             const SizedBox(height: 14),
-            _SectionHeader(label: 'Local Data', ruleColor: ruleColor),
+            _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
             Align(
               alignment: Alignment.centerLeft,
               child: _BackupTextButton(
-                label: 'Delete all local chat data',
+                label: l10n.settingsDeleteAllLocalChats,
                 busy: backupState?.isBusy == true,
                 inkColor: AppPalette.danger700,
                 mutedColor: AppPalette.neutral500,
@@ -324,7 +350,9 @@ class SettingsTab extends ConsumerWidget {
                       .read(backupControllerProvider.notifier)
                       .deleteLocalChatData();
                   if (activePartnerId != null) {
-                    ref.invalidate(conversationMessagesProvider(activePartnerId!));
+                    ref.invalidate(
+                      conversationMessagesProvider(activePartnerId!),
+                    );
                   }
                 },
               ),

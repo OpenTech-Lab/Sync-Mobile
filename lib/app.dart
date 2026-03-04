@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 import 'ui/theme/dark_theme.dart';
 import 'ui/theme/light_theme.dart';
@@ -8,6 +10,7 @@ import 'features/onboarding/onboarding_page.dart';
 import 'features/shell/main_shell.dart';
 import 'services/auth_service.dart';
 import 'state/app_controller.dart';
+import 'state/app_locale_controller.dart';
 import 'state/theme_mode_controller.dart';
 
 class SyncMobileApp extends ConsumerWidget {
@@ -16,13 +19,38 @@ class SyncMobileApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appStateAsync = ref.watch(appControllerProvider);
+    final selectedLocale = ref.watch(appLocaleProvider).toLocale();
 
     return MaterialApp(
-      title: 'Sync',
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: ref.watch(themeModeProvider),
+      locale: selectedLocale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('zh'), Locale('zh', 'TW')],
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (selectedLocale != null) {
+          return selectedLocale;
+        }
+        if (deviceLocale == null) {
+          return const Locale('en');
+        }
+        for (final locale in supportedLocales) {
+          if (locale.languageCode == deviceLocale.languageCode &&
+              (locale.countryCode == null ||
+                  locale.countryCode == deviceLocale.countryCode)) {
+            return locale;
+          }
+        }
+        return const Locale('en');
+      },
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),
         error: (error, _) => _ErrorScreen(message: error.toString()),
@@ -85,6 +113,7 @@ class _LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1E1C19) : const Color(0xFFFAF9F6);
     const muted = Color(0xFF8A8680);
@@ -117,8 +146,8 @@ class _LoadingScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'sync',
+            Text(
+              l10n.loadingSync,
               style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 2.8,
@@ -140,6 +169,7 @@ class _ErrorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1E1C19) : const Color(0xFFFAF9F6);
     final inkColor = isDark ? const Color(0xFFE8E4DC) : const Color(0xFF2C2A27);
@@ -155,8 +185,8 @@ class _ErrorScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'ERROR',
+              Text(
+                l10n.errorTitle,
                 style: TextStyle(
                   fontSize: 10,
                   letterSpacing: 2.8,
@@ -175,8 +205,8 @@ class _ErrorScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'please restart the app',
+              Text(
+                l10n.restartAppHint,
                 style: TextStyle(
                   fontSize: 12,
                   color: muted,

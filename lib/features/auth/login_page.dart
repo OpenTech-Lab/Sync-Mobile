@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/molecules/language_picker.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({
     super.key,
     required this.serverUrl,
@@ -25,10 +28,10 @@ class LoginScreen extends StatefulWidget {
   final Future<void> Function(String email)? onForgotPassword;
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   final _signInEmail = TextEditingController();
@@ -62,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -103,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const LanguagePicker(compact: true),
                 ],
               ),
             ),
@@ -124,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'Your private messenger',
+              l10n.authTagline,
               style: TextStyle(
                 fontSize: 12,
                 color: AppPalette.neutral500,
@@ -140,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen>
                 child: Row(
                   children: [
                     _AuthTab(
-                      label: 'Sign in',
+                      label: l10n.signInTab,
                       selected: _tabs.index == 0,
                       inkColor: inkColor,
                       mutedColor: AppPalette.neutral500,
@@ -148,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     const SizedBox(width: 32),
                     _AuthTab(
-                      label: 'Sign up',
+                      label: l10n.signUpTab,
                       selected: _tabs.index == 1,
                       inkColor: inkColor,
                       mutedColor: AppPalette.neutral500,
@@ -167,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen>
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Text(
-                  'Account found for this server',
+                  l10n.accountFoundForServer,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppPalette.neutral500,
@@ -232,6 +237,7 @@ class _LoginScreenState extends State<LoginScreen>
                     mutedColor: AppPalette.neutral500,
                     ruleColor: ruleColor,
                     isDark: isDark,
+                    l10n: l10n,
                   ),
                   if (!hasAccount)
                     _SignUpForm(
@@ -251,6 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
                       mutedColor: AppPalette.neutral500,
                       ruleColor: ruleColor,
                       isDark: isDark,
+                      l10n: l10n,
                     ),
                 ],
               ),
@@ -284,6 +291,7 @@ class _SignInForm extends StatelessWidget {
     required this.mutedColor,
     required this.ruleColor,
     required this.isDark,
+    required this.l10n,
     this.onForgotPassword,
   });
 
@@ -299,6 +307,7 @@ class _SignInForm extends StatelessWidget {
   final Color mutedColor;
   final Color ruleColor;
   final bool isDark;
+  final AppLocalizations l10n;
 
   void _showForgotDialog(BuildContext context) {
     final emailCtrl = TextEditingController(text: emailController.text);
@@ -328,7 +337,7 @@ class _SignInForm extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Reset password',
+                      l10n.resetPasswordTitle,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w300,
@@ -338,7 +347,7 @@ class _SignInForm extends StatelessWidget {
                     const SizedBox(height: 12),
                     if (done)
                       Text(
-                        'If that email is registered, a reset link was sent.',
+                        l10n.resetPasswordSentHint,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w300,
@@ -348,7 +357,7 @@ class _SignInForm extends StatelessWidget {
                       )
                     else ...[
                       Text(
-                        "Enter your email and we'll send a reset link.",
+                        l10n.resetPasswordEnterEmailHint,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w300,
@@ -359,7 +368,7 @@ class _SignInForm extends StatelessWidget {
                       const SizedBox(height: 20),
                       _AuthField(
                         controller: emailCtrl,
-                        label: 'Email',
+                        label: l10n.emailLabel,
                         keyboardType: TextInputType.emailAddress,
                         inkColor: inkColor,
                         mutedColor: mutedColor,
@@ -380,7 +389,7 @@ class _SignInForm extends StatelessWidget {
                               vertical: 4,
                             ),
                             child: Text(
-                              'close',
+                              l10n.actionClose,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: mutedColor,
@@ -404,7 +413,7 @@ class _SignInForm extends StatelessWidget {
                                 vertical: 4,
                               ),
                               child: Text(
-                                'cancel',
+                                l10n.actionCancel,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: mutedColor,
@@ -444,7 +453,7 @@ class _SignInForm extends StatelessWidget {
                                       ),
                                     )
                                   : Text(
-                                      'S E N D',
+                                      l10n.actionSend,
                                       style: TextStyle(
                                         fontSize: 11,
                                         letterSpacing: 2.5,
@@ -473,7 +482,7 @@ class _SignInForm extends StatelessWidget {
       children: [
         _AuthField(
           controller: emailController,
-          label: 'Email',
+          label: l10n.emailLabel,
           keyboardType: TextInputType.emailAddress,
           readOnly: emailLocked,
           inkColor: inkColor,
@@ -483,7 +492,7 @@ class _SignInForm extends StatelessWidget {
         const SizedBox(height: 24),
         _AuthField(
           controller: passwordController,
-          label: 'Password',
+          label: l10n.passwordLabel,
           obscure: obscure,
           toggleObscure: onToggleObscure,
           inkColor: inkColor,
@@ -498,7 +507,7 @@ class _SignInForm extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 4),
                 child: Text(
-                  'Forgot password?',
+                  l10n.forgotPassword,
                   style: TextStyle(
                     fontSize: 12,
                     color: mutedColor,
@@ -510,7 +519,7 @@ class _SignInForm extends StatelessWidget {
           ),
         const SizedBox(height: 32),
         _SubmitButton(
-          label: isSubmitting ? 'signing in…' : 'S I G N   I N',
+          label: isSubmitting ? l10n.signingInProgress : l10n.signInAction,
           busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
@@ -534,6 +543,7 @@ class _SignUpForm extends StatelessWidget {
     required this.mutedColor,
     required this.ruleColor,
     required this.isDark,
+    required this.l10n,
   });
 
   final TextEditingController usernameController;
@@ -547,6 +557,7 @@ class _SignUpForm extends StatelessWidget {
   final Color mutedColor;
   final Color ruleColor;
   final bool isDark;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -555,7 +566,7 @@ class _SignUpForm extends StatelessWidget {
       children: [
         _AuthField(
           controller: usernameController,
-          label: 'Username',
+          label: l10n.usernameLabel,
           inkColor: inkColor,
           mutedColor: mutedColor,
           ruleColor: ruleColor,
@@ -563,7 +574,7 @@ class _SignUpForm extends StatelessWidget {
         const SizedBox(height: 24),
         _AuthField(
           controller: emailController,
-          label: 'Email',
+          label: l10n.emailLabel,
           keyboardType: TextInputType.emailAddress,
           inkColor: inkColor,
           mutedColor: mutedColor,
@@ -572,7 +583,7 @@ class _SignUpForm extends StatelessWidget {
         const SizedBox(height: 24),
         _AuthField(
           controller: passwordController,
-          label: 'Password · min 8 characters',
+          label: l10n.passwordMin8Label,
           obscure: obscure,
           toggleObscure: onToggleObscure,
           inkColor: inkColor,
@@ -582,8 +593,8 @@ class _SignUpForm extends StatelessWidget {
         const SizedBox(height: 32),
         _SubmitButton(
           label: isSubmitting
-              ? 'creating account…'
-              : 'C R E A T E   A C C O U N T',
+              ? l10n.creatingAccountProgress
+              : l10n.createAccountAction,
           busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
