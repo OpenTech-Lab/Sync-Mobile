@@ -30,6 +30,14 @@ class SimpleMarkdownText extends StatelessWidget {
         continue;
       }
 
+      if (_isThematicBreak(trimmed)) {
+        widgets.add(
+          const Divider(height: 1, thickness: 1, color: AppPalette.neutral300),
+        );
+        shownParagraphs += 1;
+        continue;
+      }
+
       if (trimmed.startsWith('### ')) {
         widgets.add(
           _buildRichText(
@@ -186,5 +194,25 @@ class SimpleMarkdownText extends StatelessWidget {
     }
 
     return spans;
+  }
+
+  bool _isThematicBreak(String line) {
+    if (!RegExp(r'^[-_* \t]+$').hasMatch(line)) {
+      return false;
+    }
+    final compact = line.replaceAll(RegExp(r'[ \t]'), '');
+    if (compact.length < 3) {
+      return false;
+    }
+    final char = compact[0];
+    if (char != '-' && char != '*' && char != '_') {
+      return false;
+    }
+    for (final rune in compact.runes) {
+      if (String.fromCharCode(rune) != char) {
+        return false;
+      }
+    }
+    return true;
   }
 }
