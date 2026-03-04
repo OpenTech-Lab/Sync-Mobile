@@ -143,6 +143,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get signInAction => '登 入';
 
   @override
+  String get authQrTitle => '使用 QR 登入';
+
+  @override
+  String get authQrHint => '在手機上開啟 Sync，前往我的檔案並掃描此 QR。';
+
+  @override
+  String get authQrWaitingForScan => '等待手機確認…';
+
+  @override
+  String get authQrExpired => 'QR 已過期，請重新整理。';
+
+  @override
+  String get authQrUnavailable => 'QR 登入暫時不可用，請重試。';
+
+  @override
+  String get authQrRefresh => '重新整理 QR';
+
+  @override
   String get creatingAccountProgress => '建立帳號中…';
 
   @override
@@ -428,6 +446,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileCopyQrPayload => '複製 QR 內容';
+
+  @override
+  String get profileDeviceLoginAction => '掃描 QR 以登入其他裝置';
+
+  @override
+  String get profileDeviceLoginHint => '用手機相機核准桌面/網頁登入';
+
+  @override
+  String get profileDeviceLoginScanHint => '掃描桌面/網頁顯示的登入 QR';
+
+  @override
+  String get profileDeviceLoginApproved => '已核准登入';
+
+  @override
+  String get profileDeviceLoginFailed => '核准登入失敗';
 
   @override
   String get profileAboutYouLabel => '關於你';
@@ -704,6 +737,24 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get signInAction => '登 入';
 
   @override
+  String get authQrTitle => '使用 QR 登入';
+
+  @override
+  String get authQrHint => '在手機上開啟 Sync，前往我的檔案並掃描此 QR。';
+
+  @override
+  String get authQrWaitingForScan => '等待手機確認…';
+
+  @override
+  String get authQrExpired => 'QR 已過期，請重新整理。';
+
+  @override
+  String get authQrUnavailable => 'QR 登入暫時不可用，請重試。';
+
+  @override
+  String get authQrRefresh => '重新整理 QR';
+
+  @override
   String get creatingAccountProgress => '建立帳號中…';
 
   @override
@@ -989,6 +1040,21 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get profileCopyQrPayload => '複製 QR 內容';
+
+  @override
+  String get profileDeviceLoginAction => '掃描 QR 以登入其他裝置';
+
+  @override
+  String get profileDeviceLoginHint => '用手機相機核准桌面/網頁登入';
+
+  @override
+  String get profileDeviceLoginScanHint => '掃描桌面/網頁顯示的登入 QR';
+
+  @override
+  String get profileDeviceLoginApproved => '已核准登入';
+
+  @override
+  String get profileDeviceLoginFailed => '核准登入失敗';
 
   @override
   String get profileAboutYouLabel => '關於你';

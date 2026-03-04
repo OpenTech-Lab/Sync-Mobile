@@ -143,6 +143,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInAction => 'S I G N   I N';
 
   @override
+  String get authQrTitle => 'Sign in with QR';
+
+  @override
+  String get authQrHint => 'Open Sync on your phone and scan this code from My Profile.';
+
+  @override
+  String get authQrWaitingForScan => 'waiting for phone approval…';
+
+  @override
+  String get authQrExpired => 'QR expired. refresh to continue.';
+
+  @override
+  String get authQrUnavailable => 'QR login unavailable. try refresh.';
+
+  @override
+  String get authQrRefresh => 'refresh qr';
+
+  @override
   String get creatingAccountProgress => 'creating account…';
 
   @override
@@ -428,6 +446,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCopyQrPayload => 'copy qr payload';
+
+  @override
+  String get profileDeviceLoginAction => 'scan qr to login other device';
+
+  @override
+  String get profileDeviceLoginHint => 'use your phone camera to approve desktop/web login';
+
+  @override
+  String get profileDeviceLoginScanHint => 'scan login qr shown on desktop/web';
+
+  @override
+  String get profileDeviceLoginApproved => 'Login approved';
+
+  @override
+  String get profileDeviceLoginFailed => 'Failed to approve login';
 
   @override
   String get profileAboutYouLabel => 'ABOUT YOU';

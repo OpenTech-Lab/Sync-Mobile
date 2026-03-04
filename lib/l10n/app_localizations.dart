@@ -360,6 +360,42 @@ abstract class AppLocalizations {
   /// **'S I G N   I N'**
   String get signInAction;
 
+  /// No description provided for @authQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with QR'**
+  String get authQrTitle;
+
+  /// No description provided for @authQrHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Sync on your phone and scan this code from My Profile.'**
+  String get authQrHint;
+
+  /// No description provided for @authQrWaitingForScan.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting for phone approval…'**
+  String get authQrWaitingForScan;
+
+  /// No description provided for @authQrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR expired. refresh to continue.'**
+  String get authQrExpired;
+
+  /// No description provided for @authQrUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'QR login unavailable. try refresh.'**
+  String get authQrUnavailable;
+
+  /// No description provided for @authQrRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'refresh qr'**
+  String get authQrRefresh;
+
   /// No description provided for @creatingAccountProgress.
   ///
   /// In en, this message translates to:
@@ -917,6 +953,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'copy qr payload'**
   String get profileCopyQrPayload;
+
+  /// No description provided for @profileDeviceLoginAction.
+  ///
+  /// In en, this message translates to:
+  /// **'scan qr to login other device'**
+  String get profileDeviceLoginAction;
+
+  /// No description provided for @profileDeviceLoginHint.
+  ///
+  /// In en, this message translates to:
+  /// **'use your phone camera to approve desktop/web login'**
+  String get profileDeviceLoginHint;
+
+  /// No description provided for @profileDeviceLoginScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'scan login qr shown on desktop/web'**
+  String get profileDeviceLoginScanHint;
+
+  /// No description provided for @profileDeviceLoginApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Login approved'**
+  String get profileDeviceLoginApproved;
+
+  /// No description provided for @profileDeviceLoginFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to approve login'**
+  String get profileDeviceLoginFailed;
 
   /// No description provided for @profileAboutYouLabel.
   ///

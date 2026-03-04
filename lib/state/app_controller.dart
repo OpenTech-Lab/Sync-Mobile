@@ -422,6 +422,72 @@ class AppController extends AsyncNotifier<AppState> {
     }
   }
 
+  Future<void> loginWithQrTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    final current = state.value;
+    if (current == null || current.serverUrl == null) {
+      return;
+    }
+
+    state = AsyncData(
+      current.copyWith(isSubmitting: true, clearAuthError: true),
+    );
+
+    try {
+      await _sessionStorage.writeTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      final userId = _jwtService.tryReadUserId(accessToken);
+      var username = _jwtService.tryReadDisplayName(accessToken);
+      if (current.serverUrl != null && userId != null) {
+        try {
+          final profile = await _remoteUserProfileService.getMyProfile(
+            baseUrl: current.serverUrl!,
+            accessToken: accessToken,
+          );
+          username = profile.username.trim().isEmpty
+              ? username
+              : profile.username.trim();
+          await _userProfilePreferences.writeAvatarBase64(
+            userId,
+            profile.avatarBase64,
+          );
+        } catch (_) {}
+      }
+
+      final email = await _authService.fetchMyEmail(
+        baseUrl: current.serverUrl!,
+        accessToken: accessToken,
+      );
+      if (email != null && email.isNotEmpty) {
+        await _serverPreferences.writeSavedEmail(current.serverUrl!, email);
+      }
+
+      state = AsyncData(
+        current.copyWith(
+          accessToken: accessToken,
+          currentUserId: userId,
+          currentUsername: username,
+          savedEmail: email,
+          isSubmitting: false,
+          clearAuthError: true,
+        ),
+      );
+
+      if (userId != null && username != null) {
+        await _userProfilePreferences.writeDisplayName(userId, username);
+      }
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(isSubmitting: false, authError: error.toString()),
+      );
+    }
+  }
+
   Future<void> resetServerUrl() async {
     final current = state.value;
     if (current == null) {

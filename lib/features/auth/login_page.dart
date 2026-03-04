@@ -1,8 +1,15 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../models/qr_login_payload.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({
@@ -12,6 +19,7 @@ class LoginScreen extends ConsumerStatefulWidget {
     required this.isSubmitting,
     required this.errorMessage,
     required this.onSignIn,
+    required this.onQrSignIn,
     required this.onSignUp,
     required this.onBackToUrl,
     this.onForgotPassword,
@@ -22,6 +30,8 @@ class LoginScreen extends ConsumerStatefulWidget {
   final bool isSubmitting;
   final String? errorMessage;
   final Future<void> Function(String email, String password) onSignIn;
+  final Future<void> Function(String accessToken, String refreshToken)
+  onQrSignIn;
   final Future<void> Function(String username, String email, String password)
   onSignUp;
   final VoidCallback onBackToUrl;
@@ -39,8 +49,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _signUpUsername = TextEditingController();
   final _signUpEmail = TextEditingController();
   final _signUpPassword = TextEditingController();
+  final _authService = AuthService();
   bool _obscureSignIn = true;
   bool _obscureSignUp = true;
+  QrLoginSession? _qrSession;
+  Timer? _qrPollingTimer;
+  bool _loadingQrSession = false;
+  bool _qrSessionExpired = false;
+  String? _qrSessionError;
+  bool _qrPollingBusy = false;
 
   @override
   void initState() {
@@ -50,10 +67,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (hasAccount) {
       _signInEmail.text = widget.savedEmail!;
     }
+    if (!_isMobileDevice) {
+      _createQrSession();
+    }
   }
 
   @override
   void dispose() {
+    _qrPollingTimer?.cancel();
     _tabs.dispose();
     _signInEmail.dispose();
     _signInPassword.dispose();
@@ -61,6 +82,94 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _signUpEmail.dispose();
     _signUpPassword.dispose();
     super.dispose();
+  }
+
+  bool get _isMobileDevice {
+    if (kIsWeb) {
+      return false;
+    }
+    final platform = defaultTargetPlatform;
+    return platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+  }
+
+  Future<void> _createQrSession() async {
+    if (_loadingQrSession || _isMobileDevice) {
+      return;
+    }
+    setState(() {
+      _loadingQrSession = true;
+      _qrSessionError = null;
+      _qrSessionExpired = false;
+      _qrSession = null;
+    });
+    _qrPollingTimer?.cancel();
+    try {
+      final session = await _authService.createQrLoginSession(
+        baseUrl: widget.serverUrl,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _qrSession = session;
+        _loadingQrSession = false;
+      });
+      _qrPollingTimer = Timer.periodic(
+        const Duration(seconds: 2),
+        (_) => _pollQrSession(),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingQrSession = false;
+        _qrSessionError = 'failed';
+      });
+    }
+  }
+
+  Future<void> _pollQrSession() async {
+    final session = _qrSession;
+    if (session == null || _qrPollingBusy || widget.isSubmitting) {
+      return;
+    }
+    final payload = QrLoginPayload.tryParse(session.qrPayload);
+    if (payload == null) {
+      _qrPollingTimer?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _qrSessionError = 'invalid';
+      });
+      return;
+    }
+    _qrPollingBusy = true;
+    try {
+      final status = await _authService.pollQrLoginSession(
+        baseUrl: widget.serverUrl,
+        sessionId: payload.sessionId,
+        secret: payload.secret,
+      );
+      if (!mounted) return;
+      if (status.isApproved &&
+          status.accessToken != null &&
+          status.refreshToken != null) {
+        _qrPollingTimer?.cancel();
+        await widget.onQrSignIn(status.accessToken!, status.refreshToken!);
+        return;
+      }
+      if (status.isExpired) {
+        _qrPollingTimer?.cancel();
+        setState(() {
+          _qrSessionExpired = true;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _qrSessionError = 'poll';
+      });
+    } finally {
+      _qrPollingBusy = false;
+    }
   }
 
   @override
@@ -73,6 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final hasAccount = widget.savedEmail != null;
+    final useQrLoginOnly = !_isMobileDevice;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -138,130 +248,147 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(height: 36),
 
-            // — Tabs / account-found note
-            if (!hasAccount) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Row(
-                  children: [
-                    _AuthTab(
-                      label: l10n.signInTab,
-                      selected: _tabs.index == 0,
-                      inkColor: inkColor,
-                      mutedColor: AppPalette.neutral500,
-                      onTap: () => setState(() => _tabs.index = 0),
-                    ),
-                    const SizedBox(width: 32),
-                    _AuthTab(
-                      label: l10n.signUpTab,
-                      selected: _tabs.index == 1,
-                      inkColor: inkColor,
-                      mutedColor: AppPalette.neutral500,
-                      onTap: () => setState(() => _tabs.index = 1),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Divider(height: 1, thickness: 1, color: ruleColor),
-              ),
-              const SizedBox(height: 20),
-            ] else ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Text(
-                  l10n.accountFoundForServer,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppPalette.neutral500,
-                    letterSpacing: 0.2,
+            if (!useQrLoginOnly) ...[
+              // — Tabs / account-found note
+              if (!hasAccount) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Row(
+                    children: [
+                      _AuthTab(
+                        label: l10n.signInTab,
+                        selected: _tabs.index == 0,
+                        inkColor: inkColor,
+                        mutedColor: AppPalette.neutral500,
+                        onTap: () => setState(() => _tabs.index = 0),
+                      ),
+                      const SizedBox(width: 32),
+                      _AuthTab(
+                        label: l10n.signUpTab,
+                        selected: _tabs.index == 1,
+                        inkColor: inkColor,
+                        mutedColor: AppPalette.neutral500,
+                        onTap: () => setState(() => _tabs.index = 1),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // — Error notice
-            if (widget.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 3),
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppPalette.danger700,
-                        shape: BoxShape.circle,
-                      ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Divider(height: 1, thickness: 1, color: ruleColor),
+                ),
+                const SizedBox(height: 20),
+              ] else ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    l10n.accountFoundForServer,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                      letterSpacing: 0.2,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.errorMessage!,
-                        style: const TextStyle(
-                          fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // — Error notice
+              if (widget.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 3),
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
                           color: AppPalette.danger700,
-                          fontWeight: FontWeight.w300,
-                          height: 1.5,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // — Tab content
-            Expanded(
-              child: TabBarView(
-                controller: _tabs,
-                children: [
-                  _SignInForm(
-                    emailController: _signInEmail,
-                    emailLocked: hasAccount,
-                    passwordController: _signInPassword,
-                    obscure: _obscureSignIn,
-                    onToggleObscure: () =>
-                        setState(() => _obscureSignIn = !_obscureSignIn),
-                    isSubmitting: widget.isSubmitting,
-                    onSubmit: () => widget.onSignIn(
-                      _signInEmail.text,
-                      _signInPassword.text,
-                    ),
-                    onForgotPassword: widget.onForgotPassword,
-                    inkColor: inkColor,
-                    mutedColor: AppPalette.neutral500,
-                    ruleColor: ruleColor,
-                    isDark: isDark,
-                    l10n: l10n,
-                  ),
-                  if (!hasAccount)
-                    _SignUpForm(
-                      usernameController: _signUpUsername,
-                      emailController: _signUpEmail,
-                      passwordController: _signUpPassword,
-                      obscure: _obscureSignUp,
-                      onToggleObscure: () =>
-                          setState(() => _obscureSignUp = !_obscureSignUp),
-                      isSubmitting: widget.isSubmitting,
-                      onSubmit: () => widget.onSignUp(
-                        _signUpUsername.text,
-                        _signUpEmail.text,
-                        _signUpPassword.text,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.errorMessage!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppPalette.danger700,
+                            fontWeight: FontWeight.w300,
+                            height: 1.5,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+
+              // — Tab content (mobile only)
+              Expanded(
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _SignInForm(
+                      emailController: _signInEmail,
+                      emailLocked: hasAccount,
+                      passwordController: _signInPassword,
+                      obscure: _obscureSignIn,
+                      onToggleObscure: () =>
+                          setState(() => _obscureSignIn = !_obscureSignIn),
+                      isSubmitting: widget.isSubmitting,
+                      onSubmit: () => widget.onSignIn(
+                        _signInEmail.text,
+                        _signInPassword.text,
+                      ),
+                      onForgotPassword: widget.onForgotPassword,
                       inkColor: inkColor,
                       mutedColor: AppPalette.neutral500,
                       ruleColor: ruleColor,
                       isDark: isDark,
                       l10n: l10n,
                     ),
-                ],
+                    if (!hasAccount)
+                      _SignUpForm(
+                        usernameController: _signUpUsername,
+                        emailController: _signUpEmail,
+                        passwordController: _signUpPassword,
+                        obscure: _obscureSignUp,
+                        onToggleObscure: () =>
+                            setState(() => _obscureSignUp = !_obscureSignUp),
+                        isSubmitting: widget.isSubmitting,
+                        onSubmit: () => widget.onSignUp(
+                          _signUpUsername.text,
+                          _signUpEmail.text,
+                          _signUpPassword.text,
+                        ),
+                        inkColor: inkColor,
+                        mutedColor: AppPalette.neutral500,
+                        ruleColor: ruleColor,
+                        isDark: isDark,
+                        l10n: l10n,
+                      ),
+                  ],
+                ),
               ),
-            ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Expanded(
+                child: _DesktopQrLoginPanel(
+                  session: _qrSession,
+                  loading: _loadingQrSession,
+                  expired: _qrSessionExpired,
+                  hasError: _qrSessionError != null,
+                  onRefresh: _createQrSession,
+                  l10n: l10n,
+                  inkColor: inkColor,
+                  mutedColor: AppPalette.neutral500,
+                  ruleColor: ruleColor,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -599,6 +726,122 @@ class _SignUpForm extends StatelessWidget {
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
           mutedColor: mutedColor,
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopQrLoginPanel extends StatelessWidget {
+  const _DesktopQrLoginPanel({
+    required this.session,
+    required this.loading,
+    required this.expired,
+    required this.hasError,
+    required this.onRefresh,
+    required this.l10n,
+    required this.inkColor,
+    required this.mutedColor,
+    required this.ruleColor,
+  });
+
+  final QrLoginSession? session;
+  final bool loading;
+  final bool expired;
+  final bool hasError;
+  final VoidCallback onRefresh;
+  final AppLocalizations l10n;
+  final Color inkColor;
+  final Color mutedColor;
+  final Color ruleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final showQr = session != null && !loading;
+    final statusText = expired
+        ? l10n.authQrExpired
+        : hasError
+        ? l10n.authQrUnavailable
+        : l10n.authQrWaitingForScan;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(28, 8, 28, 28),
+      children: [
+        Text(
+          l10n.authQrTitle,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.authQrHint,
+          style: TextStyle(
+            fontSize: 12,
+            color: mutedColor,
+            fontWeight: FontWeight.w300,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 22),
+        Center(
+          child: Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              border: Border.all(color: ruleColor),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            alignment: Alignment.center,
+            child: loading
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.6,
+                      color: mutedColor,
+                    ),
+                  )
+                : showQr
+                ? QrImageView(
+                    data: session!.qrPayload,
+                    version: QrVersions.auto,
+                    size: 180,
+                    backgroundColor: AppPalette.white,
+                  )
+                : Icon(Icons.qr_code_2, color: mutedColor, size: 28),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Center(
+          child: Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 11,
+              color: mutedColor,
+              fontWeight: FontWeight.w300,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Center(
+          child: GestureDetector(
+            onTap: onRefresh,
+            child: Text(
+              l10n.authQrRefresh,
+              style: TextStyle(
+                fontSize: 12,
+                color: mutedColor,
+                letterSpacing: 0.3,
+                decoration: TextDecoration.underline,
+                decorationColor: ruleColor,
+              ),
+            ),
+          ),
         ),
       ],
     );

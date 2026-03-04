@@ -78,6 +78,12 @@ class SyncMobileApp extends ConsumerWidget {
                 onSignIn: (email, password) => ref
                     .read(appControllerProvider.notifier)
                     .login(email: email, password: password),
+                onQrSignIn: (accessToken, refreshToken) => ref
+                    .read(appControllerProvider.notifier)
+                    .loginWithQrTokens(
+                      accessToken: accessToken,
+                      refreshToken: refreshToken,
+                    ),
                 onSignUp: (username, email, password) => ref
                     .read(appControllerProvider.notifier)
                     .signUp(

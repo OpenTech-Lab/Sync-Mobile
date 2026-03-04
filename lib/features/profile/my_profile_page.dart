@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
@@ -11,8 +12,11 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../models/friend_qr_payload.dart';
+import '../../models/qr_login_payload.dart';
+import '../../services/auth_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/user_profile_controller.dart';
+import 'device_login_qr_scanner_page.dart';
 
 class MyProfileScreen extends ConsumerWidget {
   const MyProfileScreen({
@@ -46,6 +50,11 @@ class MyProfileScreen extends ConsumerWidget {
       userId: currentUserId,
       serverUrl: serverUrl,
     ).encode();
+    final authService = AuthService();
+    final isMobileDevice =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
 
     Future<void> saveUsername() async {
       final result = await showDialog<String>(
@@ -62,9 +71,7 @@ class MyProfileScreen extends ConsumerWidget {
       if (!usernamePattern.hasMatch(result)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.profileUsernameValidationError),
-          ),
+          SnackBar(content: Text(l10n.profileUsernameValidationError)),
         );
         return;
       }
@@ -117,9 +124,7 @@ class MyProfileScreen extends ConsumerWidget {
       if (words > 100) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.profileDescriptionWordLimitError),
-          ),
+          SnackBar(content: Text(l10n.profileDescriptionWordLimitError)),
         );
         return;
       }
@@ -153,11 +158,9 @@ class MyProfileScreen extends ConsumerWidget {
       final bytes = await image.readAsBytes();
       if (bytes.length > 256 * 1024) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.profileAvatarTooLarge),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileAvatarTooLarge)));
         return;
       }
 
@@ -186,9 +189,9 @@ class MyProfileScreen extends ConsumerWidget {
             .setCurrentUsername(profile.username);
       } catch (_) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileAvatarUploadFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileAvatarUploadFailed)));
         return;
       }
 
@@ -201,6 +204,39 @@ class MyProfileScreen extends ConsumerWidget {
           width: 160,
         ),
       );
+    }
+
+    Future<void> scanDeviceLoginQr() async {
+      final payload = await Navigator.of(context).push<QrLoginPayload>(
+        MaterialPageRoute(builder: (_) => const DeviceLoginQrScannerPage()),
+      );
+      if (!context.mounted || payload == null) {
+        return;
+      }
+      try {
+        final freshToken =
+            await ref
+                .read(appControllerProvider.notifier)
+                .ensureFreshAccessToken() ??
+            accessToken;
+        await authService.approveQrLoginSession(
+          baseUrl: serverUrl,
+          accessToken: freshToken,
+          sessionId: payload.sessionId,
+          secret: payload.secret,
+        );
+        if (!context.mounted) return;
+        _showMinimalCopyToast(
+          context: context,
+          message: l10n.profileDeviceLoginApproved,
+        );
+      } catch (_) {
+        if (!context.mounted) return;
+        _showMinimalCopyToast(
+          context: context,
+          message: l10n.profileDeviceLoginFailed,
+        );
+      }
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -439,6 +475,35 @@ class MyProfileScreen extends ConsumerWidget {
               textColor: AppPalette.neutral500,
             ),
           ),
+          if (isMobileDevice) ...[
+            const SizedBox(height: 18),
+            Center(
+              child: GestureDetector(
+                onTap: scanDeviceLoginQr,
+                child: Text(
+                  l10n.profileDeviceLoginAction,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppPalette.neutral500,
+                    letterSpacing: 0.3,
+                    decoration: TextDecoration.underline,
+                    decorationColor: ruleColor,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                l10n.profileDeviceLoginHint,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w300,
+                  color: AppPalette.neutral500,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -500,7 +565,9 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final foregroundColor = _isCopied ? AppPalette.success700 : widget.textColor;
+    final foregroundColor = _isCopied
+        ? AppPalette.success700
+        : widget.textColor;
 
     return GestureDetector(
       onTap: _copyQrPayload,
@@ -605,7 +672,9 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-    final counterColor = isOverLimit ? AppPalette.danger700 : AppPalette.neutral500;
+    final counterColor = isOverLimit
+        ? AppPalette.danger700
+        : AppPalette.neutral500;
 
     return Dialog(
       backgroundColor: bgColor,
