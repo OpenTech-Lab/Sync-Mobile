@@ -52,6 +52,8 @@ final realtimeSyncControllerProvider =
     );
 
 class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
+  static const _encryptedFallbackMessage =
+      '[Encrypted message: key unavailable on this device]';
   StreamSubscription<RealtimeEvent>? _subscription;
   final Set<String> _conversationSyncInFlight = <String>{};
 
@@ -119,6 +121,14 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
             conversationId: message.conversationId,
             senderId: message.senderId,
             body: decrypted,
+            createdAt: message.createdAt,
+          );
+        } else if (e2eeService.isEncryptedEnvelope(message.body)) {
+          message = LocalChatMessage(
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            body: _encryptedFallbackMessage,
             createdAt: message.createdAt,
           );
         }

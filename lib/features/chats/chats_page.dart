@@ -55,6 +55,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   final Set<String> _profileSyncInFlight = <String>{};
   final Set<String> _profileSyncedOnce = <String>{};
   final Map<String, String> _partnerServerUrlOverrides = <String, String>{};
+  final Map<String, List<_OutgoingMessageDraft>> _outgoingDraftsByPartner =
+      <String, List<_OutgoingMessageDraft>>{};
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   @override
@@ -576,24 +578,137 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       _typingSignalSent = false;
     }
 
-    final accessToken = await _effectiveAccessToken();
-
-    await ref
-        .read(conversationMessagesProvider(_activePartnerId!).notifier)
-        .sendMessage(
-          baseUrl: widget.serverUrl,
-          accessToken: accessToken,
-          currentUserId: widget.currentUserId,
-          body: content,
-          recipientServerUrl: _partnerServerUrlOverrides[_activePartnerId!],
-        );
     _clearMedia();
-    await ref
-        .read(unreadCountsProvider.notifier)
-        .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
-    await ref
-        .read(backupControllerProvider.notifier)
-        .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
+    await _sendMessageWithOptimisticBubble(content);
+  }
+
+  Future<void> _sendMessageWithOptimisticBubble(String content) async {
+    final partnerId = _activePartnerId;
+    if (partnerId == null || partnerId.isEmpty) {
+      return;
+    }
+    final draftId = _addOutgoingDraft(partnerId: partnerId, body: content);
+
+    try {
+      final accessToken = await _effectiveAccessToken();
+      await ref
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .sendMessage(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            currentUserId: widget.currentUserId,
+            body: content,
+            recipientServerUrl: _partnerServerUrlOverrides[partnerId],
+          );
+      _removeOutgoingDraft(partnerId: partnerId, draftId: draftId);
+      await ref
+          .read(unreadCountsProvider.notifier)
+          .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
+      await ref
+          .read(backupControllerProvider.notifier)
+          .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
+    } catch (error) {
+      _markOutgoingDraftFailed(partnerId: partnerId, draftId: draftId);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  String _addOutgoingDraft({required String partnerId, required String body}) {
+    final id =
+        'draft-${DateTime.now().microsecondsSinceEpoch}-${body.length.hashCode.abs()}';
+    final next = _OutgoingMessageDraft(
+      id: id,
+      partnerId: partnerId,
+      body: body,
+      createdAt: DateTime.now().toUtc(),
+      state: _OutgoingDeliveryState.sending,
+    );
+    setState(() {
+      final current = _outgoingDraftsByPartner[partnerId] ?? const [];
+      _outgoingDraftsByPartner[partnerId] = [next, ...current];
+    });
+    return id;
+  }
+
+  void _removeOutgoingDraft({
+    required String partnerId,
+    required String draftId,
+  }) {
+    if (!_outgoingDraftsByPartner.containsKey(partnerId)) {
+      return;
+    }
+    setState(() {
+      final next = (_outgoingDraftsByPartner[partnerId] ?? const [])
+          .where((draft) => draft.id != draftId)
+          .toList(growable: false);
+      if (next.isEmpty) {
+        _outgoingDraftsByPartner.remove(partnerId);
+      } else {
+        _outgoingDraftsByPartner[partnerId] = next;
+      }
+    });
+  }
+
+  void _markOutgoingDraftFailed({
+    required String partnerId,
+    required String draftId,
+  }) {
+    if (!_outgoingDraftsByPartner.containsKey(partnerId)) {
+      return;
+    }
+    setState(() {
+      final next = (_outgoingDraftsByPartner[partnerId] ?? const [])
+          .map(
+            (draft) => draft.id == draftId
+                ? draft.copyWith(state: _OutgoingDeliveryState.failed)
+                : draft,
+          )
+          .toList(growable: false);
+      _outgoingDraftsByPartner[partnerId] = next;
+    });
+  }
+
+  Future<void> _retryOutgoingDraft(_OutgoingMessageDraft draft) async {
+    if (draft.state != _OutgoingDeliveryState.failed) {
+      return;
+    }
+    setState(() {
+      final current = _outgoingDraftsByPartner[draft.partnerId] ?? const [];
+      _outgoingDraftsByPartner[draft.partnerId] = current
+          .map(
+            (item) => item.id == draft.id
+                ? item.copyWith(state: _OutgoingDeliveryState.sending)
+                : item,
+          )
+          .toList(growable: false);
+    });
+
+    try {
+      final accessToken = await _effectiveAccessToken();
+      await ref
+          .read(conversationMessagesProvider(draft.partnerId).notifier)
+          .sendMessage(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            currentUserId: widget.currentUserId,
+            body: draft.body,
+            recipientServerUrl: _partnerServerUrlOverrides[draft.partnerId],
+          );
+      _removeOutgoingDraft(partnerId: draft.partnerId, draftId: draft.id);
+      await ref
+          .read(unreadCountsProvider.notifier)
+          .refresh(baseUrl: widget.serverUrl, accessToken: accessToken);
+      await ref
+          .read(backupControllerProvider.notifier)
+          .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
+    } catch (_) {
+      _markOutgoingDraftFailed(partnerId: draft.partnerId, draftId: draft.id);
+    }
   }
 
   Future<void> _openActivePartnerProfile() async {
@@ -880,82 +995,115 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                 ),
                               ),
                             ),
-                            data: (messages) => messages.isEmpty
-                                ? Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.chat_bubble_outline,
-                                          size: 48,
-                                          color: cs.outlineVariant,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          _l10n.chatNoMessagesYet,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: cs.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : ListView.separated(
-                                    reverse: true,
-                                    controller: _messageScrollController,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      12,
-                                      8,
-                                      12,
-                                      8,
-                                    ),
-                                    itemCount: messages.length,
-                                    separatorBuilder: (_, _) =>
-                                        const SizedBox(height: 6),
-                                    itemBuilder: (ctx, i) {
-                                      final message = messages[i];
-                                      final showDayDivider =
-                                          i == messages.length - 1 ||
-                                          !_isSameDay(
-                                            message.createdAt,
-                                            messages[i + 1].createdAt,
-                                          );
-                                      return Column(
+                            data: (messages) {
+                              final activePartnerId = _activePartnerId;
+                              final draftMessages = activePartnerId == null
+                                  ? const <_OutgoingMessageDraft>[]
+                                  : (_outgoingDraftsByPartner[activePartnerId] ??
+                                        const <_OutgoingMessageDraft>[]);
+                              final draftById = <String, _OutgoingMessageDraft>{
+                                for (final draft in draftMessages)
+                                  draft.id: draft,
+                              };
+                              final displayedMessages = <LocalChatMessage>[
+                                ...draftMessages.map(
+                                  (draft) => LocalChatMessage(
+                                    id: draft.id,
+                                    conversationId: draft.partnerId,
+                                    senderId: widget.currentUserId,
+                                    body: draft.body,
+                                    createdAt: draft.createdAt,
+                                  ),
+                                ),
+                                ...messages,
+                              ];
+
+                              return displayedMessages.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          if (showDayDivider)
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                    0,
-                                                    8,
-                                                    0,
-                                                    6,
-                                                  ),
-                                              child: _DayDivider(
-                                                label: _dayLabel(
-                                                  context,
-                                                  message.createdAt,
-                                                ),
-                                              ),
+                                          Icon(
+                                            Icons.chat_bubble_outline,
+                                            size: 48,
+                                            color: cs.outlineVariant,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            _l10n.chatNoMessagesYet,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: cs.onSurfaceVariant,
                                             ),
-                                          _MessageBubble(
-                                            message: message,
-                                            isMine:
-                                                message.senderId ==
-                                                widget.currentUserId,
-                                            currentUserId: widget.currentUserId,
-                                            currentUserAvatarBase64:
-                                                currentUserAvatarBase64,
-                                            partnerAvatarBase64:
-                                                partnerAvatarBase64,
-                                            onPartnerAvatarTap:
-                                                _openActivePartnerProfile,
                                           ),
                                         ],
-                                      );
-                                    },
-                                  ),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      reverse: true,
+                                      controller: _messageScrollController,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        12,
+                                        8,
+                                        12,
+                                        8,
+                                      ),
+                                      itemCount: displayedMessages.length,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(height: 6),
+                                      itemBuilder: (ctx, i) {
+                                        final message = displayedMessages[i];
+                                        final draft = draftById[message.id];
+                                        final showDayDivider =
+                                            i == displayedMessages.length - 1 ||
+                                            !_isSameDay(
+                                              message.createdAt,
+                                              displayedMessages[i + 1]
+                                                  .createdAt,
+                                            );
+                                        return Column(
+                                          children: [
+                                            if (showDayDivider)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                      0,
+                                                      8,
+                                                      0,
+                                                      6,
+                                                    ),
+                                                child: _DayDivider(
+                                                  label: _dayLabel(
+                                                    context,
+                                                    message.createdAt,
+                                                  ),
+                                                ),
+                                              ),
+                                            _MessageBubble(
+                                              message: message,
+                                              isMine:
+                                                  message.senderId ==
+                                                  widget.currentUserId,
+                                              currentUserId:
+                                                  widget.currentUserId,
+                                              currentUserAvatarBase64:
+                                                  currentUserAvatarBase64,
+                                              partnerAvatarBase64:
+                                                  partnerAvatarBase64,
+                                              onPartnerAvatarTap:
+                                                  _openActivePartnerProfile,
+                                              deliveryState: draft?.state,
+                                              onRetryTap: draft == null
+                                                  ? null
+                                                  : () => _retryOutgoingDraft(
+                                                      draft,
+                                                    ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                            },
                           ),
                   ),
 
@@ -992,27 +1140,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                       onClearMedia: _clearMedia,
                       onStickerSelected: (sticker) async {
                         if (_activePartnerId == null) return;
-                        final accessToken = await _effectiveAccessToken();
-                        await ref
-                            .read(
-                              conversationMessagesProvider(
-                                _activePartnerId!,
-                              ).notifier,
-                            )
-                            .sendMessage(
-                              baseUrl: widget.serverUrl,
-                              accessToken: accessToken,
-                              currentUserId: widget.currentUserId,
-                              body: '[sticker:${sticker.id}:${sticker.name}]',
-                              recipientServerUrl:
-                                  _partnerServerUrlOverrides[_activePartnerId!],
-                            );
-                        await ref
-                            .read(backupControllerProvider.notifier)
-                            .maybeAutoBackup(
-                              baseUrl: widget.serverUrl,
-                              accessToken: accessToken,
-                            );
+                        await _sendMessageWithOptimisticBubble(
+                          '[sticker:${sticker.id}:${sticker.name}]',
+                        );
                       },
                     ),
                   ),
@@ -1024,6 +1154,34 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 }
 
 enum _ChatQuickAction { newFriendOrChat, scanFriendQr }
+
+enum _OutgoingDeliveryState { sending, failed }
+
+class _OutgoingMessageDraft {
+  const _OutgoingMessageDraft({
+    required this.id,
+    required this.partnerId,
+    required this.body,
+    required this.createdAt,
+    required this.state,
+  });
+
+  final String id;
+  final String partnerId;
+  final String body;
+  final DateTime createdAt;
+  final _OutgoingDeliveryState state;
+
+  _OutgoingMessageDraft copyWith({_OutgoingDeliveryState? state}) {
+    return _OutgoingMessageDraft(
+      id: id,
+      partnerId: partnerId,
+      body: body,
+      createdAt: createdAt,
+      state: state ?? this.state,
+    );
+  }
+}
 
 bool _isSameDay(DateTime a, DateTime b) {
   final x = a.toLocal();
@@ -1723,6 +1881,8 @@ class _MessageBubble extends StatelessWidget {
     required this.currentUserAvatarBase64,
     required this.partnerAvatarBase64,
     required this.onPartnerAvatarTap,
+    this.deliveryState,
+    this.onRetryTap,
   });
 
   final LocalChatMessage message;
@@ -1731,6 +1891,8 @@ class _MessageBubble extends StatelessWidget {
   final String? currentUserAvatarBase64;
   final String? partnerAvatarBase64;
   final VoidCallback onPartnerAvatarTap;
+  final _OutgoingDeliveryState? deliveryState;
+  final VoidCallback? onRetryTap;
 
   static const double _kMaxBubbleHeight = 180;
 
@@ -1759,6 +1921,9 @@ class _MessageBubble extends StatelessWidget {
 
     final bubbleColor = isMine ? myBubble : theirBubble;
     final onBubble = inkColor;
+    final statusColor = deliveryState == _OutgoingDeliveryState.failed
+        ? AppPalette.danger700
+        : AppPalette.neutral500;
     const textMaxLines = 7;
     final messageTextStyle = TextStyle(
       color: onBubble,
@@ -1844,6 +2009,20 @@ class _MessageBubble extends StatelessWidget {
                             ),
                           ),
                         const Spacer(),
+                        if (deliveryState != null) ...[
+                          if (deliveryState == _OutgoingDeliveryState.sending)
+                            Icon(Icons.schedule, size: 11, color: statusColor),
+                          if (deliveryState == _OutgoingDeliveryState.failed)
+                            GestureDetector(
+                              onTap: onRetryTap,
+                              child: Icon(
+                                Icons.refresh,
+                                size: 12,
+                                color: statusColor,
+                              ),
+                            ),
+                          const SizedBox(width: 6),
+                        ],
                         Text(
                           _timeLabel(message.createdAt),
                           maxLines: 1,
