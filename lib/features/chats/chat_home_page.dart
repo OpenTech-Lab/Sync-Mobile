@@ -271,8 +271,11 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         onPressed: backupState?.isBusy == true
                             ? null
                             : () => ref
-                                  .read(backupControllerProvider.notifier)
-                                  .createBackup(),
+                              .read(backupControllerProvider.notifier)
+                                  .createBackup(
+                                    baseUrl: widget.serverUrl,
+                                    accessToken: widget.accessToken,
+                                  ),
                         child: const Text('Create backup'),
                       ),
                       const SizedBox(width: 8),
@@ -282,7 +285,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                             : () async {
                                 await ref
                                     .read(backupControllerProvider.notifier)
-                                    .restoreBackup();
+                                    .restoreBackup(
+                                      baseUrl: widget.serverUrl,
+                                      accessToken: widget.accessToken,
+                                    );
                                 if (_activePartnerId != null) {
                                   ref.invalidate(
                                     conversationMessagesProvider(

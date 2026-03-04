@@ -74,6 +74,11 @@ class EncryptedBackupService {
     }
   }
 
+  Future<List<int>> readOrCreateSecretKeyBytes() async {
+    final secret = await _readOrCreateSecretKey();
+    return secret.extractBytes();
+  }
+
   Future<File> _backupFile() async {
     final docs = await getApplicationDocumentsDirectory();
     return File(path.join(docs.path, _backupFileName));

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/backup_preferences.dart';
 import '../services/encrypted_backup_service.dart';
+import '../services/remote_backup_service.dart';
 import 'conversation_messages_controller.dart';
 
 class BackupState {
@@ -29,7 +30,8 @@ final backupControllerProvider =
 
 class BackupController extends AsyncNotifier<BackupState> {
   final _backupPreferences = BackupPreferences();
-  final _backupService = EncryptedBackupService();
+  final _localCryptoService = EncryptedBackupService();
+  final _remoteBackupService = RemoteBackupService();
 
   @override
   Future<BackupState> build() async {
@@ -47,7 +49,10 @@ class BackupController extends AsyncNotifier<BackupState> {
     state = AsyncData(current.copyWith(enabled: enabled, statusMessage: null));
   }
 
-  Future<void> createBackup() async {
+  Future<void> createBackup({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
     final current = state.value;
     if (current == null || !current.enabled) {
       return;
@@ -57,11 +62,17 @@ class BackupController extends AsyncNotifier<BackupState> {
 
     try {
       final messages = await ref.read(chatRepositoryProvider).listAllMessages();
-      await _backupService.backupMessages(messages);
+      final keyBytes = await _localCryptoService.readOrCreateSecretKeyBytes();
+      await _remoteBackupService.uploadBackup(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        messages: messages,
+        keyBytes: keyBytes,
+      );
       state = AsyncData(
         current.copyWith(
           isBusy: false,
-          statusMessage: 'Backup created.',
+          statusMessage: 'Encrypted backup uploaded to planet server.',
         ),
       );
     } catch (error) {
@@ -71,7 +82,10 @@ class BackupController extends AsyncNotifier<BackupState> {
     }
   }
 
-  Future<void> restoreBackup() async {
+  Future<void> restoreBackup({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
     final current = state.value;
     if (current == null || !current.enabled) {
       return;
@@ -80,7 +94,12 @@ class BackupController extends AsyncNotifier<BackupState> {
     state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
 
     try {
-      final messages = await _backupService.restoreMessages();
+      final keyBytes = await _localCryptoService.readOrCreateSecretKeyBytes();
+      final messages = await _remoteBackupService.restoreBackup(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        keyBytes: keyBytes,
+      );
       await ref.read(chatRepositoryProvider).replaceAllMessages(messages);
 
       state = AsyncData(
@@ -99,7 +118,10 @@ class BackupController extends AsyncNotifier<BackupState> {
     }
   }
 
-  Future<void> deleteBackupData() async {
+  Future<void> deleteBackupData({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
     final current = state.value;
     if (current == null || !current.enabled) {
       return;
@@ -108,11 +130,14 @@ class BackupController extends AsyncNotifier<BackupState> {
     state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
 
     try {
-      await _backupService.deleteBackup();
+      await _remoteBackupService.deleteBackup(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+      );
       state = AsyncData(
         current.copyWith(
           isBusy: false,
-          statusMessage: 'Backup data deleted.',
+          statusMessage: 'Server backup deleted.',
         ),
       );
     } catch (error) {

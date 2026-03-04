@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/realtime_event.dart';
 import '../../services/server_health_service.dart';
+import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/notification_controller.dart';
@@ -56,6 +57,20 @@ class SettingsTab extends ConsumerWidget {
       (ThemeMode.system, 'System'),
       (ThemeMode.dark, 'Dark'),
     ];
+
+    Future<String?> resolveAccessToken() async {
+      final fresh = await ref
+          .read(appControllerProvider.notifier)
+          .ensureFreshAccessToken();
+      if (fresh != null && fresh.isNotEmpty) {
+        return fresh;
+      }
+      final fallback = ref.read(appControllerProvider).value?.accessToken;
+      if (fallback != null && fallback.isNotEmpty) {
+        return fallback;
+      }
+      return null;
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -151,7 +166,7 @@ class SettingsTab extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Locally encrypted · AES-GCM',
+                      'End-to-end encrypted on planet server',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppPalette.neutral500,
@@ -184,9 +199,24 @@ class SettingsTab extends ConsumerWidget {
                     busy: backupState?.isBusy == true,
                     inkColor: inkColor,
                     mutedColor: AppPalette.neutral500,
-                    onPressed: () => ref
-                        .read(backupControllerProvider.notifier)
-                        .createBackup(),
+                    onPressed: () async {
+                      final token = await resolveAccessToken();
+                      if (token == null) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Missing access token for backup.'),
+                          ),
+                        );
+                        return;
+                      }
+                      await ref
+                          .read(backupControllerProvider.notifier)
+                          .createBackup(
+                            baseUrl: serverUrl,
+                            accessToken: token,
+                          );
+                    },
                   ),
                   _BackupTextButton(
                     label: 'Restore',
@@ -194,9 +224,19 @@ class SettingsTab extends ConsumerWidget {
                     inkColor: inkColor,
                     mutedColor: AppPalette.neutral500,
                     onPressed: () async {
+                      final token = await resolveAccessToken();
+                      if (token == null) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Missing access token for restore.'),
+                          ),
+                        );
+                        return;
+                      }
                       await ref
                           .read(backupControllerProvider.notifier)
-                          .restoreBackup();
+                          .restoreBackup(baseUrl: serverUrl, accessToken: token);
                       if (activePartnerId != null) {
                         ref.invalidate(
                           conversationMessagesProvider(activePartnerId!),
@@ -223,9 +263,24 @@ class SettingsTab extends ConsumerWidget {
                       if (confirmed != true) {
                         return;
                       }
+                      final token = await resolveAccessToken();
+                      if (token == null) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Missing access token for backup delete.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
                       await ref
                           .read(backupControllerProvider.notifier)
-                          .deleteBackupData();
+                          .deleteBackupData(
+                            baseUrl: serverUrl,
+                            accessToken: token,
+                          );
                     },
                   ),
                 ],
