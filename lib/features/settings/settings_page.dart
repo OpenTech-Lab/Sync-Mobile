@@ -211,8 +211,6 @@ class SettingsTab extends ConsumerWidget {
             ),
             if (backupState?.enabled == true) ...[
               const SizedBox(height: 16),
-              Divider(height: 1, thickness: 1, color: ruleColor),
-              const SizedBox(height: 16),
               Wrap(
                 spacing: 24,
                 runSpacing: 10,
@@ -322,7 +320,6 @@ class SettingsTab extends ConsumerWidget {
             ],
 
             const SizedBox(height: 18),
-            Divider(height: 1, thickness: 1, color: ruleColor),
             const SizedBox(height: 14),
             _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
             Align(
