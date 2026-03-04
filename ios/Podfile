@@ -51,6 +51,15 @@ post_install do |installer|
       config.build_settings['PROVISIONING_PROFILE'] = ''
       config.build_settings['DEVELOPMENT_TEAM'] = ''
       config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+
+      if target.name == 'SQLCipher'
+        # SQLCipher sqlite3.c can trigger this on Apple clang; keep scope narrow to this pod.
+        config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+        warning_cflags = config.build_settings['WARNING_CFLAGS'] || ['$(inherited)']
+        warning_cflags = [warning_cflags] unless warning_cflags.is_a?(Array)
+        warning_cflags << '-Wno-shorten-64-to-32' unless warning_cflags.include?('-Wno-shorten-64-to-32')
+        config.build_settings['WARNING_CFLAGS'] = warning_cflags
+      end
     end
   end
 end
