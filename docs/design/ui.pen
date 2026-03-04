@@ -1,0 +1,201 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "agn0m",
+      "x": 0,
+      "y": 0,
+      "name": "Welcome",
+      "clip": true,
+      "width": 360,
+      "height": 560,
+      "fill": "#FAFAFA",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "MP0jN",
+          "x": 308,
+          "y": 28,
+          "name": "lang",
+          "fill": "#6B7280",
+          "content": "EN",
+          "fontFamily": "Inter",
+          "fontSize": 11,
+          "fontWeight": "500",
+          "letterSpacing": 1.4
+        },
+        {
+          "type": "frame",
+          "id": "X5iiI",
+          "x": 152,
+          "y": 82,
+          "name": "logoCircle",
+          "width": 56,
+          "height": 56,
+          "fill": "#111827",
+          "cornerRadius": 28,
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "BesRS",
+              "x": 24,
+              "y": 24,
+              "name": "logoDot",
+              "width": 8,
+              "height": 8,
+              "fill": "#FFFFFF",
+              "cornerRadius": 4
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "HiQdF",
+          "x": 97,
+          "y": 166,
+          "name": "welcomeTitle",
+          "fill": "#1F2937",
+          "content": "Welcome to Sync",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": "300",
+          "letterSpacing": -0.3
+        },
+        {
+          "type": "text",
+          "id": "d3IjB",
+          "x": 28,
+          "y": 282,
+          "name": "serverLabel",
+          "fill": "#6B7280",
+          "content": "SERVER URL",
+          "fontFamily": "Inter",
+          "fontSize": 10,
+          "letterSpacing": 2.8
+        },
+        {
+          "type": "text",
+          "id": "UNHT6",
+          "x": 28,
+          "y": 310,
+          "name": "serverHint",
+          "fill": "#9CA3AF",
+          "content": "https://your-planet.example",
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": "300"
+        },
+        {
+          "type": "frame",
+          "id": "WrDxO",
+          "x": 28,
+          "y": 336,
+          "name": "inputRule",
+          "width": 304,
+          "height": 1,
+          "fill": "#D1D5DB"
+        },
+        {
+          "type": "text",
+          "id": "2K9FV",
+          "x": 28,
+          "y": 372,
+          "name": "quickLabel",
+          "fill": "#6B7280",
+          "content": "QUICK CONNECT",
+          "fontFamily": "Inter",
+          "fontSize": 10,
+          "letterSpacing": 2.8
+        },
+        {
+          "type": "text",
+          "id": "AVaH5",
+          "x": 28,
+          "y": 400,
+          "name": "presetA",
+          "fill": "#1F2937",
+          "content": "Planet One",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "300"
+        },
+        {
+          "type": "text",
+          "id": "VGPEb",
+          "x": 124,
+          "y": 400,
+          "name": "presetB",
+          "fill": "#1F2937",
+          "content": "Planet Two",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "300"
+        },
+        {
+          "type": "text",
+          "id": "mbPaK",
+          "x": 219,
+          "y": 400,
+          "name": "presetC",
+          "fill": "#1F2937",
+          "content": "Localhost",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "300"
+        },
+        {
+          "type": "frame",
+          "id": "Rbk4g",
+          "x": 28,
+          "y": 454,
+          "name": "sectionRule",
+          "width": 304,
+          "height": 1,
+          "fill": "#D1D5DB"
+        },
+        {
+          "type": "text",
+          "id": "Fo7fO",
+          "x": 218,
+          "y": 478,
+          "name": "checkAction",
+          "fill": "#1F2937",
+          "content": "CHECK CONNECTION",
+          "fontFamily": "Inter",
+          "fontSize": 10,
+          "fontWeight": "500",
+          "letterSpacing": 2.2
+        },
+        {
+          "type": "text",
+          "id": "GP5Wl",
+          "x": 94,
+          "y": 206,
+          "name": "subLine1",
+          "fill": "#6B7280",
+          "content": "Connect to your planet server",
+          "textAlign": "center",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "300"
+        },
+        {
+          "type": "text",
+          "id": "1880t",
+          "x": 138,
+          "y": 222,
+          "name": "subLine2",
+          "fill": "#6B7280",
+          "content": "to get started.",
+          "textAlign": "center",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "300"
+        }
+      ]
+    }
+  ]
+}

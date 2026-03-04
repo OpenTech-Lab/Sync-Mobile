@@ -838,20 +838,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       return;
     }
     if (failed.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_l10n.chatMarkedAllAsRead)));
+      _showMinimalChatToast(context: context, message: _l10n.chatMarkedAllAsRead);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _l10n.chatMarkReadPartial(
-            partnerIds.length - failed.length,
-            partnerIds.length,
-          ),
-        ),
+    _showMinimalChatToast(
+      context: context,
+      message: _l10n.chatMarkReadPartial(
+        partnerIds.length - failed.length,
+        partnerIds.length,
       ),
+      duration: const Duration(milliseconds: 1500),
     );
   }
 
@@ -1219,6 +1215,7 @@ class _OutgoingMessageDraft {
 void _showMinimalChatToast({
   required BuildContext context,
   required String message,
+  Duration duration = const Duration(milliseconds: 900),
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final background = isDark ? AppPalette.neutral800 : AppPalette.neutral700;
@@ -1238,7 +1235,7 @@ void _showMinimalChatToast({
           letterSpacing: 0.2,
         ),
       ),
-      duration: const Duration(milliseconds: 900),
+      duration: duration,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.fromLTRB(28, 0, 28, 20),
       backgroundColor: background,
