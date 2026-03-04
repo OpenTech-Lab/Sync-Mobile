@@ -42,28 +42,38 @@ platform :ios do
     end
     profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
 
-    gym(
-      workspace:     "Runner.xcworkspace",
-      scheme:        "Runner",
-      configuration: "Release",
-      clean:         false,
-      export_method: "app-store",
-      codesigning_identity: "Apple Distribution",
-      xcargs: {
-        "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
-        "CODE_SIGN_STYLE"                => "Manual",
-        "PROVISIONING_PROFILE_SPECIFIER" => profile_name,
-      },
-      export_options: {
-        method:               "app-store",
-        teamID:               ENV.fetch("IOS_TEAM_ID"),
-        signingStyle:         "manual",
-        provisioningProfiles: {
-          app_identifier => profile_name,
+    begin
+      gym(
+        workspace:     "Runner.xcworkspace",
+        scheme:        "Runner",
+        configuration: "Release",
+        clean:         false,
+        export_method: "app-store",
+        codesigning_identity: "Apple Distribution",
+        suppress_xcode_output: false,
+        xcargs: {
+          "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
+          "CODE_SIGN_STYLE"                => "Manual",
+          "PROVISIONING_PROFILE_SPECIFIER" => profile_name,
         },
-        uploadSymbols:        true,
-      },
-    )
+        export_options: {
+          method:               "app-store",
+          teamID:               ENV.fetch("IOS_TEAM_ID"),
+          signingStyle:         "manual",
+          provisioningProfiles: {
+            app_identifier => profile_name,
+          },
+          uploadSymbols:        true,
+        },
+      )
+    rescue => e
+      gym_log = File.expand_path("~/Library/Logs/gym/Runner-Runner.log")
+      if File.exist?(gym_log)
+        UI.important("Printing tail of #{gym_log} for root-cause diagnostics")
+        UI.message(File.readlines(gym_log).last(300).join)
+      end
+      raise e
+    end
 
     # --- Upload to TestFlight ---
     upload_to_testflight(

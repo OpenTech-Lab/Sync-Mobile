@@ -138,6 +138,7 @@ jobs:
           bundler-cache: true
 
       - name: Build and Upload
+        id: build_and_upload
         working-directory: ios
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/ios/Gemfile
@@ -147,3 +148,24 @@ jobs:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           IOS_BUILD_NUMBER: ${{ github.run_number }}
         run: bundle exec fastlane release
+
+      - name: Print gym log tail on failure
+        if: failure()
+        run: |
+          LOG_PATH="$HOME/Library/Logs/gym/Runner-Runner.log"
+          if [ -f "$LOG_PATH" ]; then
+            echo "----- gym log tail (Runner-Runner.log) -----"
+            tail -n 400 "$LOG_PATH"
+          else
+            echo "Gym log not found at $LOG_PATH"
+          fi
+
+      - name: Upload gym log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-gym-log
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            /Users/runner/Library/Logs/gym/Runner-Runner.log
