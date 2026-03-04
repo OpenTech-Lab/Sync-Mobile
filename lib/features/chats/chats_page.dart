@@ -327,9 +327,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                         isDense: true,
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    Divider(height: 1, thickness: 1, color: ruleColor),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1268,8 +1266,12 @@ class _DayDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(
-          child: Divider(height: 1, thickness: 1, color: AppPalette.neutral300),
+        Expanded(
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: AppPalette.neutral500.withValues(alpha: 0.22),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1277,13 +1279,17 @@ class _DayDivider extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              color: AppPalette.neutral500,
+              color: AppPalette.neutral300,
               fontWeight: FontWeight.w300,
             ),
           ),
         ),
-        const Expanded(
-          child: Divider(height: 1, thickness: 1, color: AppPalette.neutral300),
+        Expanded(
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: AppPalette.neutral500.withValues(alpha: 0.22),
+          ),
         ),
       ],
     );
@@ -1365,60 +1371,64 @@ class _ConversationStarter extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
       children: [
-        // ── actions row ──
-        Align(
-          alignment: Alignment.centerRight,
-          child: GestureDetector(
-            onTap: () async {
-              final action = await showModalBottomSheet<_ChatQuickAction>(
-                context: context,
-                backgroundColor: bgColor,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
+        // ── search + quick action ──
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autocorrect: false,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w300,
+                  color: inkColor,
                 ),
-                builder: (_) => _QuickActionSheet(
-                  inkColor: inkColor,
-                  mutedColor: AppPalette.neutral500,
-                  ruleColor: ruleColor,
+                decoration: InputDecoration(
+                  hintText: l10n.chatSearchHint,
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: AppPalette.neutral500.withValues(alpha: 0.55),
+                    fontWeight: FontWeight.w300,
+                  ),
+                  border: UnderlineInputBorder(
+                    borderSide: BorderSide(color: ruleColor),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: ruleColor),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppPalette.neutral500),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  isDense: true,
                 ),
-              );
-              if (action != null) onQuickAction(action);
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.add, color: inkColor, size: 22),
+              ),
             ),
-          ),
-        ),
-        // ── search ──
-        TextField(
-          controller: controller,
-          focusNode: focusNode,
-          autocorrect: false,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
-          ),
-          decoration: InputDecoration(
-            hintText: l10n.chatSearchHint,
-            hintStyle: TextStyle(
-              fontSize: 14,
-              color: AppPalette.neutral500.withValues(alpha: 0.55),
-              fontWeight: FontWeight.w300,
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () async {
+                final action = await showModalBottomSheet<_ChatQuickAction>(
+                  context: context,
+                  backgroundColor: bgColor,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  builder: (_) => _QuickActionSheet(
+                    inkColor: inkColor,
+                    mutedColor: AppPalette.neutral500,
+                    ruleColor: ruleColor,
+                  ),
+                );
+                if (action != null) onQuickAction(action);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.add, color: inkColor, size: 22),
+              ),
             ),
-            border: UnderlineInputBorder(
-              borderSide: BorderSide(color: ruleColor),
-            ),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: ruleColor),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: AppPalette.neutral500),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            isDense: true,
-          ),
+          ],
         ),
         const SizedBox(height: 24),
 
