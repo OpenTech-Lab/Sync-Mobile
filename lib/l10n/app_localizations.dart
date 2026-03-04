@@ -438,6 +438,36 @@ abstract class AppLocalizations {
   /// **'Open Chats and start a conversation'**
   String get openChatsHint;
 
+  /// No description provided for @homeConnectedPlanetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected Planets'**
+  String get homeConnectedPlanetsTitle;
+
+  /// No description provided for @homeConnectedPlanetsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No connected planets yet'**
+  String get homeConnectedPlanetsEmpty;
+
+  /// No description provided for @homeConnectedPlanetsLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading connected planets…'**
+  String get homeConnectedPlanetsLoading;
+
+  /// No description provided for @homeConnectedPlanetsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load connected planets'**
+  String get homeConnectedPlanetsLoadFailed;
+
+  /// No description provided for @homePlanetMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String homePlanetMembers(int count);
+
   /// No description provided for @friendRemoved.
   ///
   /// In en, this message translates to:

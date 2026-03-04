@@ -205,6 +205,9 @@ class _FakeMessageE2eeService extends MessageE2eeService {
 
   @override
   Future<String?> readStoredPublicKey() async => _publicKey;
+
+  @override
+  Future<String> ensureDevicePublicKeyBase64() async => _publicKey;
 }
 
 void main() {

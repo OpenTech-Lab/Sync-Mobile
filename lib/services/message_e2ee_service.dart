@@ -52,6 +52,17 @@ class MessageE2eeService {
     return base64Encode(publicKey.bytes);
   }
 
+  Future<String> ensureDevicePublicKeyBase64() async {
+    final seed = await _ensureSeed(
+      serverUrl: 'device-local',
+      email: 'device-local',
+      password: null,
+    );
+    final keyPair = await _keyPairFromSeed(seed);
+    final publicKey = await keyPair.extractPublicKey();
+    return base64Encode(publicKey.bytes);
+  }
+
   Future<String> encryptEnvelope({
     required String clearText,
     required String recipientPublicKeyBase64,
@@ -205,9 +216,20 @@ class MessageE2eeService {
     }
     final normalizedPassword = password?.trim();
     if (normalizedPassword == null || normalizedPassword.isEmpty) {
-      throw StateError(
-        'Secure chat key is not initialized on this device. Please sign in again.',
+      final randomSeed = _randomBytes(32);
+      await _secureStorage.write(
+        key: _seedKey,
+        value: base64Encode(randomSeed),
       );
+      await _secureStorage.write(
+        key: _metaKey,
+        value: jsonEncode({
+          'server_url': serverUrl.trim(),
+          'email': email.trim().toLowerCase(),
+          'mode': 'device_random_seed',
+        }),
+      );
+      return randomSeed;
     }
 
     final seed = await _deriveSeed(

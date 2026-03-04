@@ -129,12 +129,7 @@ class ConversationMessagesController
       baseUrl: baseUrl,
       accessToken: accessToken,
     );
-    final senderPublicKey = await _e2eeService.readStoredPublicKey();
-    if (senderPublicKey == null || senderPublicKey.isEmpty) {
-      throw StateError(
-        'Secure chat key is missing on this device. Please sign in again.',
-      );
-    }
+    final senderPublicKey = await _e2eeService.ensureDevicePublicKeyBase64();
     if (me.messagePublicKey != senderPublicKey) {
       await _profileService.updateMyProfile(
         baseUrl: baseUrl,

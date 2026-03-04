@@ -184,6 +184,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openChatsHint => '開啟聊天並開始對話';
 
   @override
+  String get homeConnectedPlanetsTitle => '已連線 Planet';
+
+  @override
+  String get homeConnectedPlanetsEmpty => '尚未設定已連線 Planet';
+
+  @override
+  String get homeConnectedPlanetsLoading => '正在載入已連線 Planet…';
+
+  @override
+  String get homeConnectedPlanetsLoadFailed => '載入已連線 Planet 失敗';
+
+  @override
+  String homePlanetMembers(int count) {
+    return '$count 位成員';
+  }
+
+  @override
   String get friendRemoved => '已移除好友';
 
   @override
@@ -779,6 +796,23 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get openChatsHint => '開啟聊天並開始對話';
+
+  @override
+  String get homeConnectedPlanetsTitle => '已連線 Planet';
+
+  @override
+  String get homeConnectedPlanetsEmpty => '尚未設定已連線 Planet';
+
+  @override
+  String get homeConnectedPlanetsLoading => '正在載入已連線 Planet…';
+
+  @override
+  String get homeConnectedPlanetsLoadFailed => '載入已連線 Planet 失敗';
+
+  @override
+  String homePlanetMembers(int count) {
+    return '$count 位成員';
+  }
 
   @override
   String get friendRemoved => '已移除好友';

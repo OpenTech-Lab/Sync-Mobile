@@ -13,6 +13,8 @@ class PlanetInfo {
     required this.instanceName,
     required this.instanceDescription,
     required this.instanceImageUrl,
+    required this.memberCount,
+    required this.linkedPlanets,
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
@@ -27,6 +29,8 @@ class PlanetInfo {
   final String? instanceName;
   final String? instanceDescription;
   final String? instanceImageUrl;
+  final int? memberCount;
+  final List<String> linkedPlanets;
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
@@ -67,6 +71,8 @@ class ServerHealthService {
     String? instanceName;
     String? instanceDescription;
     String? instanceImageUrl;
+    int? memberCount;
+    List<String> linkedPlanets = const [];
     String? instanceDomain;
     String? countryCode;
     String? countryName;
@@ -90,6 +96,18 @@ class ServerHealthService {
         if (rawInstanceImageUrl is String &&
             rawInstanceImageUrl.trim().isNotEmpty) {
           instanceImageUrl = rawInstanceImageUrl.trim();
+        }
+        final rawMemberCount = decoded['member_count'];
+        if (rawMemberCount is int && rawMemberCount >= 0) {
+          memberCount = rawMemberCount;
+        }
+        final rawLinkedPlanets = decoded['linked_planets'];
+        if (rawLinkedPlanets is List) {
+          linkedPlanets = rawLinkedPlanets
+              .whereType<String>()
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false);
         }
         final rawInstanceDomain = decoded['instance_domain'];
         if (rawInstanceDomain is String &&
@@ -116,6 +134,8 @@ class ServerHealthService {
       instanceName: instanceName,
       instanceDescription: instanceDescription,
       instanceImageUrl: instanceImageUrl,
+      memberCount: memberCount,
+      linkedPlanets: linkedPlanets,
       instanceDomain: instanceDomain,
       countryCode: countryCode,
       countryName: countryName,

@@ -198,6 +198,8 @@ class AppController extends AsyncNotifier<AppState> {
               instanceName: cachedPlanet.instanceName,
               instanceDescription: cachedPlanet.instanceDescription,
               instanceImageUrl: cachedPlanet.instanceImageUrl,
+              memberCount: cachedPlanet.memberCount,
+              linkedPlanets: cachedPlanet.linkedPlanets,
               instanceDomain: cachedPlanet.instanceDomain,
               countryCode: cachedPlanet.countryCode,
               countryName: cachedPlanet.countryName,
@@ -465,6 +467,12 @@ class AppController extends AsyncNotifier<AppState> {
       );
       if (email != null && email.isNotEmpty) {
         await _serverPreferences.writeSavedEmail(current.serverUrl!, email);
+        await _ensureChatPublicKeyRegistered(
+          serverUrl: current.serverUrl!,
+          accessToken: accessToken,
+          email: email,
+          remoteProfilePublicKey: null,
+        );
       }
 
       state = AsyncData(

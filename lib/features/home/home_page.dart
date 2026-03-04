@@ -6,11 +6,33 @@ import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
+import '../../services/server_health_service.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../chats/chat_target_profile_page.dart';
 import '../profile/my_profile_page.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
+
+final connectedPlanetsProvider =
+    FutureProvider.family<List<PlanetInfo>, String>((ref, serverUrl) async {
+      final service = ServerHealthService();
+      final current = await service.validate(serverUrl);
+      final urls = current.linkedPlanets;
+      if (urls.isEmpty) {
+        return const [];
+      }
+
+      final results = <PlanetInfo>[];
+      for (final url in urls.take(20)) {
+        try {
+          final info = await service.validate(url);
+          results.add(info);
+        } catch (_) {
+          // Skip offline/invalid linked planets.
+        }
+      }
+      return results;
+    });
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({
@@ -44,6 +66,9 @@ class HomeTab extends ConsumerWidget {
       (sum, count) => sum + count,
     );
     final friendIds = ref.watch(friendIdsProvider).value ?? const <String>[];
+    final connectedPlanetsAsync = ref.watch(
+      connectedPlanetsProvider(serverUrl),
+    );
     final planetLabel = _planetNameFromServerUrl(serverUrl);
 
     String initials(String uuid) =>
@@ -244,6 +269,94 @@ class HomeTab extends ConsumerWidget {
                   );
                 },
               ),
+            const SizedBox(height: 32),
+            _SectionLabel(
+              text: l10n.homeConnectedPlanetsTitle,
+              ruleColor: ruleColor,
+            ),
+            connectedPlanetsAsync.when(
+              data: (planets) {
+                if (planets.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      l10n.homeConnectedPlanetsEmpty,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: planets.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: ruleColor),
+                  itemBuilder: (ctx, index) {
+                    final item = planets[index];
+                    final title =
+                        (item.instanceName ?? item.host).trim().isEmpty
+                        ? item.host
+                        : (item.instanceName ?? item.host).trim();
+                    final subtitle = item.countryName?.trim().isNotEmpty == true
+                        ? item.countryName!.trim()
+                        : item.host;
+                    final members = item.memberCount ?? 0;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      title: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300,
+                          color: inkColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '$subtitle · ${l10n.homePlanetMembers(members)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppPalette.neutral500,
+                      ),
+                      onTap: () => _showPlanetInfoDialog(context, item),
+                    );
+                  },
+                );
+              },
+              loading: () => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  l10n.homeConnectedPlanetsLoading,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppPalette.neutral500,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ),
+              error: (_, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  l10n.homeConnectedPlanetsLoadFailed,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppPalette.danger700,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -263,6 +376,94 @@ class HomeTab extends ConsumerWidget {
     final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
     return palette[hash.abs() % palette.length];
   }
+}
+
+void _showPlanetInfoDialog(BuildContext context, PlanetInfo info) {
+  final l10n = AppLocalizations.of(context)!;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+  final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+  final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+  final title = (info.instanceName ?? info.host).trim().isEmpty
+      ? info.host
+      : (info.instanceName ?? info.host).trim();
+  final description = info.instanceDescription?.trim().isNotEmpty == true
+      ? info.instanceDescription!.trim()
+      : l10n.settingsPlanetNoDescription;
+  final country = info.countryName?.trim().isNotEmpty == true
+      ? info.countryName!.trim()
+      : l10n.settingsPlanetUnknownName;
+  final members = info.memberCount ?? 0;
+
+  showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      return Dialog(
+        backgroundColor: bgColor,
+        surfaceTintColor: AppPalette.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w300,
+                  color: inkColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w300,
+                  color: AppPalette.neutral500,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Divider(height: 1, color: ruleColor),
+              const SizedBox(height: 12),
+              Text(
+                '${l10n.planetCardHost}: ${info.host}',
+                style: TextStyle(fontSize: 12, color: AppPalette.neutral500),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${l10n.planetCardCountry}: $country',
+                style: TextStyle(fontSize: 12, color: AppPalette.neutral500),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.homePlanetMembers(members),
+                style: TextStyle(fontSize: 12, color: AppPalette.neutral500),
+              ),
+              const SizedBox(height: 18),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    l10n.actionClose,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 String _displayNameOrFallback(String userId, String? displayName) {

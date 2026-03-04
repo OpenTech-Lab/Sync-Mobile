@@ -71,6 +71,18 @@
   },
   "noFriendsYet": "No friends yet",
   "openChatsHint": "Open Chats and start a conversation",
+  "homeConnectedPlanetsTitle": "Connected Planets",
+  "homeConnectedPlanetsEmpty": "No connected planets yet",
+  "homeConnectedPlanetsLoading": "Loading connected planets…",
+  "homeConnectedPlanetsLoadFailed": "Failed to load connected planets",
+  "homePlanetMembers": "{count} members",
+  "@homePlanetMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "friendRemoved": "Friend removed",
   "friendAdded": "Friend added",
   "settingsMyPlanet": "My Planet",

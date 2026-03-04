@@ -57,6 +57,18 @@
   "friendsTitle": "好友（{count}）",
   "noFriendsYet": "尚無好友",
   "openChatsHint": "開啟聊天並開始對話",
+  "homeConnectedPlanetsTitle": "已連線 Planet",
+  "homeConnectedPlanetsEmpty": "尚未設定已連線 Planet",
+  "homeConnectedPlanetsLoading": "正在載入已連線 Planet…",
+  "homeConnectedPlanetsLoadFailed": "載入已連線 Planet 失敗",
+  "homePlanetMembers": "{count} 位成員",
+  "@homePlanetMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "friendRemoved": "已移除好友",
   "friendAdded": "已新增好友",
   "settingsMyPlanet": "我的 Planet",

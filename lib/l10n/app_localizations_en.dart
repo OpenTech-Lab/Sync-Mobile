@@ -184,6 +184,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openChatsHint => 'Open Chats and start a conversation';
 
   @override
+  String get homeConnectedPlanetsTitle => 'Connected Planets';
+
+  @override
+  String get homeConnectedPlanetsEmpty => 'No connected planets yet';
+
+  @override
+  String get homeConnectedPlanetsLoading => 'Loading connected planets…';
+
+  @override
+  String get homeConnectedPlanetsLoadFailed => 'Failed to load connected planets';
+
+  @override
+  String homePlanetMembers(int count) {
+    return '$count members';
+  }
+
+  @override
   String get friendRemoved => 'Friend removed';
 
   @override

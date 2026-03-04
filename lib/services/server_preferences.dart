@@ -9,6 +9,8 @@ class CachedPlanetInfo {
     required this.instanceName,
     required this.instanceDescription,
     required this.instanceImageUrl,
+    required this.memberCount,
+    required this.linkedPlanets,
     required this.instanceDomain,
     required this.countryCode,
     required this.countryName,
@@ -20,6 +22,8 @@ class CachedPlanetInfo {
   final String? instanceName;
   final String? instanceDescription;
   final String? instanceImageUrl;
+  final int? memberCount;
+  final List<String> linkedPlanets;
   final String? instanceDomain;
   final String? countryCode;
   final String? countryName;
@@ -80,6 +84,13 @@ class ServerPreferences {
         instanceName: decoded['instance_name'] as String?,
         instanceDescription: decoded['instance_description'] as String?,
         instanceImageUrl: decoded['instance_image_url'] as String?,
+        memberCount: decoded['member_count'] as int?,
+        linkedPlanets:
+            ((decoded['linked_planets'] as List<dynamic>?) ?? const [])
+                .whereType<String>()
+                .map((item) => item.trim())
+                .where((item) => item.isNotEmpty)
+                .toList(growable: false),
         instanceDomain: decoded['instance_domain'] as String?,
         countryCode: decoded['country_code'] as String?,
         countryName: decoded['country_name'] as String?,
@@ -106,6 +117,8 @@ class ServerPreferences {
       'instance_name': planetInfo.instanceName,
       'instance_description': planetInfo.instanceDescription,
       'instance_image_url': planetInfo.instanceImageUrl,
+      'member_count': planetInfo.memberCount,
+      'linked_planets': planetInfo.linkedPlanets,
       'instance_domain': planetInfo.instanceDomain,
       'country_code': planetInfo.countryCode,
       'country_name': planetInfo.countryName,
