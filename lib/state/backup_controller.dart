@@ -98,4 +98,57 @@ class BackupController extends AsyncNotifier<BackupState> {
       );
     }
   }
+
+  Future<void> deleteBackupData() async {
+    final current = state.value;
+    if (current == null || !current.enabled) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
+
+    try {
+      await _backupService.deleteBackup();
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Backup data deleted.',
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Delete backup failed: $error',
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteLocalChatData() async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
+
+    try {
+      await ref.read(chatRepositoryProvider).replaceAllMessages(const []);
+      ref.invalidate(conversationSummariesProvider);
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'All local chat data deleted on this device.',
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Delete local chat data failed: $error',
+        ),
+      );
+    }
+  }
 }

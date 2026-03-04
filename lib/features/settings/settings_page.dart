@@ -175,7 +175,9 @@ class SettingsTab extends ConsumerWidget {
               const SizedBox(height: 16),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 16),
-              Row(
+              Wrap(
+                spacing: 24,
+                runSpacing: 10,
                 children: [
                   _BackupTextButton(
                     label: 'Create backup',
@@ -186,7 +188,6 @@ class SettingsTab extends ConsumerWidget {
                         .read(backupControllerProvider.notifier)
                         .createBackup(),
                   ),
-                  const SizedBox(width: 32),
                   _BackupTextButton(
                     label: 'Restore',
                     busy: backupState?.isBusy == true,
@@ -203,6 +204,30 @@ class SettingsTab extends ConsumerWidget {
                       }
                     },
                   ),
+                  _BackupTextButton(
+                    label: 'Delete backup data',
+                    busy: backupState?.isBusy == true,
+                    inkColor: AppPalette.danger700,
+                    mutedColor: AppPalette.neutral500,
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => _ConfirmDialog(
+                          title: 'Delete backup data',
+                          message:
+                              'This removes the encrypted backup file from this device.\nThis cannot be undone.',
+                          confirmLabel: 'D E L E T E   B A C K U P',
+                          isDark: isDark,
+                        ),
+                      );
+                      if (confirmed != true) {
+                        return;
+                      }
+                      await ref
+                          .read(backupControllerProvider.notifier)
+                          .deleteBackupData();
+                    },
+                  ),
                 ],
               ),
               if (backupState?.statusMessage != null)
@@ -214,6 +239,41 @@ class SettingsTab extends ConsumerWidget {
                   ),
                 ),
             ],
+
+            const SizedBox(height: 18),
+            Divider(height: 1, thickness: 1, color: ruleColor),
+            const SizedBox(height: 14),
+            _SectionHeader(label: 'Local Data', ruleColor: ruleColor),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _BackupTextButton(
+                label: 'Delete all local chat data',
+                busy: backupState?.isBusy == true,
+                inkColor: AppPalette.danger700,
+                mutedColor: AppPalette.neutral500,
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => _ConfirmDialog(
+                      title: 'Delete local chat data',
+                      message:
+                          'This deletes all chat history stored on this device.\nServer-side data is not changed.',
+                      confirmLabel: 'D E L E T E   L O C A L   C H A T S',
+                      isDark: isDark,
+                    ),
+                  );
+                  if (confirmed != true) {
+                    return;
+                  }
+                  await ref
+                      .read(backupControllerProvider.notifier)
+                      .deleteLocalChatData();
+                  if (activePartnerId != null) {
+                    ref.invalidate(conversationMessagesProvider(activePartnerId!));
+                  }
+                },
+              ),
+            ),
 
             const SizedBox(height: 48),
             Divider(height: 1, thickness: 1, color: ruleColor),

@@ -67,6 +67,13 @@ class EncryptedBackupService {
     return file.exists();
   }
 
+  Future<void> deleteBackup() async {
+    final file = await _backupFile();
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
   Future<File> _backupFile() async {
     final docs = await getApplicationDocumentsDirectory();
     return File(path.join(docs.path, _backupFileName));
