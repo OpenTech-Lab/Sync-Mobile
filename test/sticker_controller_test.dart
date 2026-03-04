@@ -38,6 +38,7 @@ class _InMemoryStickerCacheService extends StickerCacheService {
 void main() {
   Sticker sticker(String id) => Sticker(
         id: id,
+        groupName: 'General',
         name: 's-$id',
         mimeType: 'image/png',
         contentBase64: 'aGVsbG8=',

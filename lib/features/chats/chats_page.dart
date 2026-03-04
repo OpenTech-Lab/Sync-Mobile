@@ -1867,14 +1867,29 @@ class _ComposerIconButton extends StatelessWidget {
 // Sticker picker
 // —————————————————————————————————————————————————————
 
-class _StickerPicker extends StatelessWidget {
+class _StickerPicker extends StatefulWidget {
   const _StickerPicker({required this.stickers});
   final List<Sticker> stickers;
 
   @override
+  State<_StickerPicker> createState() => _StickerPickerState();
+}
+
+class _StickerPickerState extends State<_StickerPicker> {
+  String? _selectedGroup;
+
+  String _normalizeGroupName(String raw) {
+    final normalized = raw.trim();
+    if (normalized.isEmpty) {
+      return "General";
+    }
+    return normalized;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (stickers.isEmpty) {
+    if (widget.stickers.isEmpty) {
       return SizedBox(
         height: 140,
         child: Center(
@@ -1890,8 +1905,19 @@ class _StickerPicker extends StatelessWidget {
       );
     }
 
+    final grouped = <String, List<Sticker>>{};
+    for (final sticker in widget.stickers) {
+      final groupName = _normalizeGroupName(sticker.groupName);
+      grouped.putIfAbsent(groupName, () => <Sticker>[]).add(sticker);
+    }
+    final groups = grouped.keys.toList(growable: false);
+    final selectedGroup = groups.contains(_selectedGroup)
+        ? _selectedGroup!
+        : groups.first;
+    final visibleStickers = grouped[selectedGroup] ?? const <Sticker>[];
+
     return SizedBox(
-      height: 260,
+      height: 320,
       child: Column(
         children: [
           Padding(
@@ -1910,6 +1936,27 @@ class _StickerPicker extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: AppPalette.neutral300),
+          SizedBox(
+            height: 52,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) {
+                final groupName = groups[i];
+                return ChoiceChip(
+                  label: Text(groupName),
+                  selected: groupName == selectedGroup,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedGroup = groupName;
+                    });
+                  },
+                );
+              },
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemCount: groups.length,
+            ),
+          ),
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -1918,9 +1965,9 @@ class _StickerPicker extends StatelessWidget {
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
-              itemCount: stickers.length,
+              itemCount: visibleStickers.length,
               itemBuilder: (_, i) {
-                final sticker = stickers[i];
+                final sticker = visibleStickers[i];
                 Uint8List bytes;
                 try {
                   bytes = base64Decode(sticker.contentBase64);

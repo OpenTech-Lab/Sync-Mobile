@@ -436,48 +436,8 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         onPressed: () async {
                           final selected = await showModalBottomSheet<Sticker>(
                             context: context,
-                            builder: (context) {
-                              if (stickers.isEmpty) {
-                                return SizedBox(
-                                  height: 160,
-                                  child: Center(
-                                    child: Text(l10n.chatNoStickersYet),
-                                  ),
-                                );
-                              }
-
-                              return GridView.builder(
-                                padding: const EdgeInsets.all(12),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 4,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                    ),
-                                itemCount: stickers.length,
-                                itemBuilder: (context, index) {
-                                  final sticker = stickers[index];
-                                  Uint8List bytes;
-                                  try {
-                                    bytes = base64Decode(sticker.contentBase64);
-                                  } catch (_) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  return InkWell(
-                                    onTap: () =>
-                                        Navigator.of(context).pop(sticker),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.memory(
-                                        bytes,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                            builder: (context) =>
+                                _GroupedStickerPicker(stickers: stickers),
                           );
 
                           if (selected != null && _activePartnerId != null) {
@@ -573,6 +533,111 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
               padding: EdgeInsets.only(bottom: 8),
               child: Text(l10n.chatHomeTyping),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupedStickerPicker extends StatefulWidget {
+  const _GroupedStickerPicker({required this.stickers});
+
+  final List<Sticker> stickers;
+
+  @override
+  State<_GroupedStickerPicker> createState() => _GroupedStickerPickerState();
+}
+
+class _GroupedStickerPickerState extends State<_GroupedStickerPicker> {
+  String? _selectedGroup;
+
+  String _normalizeGroupName(String raw) {
+    final normalized = raw.trim();
+    if (normalized.isEmpty) {
+      return "General";
+    }
+    return normalized;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.stickers.isEmpty) {
+      return SizedBox(
+        height: 160,
+        child: Center(
+          child: Text(l10n.chatNoStickersYet),
+        ),
+      );
+    }
+
+    final grouped = <String, List<Sticker>>{};
+    for (final sticker in widget.stickers) {
+      final groupName = _normalizeGroupName(sticker.groupName);
+      grouped.putIfAbsent(groupName, () => <Sticker>[]).add(sticker);
+    }
+    final groups = grouped.keys.toList(growable: false);
+    final selectedGroup = groups.contains(_selectedGroup)
+        ? _selectedGroup!
+        : groups.first;
+    final visibleStickers = grouped[selectedGroup] ?? const <Sticker>[];
+
+    return SizedBox(
+      height: 330,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 54,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, i) {
+                final groupName = groups[i];
+                return ChoiceChip(
+                  label: Text(groupName),
+                  selected: groupName == selectedGroup,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedGroup = groupName;
+                    });
+                  },
+                );
+              },
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemCount: groups.length,
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: visibleStickers.length,
+              itemBuilder: (context, index) {
+                final sticker = visibleStickers[index];
+                Uint8List bytes;
+                try {
+                  bytes = base64Decode(sticker.contentBase64);
+                } catch (_) {
+                  return const SizedBox.shrink();
+                }
+
+                return InkWell(
+                  onTap: () => Navigator.of(context).pop(sticker),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
