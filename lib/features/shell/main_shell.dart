@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ui/components/organisms/app_bottom_nav.dart';
@@ -147,6 +148,7 @@ class _MainShellState extends ConsumerState<MainShell>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hideTabs = _selectedIndex == 1 && _activePartnerId != null;
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
@@ -186,15 +188,24 @@ class _MainShellState extends ConsumerState<MainShell>
       ),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: tabs),
-      bottomNavigationBar: hideTabs
-          ? null
-          : AppBottomNav(
-              selectedIndex: _selectedIndex,
-              onTap: _onTabTapped,
-              totalUnread: totalUnread,
-            ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+      child: Scaffold(
+        body: IndexedStack(index: _selectedIndex, children: tabs),
+        bottomNavigationBar: hideTabs
+            ? null
+            : AppBottomNav(
+                selectedIndex: _selectedIndex,
+                onTap: _onTabTapped,
+                totalUnread: totalUnread,
+              ),
+      ),
     );
   }
 }
