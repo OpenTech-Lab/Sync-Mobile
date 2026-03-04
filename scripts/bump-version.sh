@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Usage: ./scripts/bump-version.sh <version|version+build> [--force]
+# Usage: ./scripts/bump-version.sh [<version|version+build>] [--force]
 # Example: ./scripts/bump-version.sh 1.1.9
 # Example: ./scripts/bump-version.sh 1.1.9+42
 # Example: ./scripts/bump-version.sh 0.1.0 --force
+# Example: ./scripts/bump-version.sh  # auto bump patch from latest version
 
 set -euo pipefail
 
@@ -27,29 +28,13 @@ if [ "$#" -gt 1 ]; then
         ;;
       *)
         echo "Error: unknown option '$1'"
-        echo "Usage: $0 <version|version+build> [--force]"
+        echo "Usage: $0 [<version|version+build>] [--force]"
         exit 1
         ;;
     esac
     shift
   done
 fi
-
-if [ -z "${INPUT_VERSION}" ]; then
-  echo "Usage: $0 <version|version+build> [--force]"
-  echo "Example: $0 1.1.9"
-  echo "Example: $0 1.1.9+42"
-  echo "Example: $0 0.1.0 --force"
-  exit 1
-fi
-
-# Validate version format (x.y.z or x.y.z+n)
-if ! echo "${INPUT_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$'; then
-  echo "Error: version must be in format x.y.z or x.y.z+build (e.g. 1.1.9 or 1.1.9+42)"
-  exit 1
-fi
-
-VERSION_NAME="${INPUT_VERSION%%+*}"
 
 # Read current version from pubspec
 CURRENT_VERSION_FULL="$(grep '^version:' "${PUBSPEC}" | sed -E 's/version:[[:space:]]*//')"
@@ -74,6 +59,20 @@ LATEST_VERSION="${CURRENT_VERSION_NAME}"
 LATEST_TAG_VERSION="$(git -C "${PROJECT_ROOT}" tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -n1)"
 if [ -n "${LATEST_TAG_VERSION}" ] && semver_gt "${LATEST_TAG_VERSION}" "${LATEST_VERSION}"; then
   LATEST_VERSION="${LATEST_TAG_VERSION}"
+fi
+
+if [ -z "${INPUT_VERSION}" ]; then
+  IFS='.' read -r latest_major latest_minor latest_patch <<< "${LATEST_VERSION}"
+  VERSION_NAME="${latest_major}.${latest_minor}.$((latest_patch + 1))"
+  INPUT_VERSION="${VERSION_NAME}"
+  echo "No version supplied. Auto bumping patch: ${LATEST_VERSION} -> ${VERSION_NAME}"
+else
+  # Validate version format (x.y.z or x.y.z+n)
+  if ! echo "${INPUT_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$'; then
+    echo "Error: version must be in format x.y.z or x.y.z+build (e.g. 1.1.9 or 1.1.9+42)"
+    exit 1
+  fi
+  VERSION_NAME="${INPUT_VERSION%%+*}"
 fi
 
 if ! semver_gt "${VERSION_NAME}" "${LATEST_VERSION}" && [ "${FORCE}" != "true" ]; then
