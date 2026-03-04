@@ -24,10 +24,12 @@ platform :ios do
       xcodeproj:    "Runner.xcodeproj",
     )
 
-    # --- Compile Flutter / Dart ---
-    # Run from the Flutter project root (one level above ios/)
+    # --- Prepare Flutter iOS generated configs/assets ---
+    # Run from the Flutter project root (one level above ios/).
+    # `flutter build ios --no-codesign` can still fail in CI when signing
+    # context is incomplete; config-only keeps gym as the single archive step.
     Dir.chdir("..") do
-      sh("flutter build ios --release --no-codesign")
+      sh("flutter build ios --release --config-only")
     end
 
     # --- Archive & export (manual signing; profile already installed by CI) ---
