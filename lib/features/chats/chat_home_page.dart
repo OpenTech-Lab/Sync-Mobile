@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
@@ -123,6 +124,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final stickers =
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final backupAsync = ref.watch(backupControllerProvider);
@@ -141,11 +143,11 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sync Chats'),
+        title: Text(l10n.chatHomeTitle),
         actions: [
           IconButton(
             onPressed: widget.onSignOut,
-            tooltip: 'Sign out',
+            tooltip: l10n.settingsSignOut,
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -158,7 +160,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Server: ${widget.serverUrl}',
+                  l10n.chatHomeServerLabel(widget.serverUrl),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 6),
@@ -167,13 +169,14 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                   runSpacing: 8,
                   children: [
                     _StatusChip(
-                      label:
-                          'Realtime: ${realtimeState?.status.name ?? 'disconnected'}',
+                      label: l10n.chatHomeRealtimeStatus(
+                        realtimeState?.status.name ?? l10n.chatHomeDisconnected,
+                      ),
                     ),
                     _StatusChip(
                       label: notificationState?.initialized == true
-                          ? 'Push: initialized'
-                          : 'Push: pending',
+                          ? l10n.chatHomePushInitialized
+                          : l10n.chatHomePushPending,
                     ),
                   ],
                 ),
@@ -183,8 +186,8 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                     Expanded(
                       child: TextField(
                         controller: _partnerController,
-                        decoration: const InputDecoration(
-                          hintText: 'Partner user UUID',
+                        decoration: InputDecoration(
+                          hintText: l10n.chatHomePartnerHint,
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -223,7 +226,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('Open'),
+                          Text(l10n.chatHomeOpenAction),
                           if (unreadCounts[_partnerController.text.trim()] !=
                                   null &&
                               unreadCounts[_partnerController.text.trim()]! >
@@ -245,14 +248,14 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                   child: TextButton.icon(
                     onPressed: _refreshUnreadCounts,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh unread'),
+                    label: Text(l10n.chatHomeRefreshUnread),
                   ),
                 ),
                 if (activeUnread > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'Unread from active partner: $activeUnread',
+                      l10n.chatHomeActiveUnread(activeUnread),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -260,7 +263,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                 SwitchListTile(
                   value: backupState?.enabled ?? false,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Enable encrypted backups'),
+                  title: Text(l10n.settingsEnableBackups),
                   onChanged: (value) => ref
                       .read(backupControllerProvider.notifier)
                       .setEnabled(value),
@@ -277,7 +280,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                     baseUrl: widget.serverUrl,
                                     accessToken: widget.accessToken,
                                   ),
-                        child: const Text('Create backup'),
+                        child: Text(l10n.settingsCreateBackup),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
@@ -298,7 +301,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                   );
                                 }
                               },
-                        child: const Text('Restore backup'),
+                        child: Text(l10n.settingsRestore),
                       ),
                     ],
                   ),
@@ -315,8 +318,8 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
           ),
           Expanded(
             child: messagesAsync == null
-                ? const Center(
-                    child: Text('Enter a partner UUID to load conversation.'),
+                ? Center(
+                    child: Text(l10n.chatHomeEnterPartnerPrompt),
                   )
                 : messagesAsync.when(
                     loading: () =>
@@ -325,15 +328,15 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                          'Failed to load messages: $error',
+                          l10n.chatHomeFailedToLoadMessages(error.toString()),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                     data: (messages) {
                       if (messages.isEmpty) {
-                        return const Center(
-                          child: Text('No messages yet. Send one below.'),
+                        return Center(
+                          child: Text(l10n.chatNoMessagesYet),
                         );
                       }
 
@@ -355,7 +358,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                       currentUserId: widget.currentUserId,
                                     );
                               },
-                              child: const Text('Load older'),
+                              child: Text(l10n.chatHomeLoadOlder),
                             ),
                           ),
                           Expanded(
@@ -410,14 +413,14 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _selectedMediaName ?? 'Selected image',
+                              _selectedMediaName ?? l10n.chatHomeSelectedImage,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           IconButton(
                             onPressed: _clearMedia,
                             icon: const Icon(Icons.close),
-                            tooltip: 'Remove media',
+                            tooltip: l10n.chatHomeRemoveMediaTooltip,
                           ),
                         ],
                       ),
@@ -427,7 +430,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                       IconButton(
                         onPressed: _pickMedia,
                         icon: const Icon(Icons.attach_file),
-                        tooltip: 'Attach image',
+                        tooltip: l10n.chatAttachImageTooltip,
                       ),
                       IconButton(
                         onPressed: () async {
@@ -435,10 +438,10 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                             context: context,
                             builder: (context) {
                               if (stickers.isEmpty) {
-                                return const SizedBox(
+                                return SizedBox(
                                   height: 160,
                                   child: Center(
-                                    child: Text('No cached stickers yet.'),
+                                    child: Text(l10n.chatNoStickersYet),
                                   ),
                                 );
                               }
@@ -500,14 +503,14 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           }
                         },
                         icon: const Icon(Icons.emoji_emotions_outlined),
-                        tooltip: 'Stickers',
+                        tooltip: l10n.chatStickersTooltip,
                       ),
                       Expanded(
                         child: TextField(
                           controller: _messageController,
                           onChanged: _onComposerChanged,
-                          decoration: const InputDecoration(
-                            hintText: 'Type a message',
+                          decoration: InputDecoration(
+                            hintText: l10n.chatMessageHint,
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -557,7 +560,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           _clearMedia();
                           await _refreshUnreadCounts();
                         },
-                        child: const Text('Send'),
+                        child: Text(l10n.actionSend),
                       ),
                     ],
                   ),
@@ -566,9 +569,9 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
             ),
           ),
           if (_isTyping)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 8),
-              child: Text('Typing…'),
+              child: Text(l10n.chatHomeTyping),
             ),
         ],
       ),

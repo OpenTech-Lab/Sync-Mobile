@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -17,6 +18,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
 
@@ -58,7 +60,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
                       vertical: 16,
                     ),
                     child: Text(
-                      'back',
+                      l10n.actionBack,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w300,
@@ -79,7 +81,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 56),
                   child: Text(
-                    'point camera at a friend\'s qr code',
+                    l10n.chatScanFriendQrInstruction,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w300,

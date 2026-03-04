@@ -624,6 +624,534 @@ abstract class AppLocalizations {
   /// **'friend link or user ID'**
   String get chatAddFriendInputHint;
 
+  /// No description provided for @chatMarkReadPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as read for {success}/{total} conversations'**
+  String chatMarkReadPartial(int success, int total);
+
+  /// No description provided for @chatSelectedMediaFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get chatSelectedMediaFallback;
+
+  /// No description provided for @chatMessageDetailTitleMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message'**
+  String get chatMessageDetailTitleMine;
+
+  /// No description provided for @chatMessageDetailTitleOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get chatMessageDetailTitleOther;
+
+  /// No description provided for @chatCopiedToClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard'**
+  String get chatCopiedToClipboard;
+
+  /// No description provided for @chatQuickNewHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW'**
+  String get chatQuickNewHeader;
+
+  /// No description provided for @chatQuickFriendOrStart.
+  ///
+  /// In en, this message translates to:
+  /// **'friend / start chat'**
+  String get chatQuickFriendOrStart;
+
+  /// No description provided for @chatQuickScanFriendQr.
+  ///
+  /// In en, this message translates to:
+  /// **'scan friend qr'**
+  String get chatQuickScanFriendQr;
+
+  /// No description provided for @chatScanFriendQrInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'point camera at a friend\'s qr code'**
+  String get chatScanFriendQrInstruction;
+
+  /// No description provided for @chatTargetCancelFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'cancel friend'**
+  String get chatTargetCancelFriend;
+
+  /// No description provided for @chatTargetAddFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'A D D   F R I E N D'**
+  String get chatTargetAddFriend;
+
+  /// No description provided for @chatTargetFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'friend'**
+  String get chatTargetFriend;
+
+  /// No description provided for @chatTargetStartChat.
+  ///
+  /// In en, this message translates to:
+  /// **'S T A R T   C H A T'**
+  String get chatTargetStartChat;
+
+  /// No description provided for @chatTargetFriendSince.
+  ///
+  /// In en, this message translates to:
+  /// **'FRIEND SINCE'**
+  String get chatTargetFriendSince;
+
+  /// No description provided for @chatTargetMessagesSent.
+  ///
+  /// In en, this message translates to:
+  /// **'MESSAGES SENT'**
+  String get chatTargetMessagesSent;
+
+  /// No description provided for @chatTargetAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'ABOUT'**
+  String get chatTargetAbout;
+
+  /// No description provided for @settingsMissingAccessTokenBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing access token for backup.'**
+  String get settingsMissingAccessTokenBackup;
+
+  /// No description provided for @settingsMissingAccessTokenRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing access token for restore.'**
+  String get settingsMissingAccessTokenRestore;
+
+  /// No description provided for @settingsDeleteBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete backup data'**
+  String get settingsDeleteBackupTitle;
+
+  /// No description provided for @settingsDeleteBackupMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the encrypted backup file from this device.\nThis cannot be undone.'**
+  String get settingsDeleteBackupMessage;
+
+  /// No description provided for @settingsDeleteBackupConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'D E L E T E   B A C K U P'**
+  String get settingsDeleteBackupConfirm;
+
+  /// No description provided for @settingsMissingAccessTokenBackupDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing access token for backup delete.'**
+  String get settingsMissingAccessTokenBackupDelete;
+
+  /// No description provided for @settingsAutoBackupSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto backup runs every 24h or after {threshold} new messages (whichever comes first).'**
+  String settingsAutoBackupSchedule(int threshold);
+
+  /// No description provided for @settingsAutoBackupThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto backup threshold'**
+  String get settingsAutoBackupThreshold;
+
+  /// No description provided for @settingsAutoBackupDecreaseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease threshold'**
+  String get settingsAutoBackupDecreaseTooltip;
+
+  /// No description provided for @settingsAutoBackupIncreaseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase threshold'**
+  String get settingsAutoBackupIncreaseTooltip;
+
+  /// No description provided for @settingsMessagesUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'messages'**
+  String get settingsMessagesUnit;
+
+  /// No description provided for @settingsDeleteLocalChatsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local chat data'**
+  String get settingsDeleteLocalChatsTitle;
+
+  /// No description provided for @settingsDeleteLocalChatsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes all chat history stored on this device.\nServer-side data is not changed.'**
+  String get settingsDeleteLocalChatsMessage;
+
+  /// No description provided for @settingsDeleteLocalChatsConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'D E L E T E   L O C A L   C H A T S'**
+  String get settingsDeleteLocalChatsConfirm;
+
+  /// No description provided for @settingsSignOutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be signed out of this account.\nLocal messages remain on device.'**
+  String get settingsSignOutMessage;
+
+  /// No description provided for @settingsSignOutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'S I G N   O U T'**
+  String get settingsSignOutConfirm;
+
+  /// No description provided for @settingsPlanetUnknownName.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown planet'**
+  String get settingsPlanetUnknownName;
+
+  /// No description provided for @settingsPlanetNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No planet description available yet.'**
+  String get settingsPlanetNoDescription;
+
+  /// No description provided for @settingsOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'online'**
+  String get settingsOnline;
+
+  /// No description provided for @settingsOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'offline'**
+  String get settingsOffline;
+
+  /// No description provided for @settingsNotificationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'notifications on'**
+  String get settingsNotificationsOn;
+
+  /// No description provided for @settingsNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'notifications off'**
+  String get settingsNotificationsOff;
+
+  /// No description provided for @settingsResidents.
+  ///
+  /// In en, this message translates to:
+  /// **'residents'**
+  String get settingsResidents;
+
+  /// No description provided for @settingsStickers.
+  ///
+  /// In en, this message translates to:
+  /// **'stickers'**
+  String get settingsStickers;
+
+  /// No description provided for @settingsEncrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'encrypted'**
+  String get settingsEncrypted;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'profile'**
+  String get profileTitle;
+
+  /// No description provided for @profileNoDescriptionYet.
+  ///
+  /// In en, this message translates to:
+  /// **'no description yet'**
+  String get profileNoDescriptionYet;
+
+  /// No description provided for @profileFriendLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend link copied'**
+  String get profileFriendLinkCopied;
+
+  /// No description provided for @profileCopyFriendLink.
+  ///
+  /// In en, this message translates to:
+  /// **'copy friend link'**
+  String get profileCopyFriendLink;
+
+  /// No description provided for @profileFriendQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FRIEND QR'**
+  String get profileFriendQrTitle;
+
+  /// No description provided for @profileFriendQrHint.
+  ///
+  /// In en, this message translates to:
+  /// **'contains your server url and id'**
+  String get profileFriendQrHint;
+
+  /// No description provided for @profileQrPayloadCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'QR payload copied'**
+  String get profileQrPayloadCopied;
+
+  /// No description provided for @profileCopyQrPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'copy qr payload'**
+  String get profileCopyQrPayload;
+
+  /// No description provided for @profileAboutYouLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ABOUT YOU'**
+  String get profileAboutYouLabel;
+
+  /// No description provided for @profileAboutYouTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A few words about yourself'**
+  String get profileAboutYouTitle;
+
+  /// No description provided for @profileDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like others to know…'**
+  String get profileDescriptionHint;
+
+  /// No description provided for @profileDescriptionExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'exceeded 100-word limit'**
+  String get profileDescriptionExceeded;
+
+  /// No description provided for @profileWordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{words} / 100'**
+  String profileWordCount(int words);
+
+  /// No description provided for @profileUsernameValidationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be 3-32 chars: a-zA-Z0-9._-'**
+  String get profileUsernameValidationError;
+
+  /// No description provided for @profileUsernameUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Username updated'**
+  String get profileUsernameUpdated;
+
+  /// No description provided for @profileUsernameUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update username'**
+  String get profileUsernameUpdateFailed;
+
+  /// No description provided for @profileDescriptionWordLimitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Description must be 100 words or less'**
+  String get profileDescriptionWordLimitError;
+
+  /// No description provided for @profileDescriptionUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Description updated'**
+  String get profileDescriptionUpdated;
+
+  /// No description provided for @profileAvatarTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar too large (max 256KB). Choose a smaller image.'**
+  String get profileAvatarTooLarge;
+
+  /// No description provided for @profileAvatarUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload avatar'**
+  String get profileAvatarUploadFailed;
+
+  /// No description provided for @profileAvatarUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar updated'**
+  String get profileAvatarUpdated;
+
+  /// No description provided for @profileUsernameDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'USERNAME'**
+  String get profileUsernameDialogTitle;
+
+  /// No description provided for @profileUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'3–32 chars, a-zA-Z0-9._-'**
+  String get profileUsernameHint;
+
+  /// No description provided for @homeUnreadSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{{count} unread message} other{{count} unread messages}}'**
+  String homeUnreadSummary(int count);
+
+  /// No description provided for @homeViewProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get homeViewProfile;
+
+  /// No description provided for @homeUsernameDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'USERNAME'**
+  String get homeUsernameDialogTitle;
+
+  /// No description provided for @homeUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'3–32 characters, a-z A-Z 0-9 . _ -'**
+  String get homeUsernameHint;
+
+  /// No description provided for @chatHomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Chats'**
+  String get chatHomeTitle;
+
+  /// No description provided for @chatHomeServerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Server: {server}'**
+  String chatHomeServerLabel(String server);
+
+  /// No description provided for @chatHomeRealtimeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtime: {status}'**
+  String chatHomeRealtimeStatus(String status);
+
+  /// No description provided for @chatHomeDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'disconnected'**
+  String get chatHomeDisconnected;
+
+  /// No description provided for @chatHomePushInitialized.
+  ///
+  /// In en, this message translates to:
+  /// **'Push: initialized'**
+  String get chatHomePushInitialized;
+
+  /// No description provided for @chatHomePushPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Push: pending'**
+  String get chatHomePushPending;
+
+  /// No description provided for @chatHomePartnerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Partner user UUID'**
+  String get chatHomePartnerHint;
+
+  /// No description provided for @chatHomeOpenAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get chatHomeOpenAction;
+
+  /// No description provided for @chatHomeRefreshUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh unread'**
+  String get chatHomeRefreshUnread;
+
+  /// No description provided for @chatHomeActiveUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread from active partner: {count}'**
+  String chatHomeActiveUnread(int count);
+
+  /// No description provided for @chatHomeEnterPartnerPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a partner UUID to load conversation.'**
+  String get chatHomeEnterPartnerPrompt;
+
+  /// No description provided for @chatHomeFailedToLoadMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load messages: {error}'**
+  String chatHomeFailedToLoadMessages(String error);
+
+  /// No description provided for @chatHomeLoadOlder.
+  ///
+  /// In en, this message translates to:
+  /// **'Load older'**
+  String get chatHomeLoadOlder;
+
+  /// No description provided for @chatHomeSelectedImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected image'**
+  String get chatHomeSelectedImage;
+
+  /// No description provided for @chatHomeRemoveMediaTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove media'**
+  String get chatHomeRemoveMediaTooltip;
+
+  /// No description provided for @chatHomeTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'Typing…'**
+  String get chatHomeTyping;
+
+  /// No description provided for @actionBack.
+  ///
+  /// In en, this message translates to:
+  /// **'back'**
+  String get actionBack;
+
+  /// No description provided for @actionCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'copy'**
+  String get actionCopy;
+
+  /// No description provided for @actionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'edit'**
+  String get actionEdit;
+
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'S A V E'**
+  String get actionSave;
+
   /// No description provided for @actionCancel.
   ///
   /// In en, this message translates to:

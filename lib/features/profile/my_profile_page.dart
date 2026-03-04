@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +30,7 @@ class MyProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
@@ -59,8 +62,8 @@ class MyProfileScreen extends ConsumerWidget {
       if (!usernamePattern.hasMatch(result)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Username must be 3-32 chars: a-zA-Z0-9._-'),
+          SnackBar(
+            content: Text(l10n.profileUsernameValidationError),
           ),
         );
         return;
@@ -89,11 +92,11 @@ class MyProfileScreen extends ConsumerWidget {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Username updated')));
+        ).showSnackBar(SnackBar(content: Text(l10n.profileUsernameUpdated)));
       } catch (_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update username')),
+          SnackBar(content: Text(l10n.profileUsernameUpdateFailed)),
         );
       }
     }
@@ -114,8 +117,8 @@ class MyProfileScreen extends ConsumerWidget {
       if (words > 100) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Description must be 100 words or less'),
+          SnackBar(
+            content: Text(l10n.profileDescriptionWordLimitError),
           ),
         );
         return;
@@ -132,7 +135,7 @@ class MyProfileScreen extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Description updated')));
+      ).showSnackBar(SnackBar(content: Text(l10n.profileDescriptionUpdated)));
     }
 
     Future<void> editAvatar() async {
@@ -151,10 +154,8 @@ class MyProfileScreen extends ConsumerWidget {
       if (bytes.length > 256 * 1024) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Avatar too large (max 256KB). Choose a smaller image.',
-            ),
+          SnackBar(
+            content: Text(l10n.profileAvatarTooLarge),
           ),
         );
         return;
@@ -186,15 +187,15 @@ class MyProfileScreen extends ConsumerWidget {
       } catch (_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload avatar')),
+          SnackBar(content: Text(l10n.profileAvatarUploadFailed)),
         );
         return;
       }
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Avatar updated'),
+        SnackBar(
+          content: Text(l10n.profileAvatarUpdated),
           duration: Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
           width: 160,
@@ -227,7 +228,7 @@ class MyProfileScreen extends ConsumerWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'profile',
+          l10n.profileTitle,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w300,
@@ -298,7 +299,7 @@ class MyProfileScreen extends ConsumerWidget {
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
                             child: Text(
-                              'edit',
+                              l10n.actionEdit,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppPalette.neutral500,
@@ -327,7 +328,7 @@ class MyProfileScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             oneLineDescription.isEmpty
-                                ? 'no description yet'
+                                ? l10n.profileNoDescriptionYet
                                 : oneLineDescription,
                             style: TextStyle(
                               fontSize: 13,
@@ -346,7 +347,7 @@ class MyProfileScreen extends ConsumerWidget {
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
                             child: Text(
-                              'edit',
+                              l10n.actionEdit,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppPalette.neutral500,
@@ -366,17 +367,13 @@ class MyProfileScreen extends ConsumerWidget {
                           userId: currentUserId,
                         );
                         Clipboard.setData(ClipboardData(text: link));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Friend link copied'),
-                            duration: Duration(seconds: 1),
-                            behavior: SnackBarBehavior.floating,
-                            width: 180,
-                          ),
+                        _showMinimalCopyToast(
+                          context: context,
+                          message: l10n.profileFriendLinkCopied,
                         );
                       },
                       child: Text(
-                        'copy friend link',
+                        l10n.profileCopyFriendLink,
                         style: TextStyle(
                           fontSize: 11,
                           color: AppPalette.neutral500,
@@ -397,8 +394,8 @@ class MyProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // ── QR section ──
-          const Text(
-            'FRIEND QR',
+          Text(
+            l10n.profileFriendQrTitle,
             style: TextStyle(
               fontSize: 10,
               letterSpacing: 2.8,
@@ -426,7 +423,7 @@ class MyProfileScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'contains your server url and id',
+              l10n.profileFriendQrHint,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w300,
@@ -436,28 +433,10 @@ class MyProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           Center(
-            child: GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: myQrPayload));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('QR payload copied'),
-                    duration: Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                    width: 180,
-                  ),
-                );
-              },
-              child: Text(
-                'copy qr payload',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppPalette.neutral500,
-                  letterSpacing: 0.3,
-                  decoration: TextDecoration.underline,
-                  decorationColor: ruleColor,
-                ),
-              ),
+            child: _CopyQrPayloadButton(
+              payload: myQrPayload,
+              ruleColor: ruleColor,
+              textColor: AppPalette.neutral500,
             ),
           ),
         ],
@@ -472,6 +451,122 @@ class _UsernameEditDialog extends StatefulWidget {
 
   @override
   State<_UsernameEditDialog> createState() => _UsernameEditDialogState();
+}
+
+class _CopyQrPayloadButton extends StatefulWidget {
+  const _CopyQrPayloadButton({
+    required this.payload,
+    required this.ruleColor,
+    required this.textColor,
+  });
+
+  final String payload;
+  final Color ruleColor;
+  final Color textColor;
+
+  @override
+  State<_CopyQrPayloadButton> createState() => _CopyQrPayloadButtonState();
+}
+
+class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
+  Timer? _copiedResetTimer;
+  bool _isCopied = false;
+
+  @override
+  void dispose() {
+    _copiedResetTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showCopiedState() {
+    _copiedResetTimer?.cancel();
+    setState(() => _isCopied = true);
+    _copiedResetTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (!mounted) return;
+      setState(() => _isCopied = false);
+    });
+  }
+
+  void _copyQrPayload() {
+    final l10n = AppLocalizations.of(context)!;
+    Clipboard.setData(ClipboardData(text: widget.payload));
+    _showCopiedState();
+    _showMinimalCopyToast(
+      context: context,
+      message: l10n.profileQrPayloadCopied,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final foregroundColor = _isCopied ? AppPalette.success700 : widget.textColor;
+
+    return GestureDetector(
+      onTap: _copyQrPayload,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _isCopied ? Icons.check : Icons.copy_rounded,
+              size: 14,
+              color: foregroundColor,
+            ),
+            const SizedBox(width: 6),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              style: TextStyle(
+                fontSize: 12,
+                color: foregroundColor,
+                letterSpacing: 0.3,
+                decoration: TextDecoration.underline,
+                decorationColor: widget.ruleColor,
+              ),
+              child: Text(
+                _isCopied
+                    ? l10n.profileQrPayloadCopied
+                    : l10n.profileCopyQrPayload,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _showMinimalCopyToast({
+  required BuildContext context,
+  required String message,
+}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final background = isDark ? AppPalette.neutral800 : AppPalette.neutral700;
+  final foreground = AppPalette.neutral100;
+
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w300,
+          color: foreground,
+          letterSpacing: 0.2,
+        ),
+      ),
+      duration: const Duration(milliseconds: 900),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+      backgroundColor: background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    ),
+  );
 }
 
 class _DescriptionEditDialog extends StatefulWidget {
@@ -500,6 +595,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final words = _wordCount(_ctrl.text);
     final isOverLimit = words > 100;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -525,7 +621,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
           children: [
             // ── Eyebrow label ─────────────────────────────────────────────
             Text(
-              'ABOUT YOU',
+              l10n.profileAboutYouLabel,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
@@ -537,7 +633,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
 
             // ── Heading ───────────────────────────────────────────────────
             Text(
-              'A few words about yourself',
+              l10n.profileAboutYouTitle,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w300,
@@ -559,7 +655,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                 fontWeight: FontWeight.w300,
               ),
               decoration: InputDecoration(
-                hintText: 'What would you like others to know…',
+                hintText: l10n.profileDescriptionHint,
                 hintStyle: TextStyle(
                   fontSize: 14,
                   height: 1.8,
@@ -587,7 +683,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
               children: [
                 if (isOverLimit)
                   Text(
-                    'exceeded 100-word limit',
+                    l10n.profileDescriptionExceeded,
                     style: TextStyle(
                       fontSize: 10,
                       letterSpacing: 0.4,
@@ -596,7 +692,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                   ),
                 const Spacer(),
                 Text(
-                  '$words / 100',
+                  l10n.profileWordCount(words),
                   style: TextStyle(
                     fontSize: 11,
                     letterSpacing: 0.5,
@@ -622,7 +718,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                       vertical: 4,
                     ),
                     child: Text(
-                      'cancel',
+                      l10n.actionCancel,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppPalette.neutral500,
@@ -642,7 +738,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                       vertical: 4,
                     ),
                     child: Text(
-                      'S A V E',
+                      l10n.actionSave,
                       style: TextStyle(
                         fontSize: 12,
                         letterSpacing: 2.5,
@@ -711,6 +807,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -727,8 +824,8 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'USERNAME',
+            Text(
+              l10n.profileUsernameDialogTitle,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
@@ -746,7 +843,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 color: inkColor,
               ),
               decoration: InputDecoration(
-                hintText: '3–32 chars, a-zA-Z0-9._-',
+                hintText: l10n.profileUsernameHint,
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: AppPalette.neutral500.withValues(alpha: 0.55),
@@ -774,10 +871,10 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
               children: [
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     child: Text(
-                      'cancel',
+                      l10n.actionCancel,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppPalette.neutral500,
@@ -795,7 +892,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                       vertical: 4,
                     ),
                     child: Text(
-                      'S A V E',
+                      l10n.actionSave,
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 2.5,

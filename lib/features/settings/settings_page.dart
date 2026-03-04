@@ -46,9 +46,10 @@ class SettingsTab extends ConsumerWidget {
     final isConnected =
         realtimeState?.status == RealtimeConnectionStatus.connected;
     final notifActive = notifState?.initialized == true;
-    final planetName = _planetNameFromData(planetInfo: planetInfo);
+    final planetName = _planetNameFromData(planetInfo: planetInfo, l10n: l10n);
     final planetDescription = _planetDescriptionFromData(
       planetInfo: planetInfo,
+      l10n: l10n,
     );
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -225,8 +226,10 @@ class SettingsTab extends ConsumerWidget {
                       if (token == null) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Missing access token for backup.'),
+                          SnackBar(
+                            content: Text(
+                              l10n.settingsMissingAccessTokenBackup,
+                            ),
                           ),
                         );
                         return;
@@ -246,8 +249,10 @@ class SettingsTab extends ConsumerWidget {
                       if (token == null) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Missing access token for restore.'),
+                          SnackBar(
+                            content: Text(
+                              l10n.settingsMissingAccessTokenRestore,
+                            ),
                           ),
                         );
                         return;
@@ -274,10 +279,9 @@ class SettingsTab extends ConsumerWidget {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => _ConfirmDialog(
-                          title: 'Delete backup data',
-                          message:
-                              'This removes the encrypted backup file from this device.\nThis cannot be undone.',
-                          confirmLabel: 'D E L E T E   B A C K U P',
+                          title: l10n.settingsDeleteBackupTitle,
+                          message: l10n.settingsDeleteBackupMessage,
+                          confirmLabel: l10n.settingsDeleteBackupConfirm,
                           isDark: isDark,
                         ),
                       );
@@ -288,9 +292,9 @@ class SettingsTab extends ConsumerWidget {
                       if (token == null) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text(
-                              'Missing access token for backup delete.',
+                              l10n.settingsMissingAccessTokenBackupDelete,
                             ),
                           ),
                         );
@@ -308,7 +312,9 @@ class SettingsTab extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Auto backup runs every 24h or after ${backupState?.autoBackupMessageThreshold ?? 20} new messages (whichever comes first).',
+                l10n.settingsAutoBackupSchedule(
+                  backupState?.autoBackupMessageThreshold ?? 20,
+                ),
                 style: TextStyle(
                   fontSize: 11,
                   color: AppPalette.neutral500,
@@ -319,8 +325,8 @@ class SettingsTab extends ConsumerWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  const Text(
-                    'Auto backup threshold',
+                  Text(
+                    l10n.settingsAutoBackupThreshold,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppPalette.neutral500,
@@ -338,7 +344,7 @@ class SettingsTab extends ConsumerWidget {
                                     1,
                               ),
                     icon: const Icon(Icons.remove, size: 16),
-                    tooltip: 'Decrease threshold',
+                    tooltip: l10n.settingsAutoBackupDecreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -351,8 +357,8 @@ class SettingsTab extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Text(
-                    'messages',
+                  Text(
+                    l10n.settingsMessagesUnit,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppPalette.neutral500,
@@ -369,7 +375,7 @@ class SettingsTab extends ConsumerWidget {
                                     1,
                               ),
                     icon: const Icon(Icons.add, size: 16),
-                    tooltip: 'Increase threshold',
+                    tooltip: l10n.settingsAutoBackupIncreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -402,10 +408,9 @@ class SettingsTab extends ConsumerWidget {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => _ConfirmDialog(
-                      title: 'Delete local chat data',
-                      message:
-                          'This deletes all chat history stored on this device.\nServer-side data is not changed.',
-                      confirmLabel: 'D E L E T E   L O C A L   C H A T S',
+                      title: l10n.settingsDeleteLocalChatsTitle,
+                      message: l10n.settingsDeleteLocalChatsMessage,
+                      confirmLabel: l10n.settingsDeleteLocalChatsConfirm,
                       isDark: isDark,
                     ),
                   );
@@ -436,10 +441,9 @@ class SettingsTab extends ConsumerWidget {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => _ConfirmDialog(
-                      title: 'Sign out',
-                      message:
-                          'You will be signed out of this account.\nLocal messages remain on device.',
-                      confirmLabel: 'S I G N   O U T',
+                      title: l10n.settingsSignOut,
+                      message: l10n.settingsSignOutMessage,
+                      confirmLabel: l10n.settingsSignOutConfirm,
                       isDark: isDark,
                     ),
                   );
@@ -448,7 +452,7 @@ class SettingsTab extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(
-                    'sign out',
+                    l10n.settingsSignOut,
                     style: TextStyle(
                       fontSize: 13,
                       color: AppPalette.danger700,
@@ -466,20 +470,26 @@ class SettingsTab extends ConsumerWidget {
   }
 }
 
-String _planetNameFromData({required PlanetInfo? planetInfo}) {
+String _planetNameFromData({
+  required PlanetInfo? planetInfo,
+  required AppLocalizations l10n,
+}) {
   final remoteName = planetInfo?.instanceName?.trim();
   if (remoteName != null && remoteName.isNotEmpty) {
     return remoteName;
   }
-  return 'Unknown planet';
+  return l10n.settingsPlanetUnknownName;
 }
 
-String _planetDescriptionFromData({required PlanetInfo? planetInfo}) {
+String _planetDescriptionFromData({
+  required PlanetInfo? planetInfo,
+  required AppLocalizations l10n,
+}) {
   final remoteDescription = planetInfo?.instanceDescription?.trim();
   if (remoteDescription != null && remoteDescription.isNotEmpty) {
     return remoteDescription;
   }
-  return 'No planet description available yet.';
+  return l10n.settingsPlanetNoDescription;
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -638,6 +648,7 @@ class _PlanetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -667,13 +678,15 @@ class _PlanetCard extends StatelessWidget {
           children: [
             _InlineStatus(
               active: isConnected,
-              label: isConnected ? 'online' : 'offline',
+              label: isConnected ? l10n.settingsOnline : l10n.settingsOffline,
               mutedColor: mutedColor,
             ),
             const SizedBox(width: 20),
             _InlineStatus(
               active: notifActive,
-              label: notifActive ? 'notifications on' : 'notifications off',
+              label: notifActive
+                  ? l10n.settingsNotificationsOn
+                  : l10n.settingsNotificationsOff,
               mutedColor: mutedColor,
             ),
           ],
@@ -683,21 +696,21 @@ class _PlanetCard extends StatelessWidget {
           children: [
             _TextStat(
               value: '$memberCount',
-              label: 'residents',
+              label: l10n.settingsResidents,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             _TextStat(
               value: '$stickerCount',
-              label: 'stickers',
+              label: l10n.settingsStickers,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),
             const SizedBox(width: 28),
             _TextStat(
               value: 'E2EE',
-              label: 'encrypted',
+              label: l10n.settingsEncrypted,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),
@@ -846,7 +859,7 @@ class _ConfirmDialog extends StatelessWidget {
                       vertical: 4,
                     ),
                     child: Text(
-                      'cancel',
+                      AppLocalizations.of(context)!.actionCancel,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppPalette.neutral500,

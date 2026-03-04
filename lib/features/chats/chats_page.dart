@@ -708,7 +708,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Marked as read for ${partnerIds.length - failed.length}/${partnerIds.length} conversations',
+          _l10n.chatMarkReadPartial(
+            partnerIds.length - failed.length,
+            partnerIds.length,
+          ),
         ),
       ),
     );
@@ -1494,7 +1497,7 @@ class _Composer extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      selectedMediaName ?? 'Image',
+                      selectedMediaName ?? l10n.chatSelectedMediaFallback,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
@@ -1952,7 +1955,9 @@ class _MessageDetailScreen extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          isMine ? 'Your message' : 'Message',
+          isMine
+              ? AppLocalizations.of(context)!.chatMessageDetailTitleMine
+              : AppLocalizations.of(context)!.chatMessageDetailTitleOther,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w300,
@@ -1965,18 +1970,20 @@ class _MessageDetailScreen extends StatelessWidget {
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.body));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied to clipboard'),
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context)!.chatCopiedToClipboard,
+                  ),
                   duration: Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,
                   width: 200,
                 ),
               );
             },
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Text(
-                'copy',
+                AppLocalizations.of(context)!.actionCopy,
                 style: TextStyle(
                   fontSize: 13,
                   color: AppPalette.neutral500,
@@ -2098,7 +2105,7 @@ class _QuickActionSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'NEW',
+              AppLocalizations.of(context)!.chatQuickNewHeader,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
@@ -2109,14 +2116,14 @@ class _QuickActionSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Divider(height: 1, color: ruleColor),
             _SheetItem(
-              label: 'friend / start chat',
+              label: AppLocalizations.of(context)!.chatQuickFriendOrStart,
               inkColor: inkColor,
               onTap: () =>
                   Navigator.of(context).pop(_ChatQuickAction.newFriendOrChat),
             ),
             Divider(height: 1, color: ruleColor),
             _SheetItem(
-              label: 'scan friend qr',
+              label: AppLocalizations.of(context)!.chatQuickScanFriendQr,
               inkColor: inkColor,
               onTap: () =>
                   Navigator.of(context).pop(_ChatQuickAction.scanFriendQr),
@@ -2128,7 +2135,7 @@ class _QuickActionSheet extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'cancel',
+                  AppLocalizations.of(context)!.actionCancel,
                   style: TextStyle(
                     fontSize: 12,
                     color: mutedColor,

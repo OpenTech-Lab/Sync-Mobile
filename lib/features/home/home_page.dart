@@ -80,7 +80,7 @@ class HomeTab extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '$totalUnread unread ${totalUnread == 1 ? 'message' : 'messages'}',
+                    l10n.homeUnreadSummary(totalUnread),
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppPalette.danger700,
@@ -337,6 +337,7 @@ class _ProfileCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
@@ -415,7 +416,7 @@ class _ProfileCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'View profile',
+                  l10n.homeViewProfile,
                   style: TextStyle(
                     fontSize: 11,
                     color: mutedColor,
@@ -460,6 +461,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
@@ -478,7 +480,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'USERNAME',
+              l10n.homeUsernameDialogTitle,
               style: const TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.8,
@@ -496,7 +498,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 color: inkColor,
               ),
               decoration: InputDecoration(
-                hintText: '3–32 characters, a-z A-Z 0-9 . _ -',
+                hintText: l10n.homeUsernameHint,
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: AppPalette.neutral500.withValues(alpha: 0.55),
@@ -529,8 +531,8 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                       horizontal: 4,
                       vertical: 4,
                     ),
-                    child: const Text(
-                      'cancel',
+                    child: Text(
+                      l10n.actionCancel,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppPalette.neutral500,
@@ -548,7 +550,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                       vertical: 4,
                     ),
                     child: Text(
-                      'S A V E',
+                      l10n.actionSave,
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 2.5,

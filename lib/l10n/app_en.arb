@@ -109,6 +109,153 @@
   "chatAddFriendTitle": "Paste a friend link or user ID",
   "chatAddFriendFormatHint": "Supported format: https://server.tld/<user-id>",
   "chatAddFriendInputHint": "friend link or user ID",
+  "chatMarkReadPartial": "Marked as read for {success}/{total} conversations",
+  "@chatMarkReadPartial": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSelectedMediaFallback": "Image",
+  "chatMessageDetailTitleMine": "Your message",
+  "chatMessageDetailTitleOther": "Message",
+  "chatCopiedToClipboard": "Copied to clipboard",
+  "chatQuickNewHeader": "NEW",
+  "chatQuickFriendOrStart": "friend / start chat",
+  "chatQuickScanFriendQr": "scan friend qr",
+  "chatScanFriendQrInstruction": "point camera at a friend's qr code",
+  "chatTargetCancelFriend": "cancel friend",
+  "chatTargetAddFriend": "A D D   F R I E N D",
+  "chatTargetFriend": "friend",
+  "chatTargetStartChat": "S T A R T   C H A T",
+  "chatTargetFriendSince": "FRIEND SINCE",
+  "chatTargetMessagesSent": "MESSAGES SENT",
+  "chatTargetAbout": "ABOUT",
+  "settingsMissingAccessTokenBackup": "Missing access token for backup.",
+  "settingsMissingAccessTokenRestore": "Missing access token for restore.",
+  "settingsDeleteBackupTitle": "Delete backup data",
+  "settingsDeleteBackupMessage": "This removes the encrypted backup file from this device.\nThis cannot be undone.",
+  "settingsDeleteBackupConfirm": "D E L E T E   B A C K U P",
+  "settingsMissingAccessTokenBackupDelete": "Missing access token for backup delete.",
+  "settingsAutoBackupSchedule": "Auto backup runs every 24h or after {threshold} new messages (whichever comes first).",
+  "@settingsAutoBackupSchedule": {
+    "placeholders": {
+      "threshold": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoBackupThreshold": "Auto backup threshold",
+  "settingsAutoBackupDecreaseTooltip": "Decrease threshold",
+  "settingsAutoBackupIncreaseTooltip": "Increase threshold",
+  "settingsMessagesUnit": "messages",
+  "settingsDeleteLocalChatsTitle": "Delete local chat data",
+  "settingsDeleteLocalChatsMessage": "This deletes all chat history stored on this device.\nServer-side data is not changed.",
+  "settingsDeleteLocalChatsConfirm": "D E L E T E   L O C A L   C H A T S",
+  "settingsSignOutMessage": "You will be signed out of this account.\nLocal messages remain on device.",
+  "settingsSignOutConfirm": "S I G N   O U T",
+  "settingsPlanetUnknownName": "Unknown planet",
+  "settingsPlanetNoDescription": "No planet description available yet.",
+  "settingsOnline": "online",
+  "settingsOffline": "offline",
+  "settingsNotificationsOn": "notifications on",
+  "settingsNotificationsOff": "notifications off",
+  "settingsResidents": "residents",
+  "settingsStickers": "stickers",
+  "settingsEncrypted": "encrypted",
+  "profileTitle": "profile",
+  "profileNoDescriptionYet": "no description yet",
+  "profileFriendLinkCopied": "Friend link copied",
+  "profileCopyFriendLink": "copy friend link",
+  "profileFriendQrTitle": "FRIEND QR",
+  "profileFriendQrHint": "contains your server url and id",
+  "profileQrPayloadCopied": "QR payload copied",
+  "profileCopyQrPayload": "copy qr payload",
+  "profileAboutYouLabel": "ABOUT YOU",
+  "profileAboutYouTitle": "A few words about yourself",
+  "profileDescriptionHint": "What would you like others to know…",
+  "profileDescriptionExceeded": "exceeded 100-word limit",
+  "profileWordCount": "{words} / 100",
+  "@profileWordCount": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "profileUsernameValidationError": "Username must be 3-32 chars: a-zA-Z0-9._-",
+  "profileUsernameUpdated": "Username updated",
+  "profileUsernameUpdateFailed": "Failed to update username",
+  "profileDescriptionWordLimitError": "Description must be 100 words or less",
+  "profileDescriptionUpdated": "Description updated",
+  "profileAvatarTooLarge": "Avatar too large (max 256KB). Choose a smaller image.",
+  "profileAvatarUploadFailed": "Failed to upload avatar",
+  "profileAvatarUpdated": "Avatar updated",
+  "profileUsernameDialogTitle": "USERNAME",
+  "profileUsernameHint": "3–32 chars, a-zA-Z0-9._-",
+  "homeUnreadSummary": "{count,plural, =1{{count} unread message} other{{count} unread messages}}",
+  "@homeUnreadSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeViewProfile": "View profile",
+  "homeUsernameDialogTitle": "USERNAME",
+  "homeUsernameHint": "3–32 characters, a-z A-Z 0-9 . _ -",
+  "chatHomeTitle": "Sync Chats",
+  "chatHomeServerLabel": "Server: {server}",
+  "@chatHomeServerLabel": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHomeRealtimeStatus": "Realtime: {status}",
+  "@chatHomeRealtimeStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHomeDisconnected": "disconnected",
+  "chatHomePushInitialized": "Push: initialized",
+  "chatHomePushPending": "Push: pending",
+  "chatHomePartnerHint": "Partner user UUID",
+  "chatHomeOpenAction": "Open",
+  "chatHomeRefreshUnread": "Refresh unread",
+  "chatHomeActiveUnread": "Unread from active partner: {count}",
+  "@chatHomeActiveUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHomeEnterPartnerPrompt": "Enter a partner UUID to load conversation.",
+  "chatHomeFailedToLoadMessages": "Failed to load messages: {error}",
+  "@chatHomeFailedToLoadMessages": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHomeLoadOlder": "Load older",
+  "chatHomeSelectedImage": "Selected image",
+  "chatHomeRemoveMediaTooltip": "Remove media",
+  "chatHomeTyping": "Typing…",
+  "actionBack": "back",
+  "actionCopy": "copy",
+  "actionEdit": "edit",
+  "actionSave": "S A V E",
   "actionCancel": "cancel",
   "actionNext": "N E X T"
 }

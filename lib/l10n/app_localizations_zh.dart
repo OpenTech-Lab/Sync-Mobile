@@ -279,6 +279,286 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatAddFriendInputHint => '好友連結或使用者 ID';
 
   @override
+  String chatMarkReadPartial(int success, int total) {
+    return '已標記 $success/$total 個對話為已讀';
+  }
+
+  @override
+  String get chatSelectedMediaFallback => '圖片';
+
+  @override
+  String get chatMessageDetailTitleMine => '你的訊息';
+
+  @override
+  String get chatMessageDetailTitleOther => '訊息';
+
+  @override
+  String get chatCopiedToClipboard => '已複製到剪貼簿';
+
+  @override
+  String get chatQuickNewHeader => '新增';
+
+  @override
+  String get chatQuickFriendOrStart => '好友 / 開始聊天';
+
+  @override
+  String get chatQuickScanFriendQr => '掃描好友 QR';
+
+  @override
+  String get chatScanFriendQrInstruction => '將鏡頭對準好友的 QR 碼';
+
+  @override
+  String get chatTargetCancelFriend => '取消好友';
+
+  @override
+  String get chatTargetAddFriend => '新 增 好 友';
+
+  @override
+  String get chatTargetFriend => '好友';
+
+  @override
+  String get chatTargetStartChat => '開 始 聊 天';
+
+  @override
+  String get chatTargetFriendSince => '成為好友時間';
+
+  @override
+  String get chatTargetMessagesSent => '已傳送訊息';
+
+  @override
+  String get chatTargetAbout => '關於';
+
+  @override
+  String get settingsMissingAccessTokenBackup => '建立備份缺少存取權杖。';
+
+  @override
+  String get settingsMissingAccessTokenRestore => '還原備份缺少存取權杖。';
+
+  @override
+  String get settingsDeleteBackupTitle => '刪除備份資料';
+
+  @override
+  String get settingsDeleteBackupMessage => '這會移除此裝置上的加密備份檔案。\n此操作無法復原。';
+
+  @override
+  String get settingsDeleteBackupConfirm => '刪 除 備 份';
+
+  @override
+  String get settingsMissingAccessTokenBackupDelete => '刪除備份缺少存取權杖。';
+
+  @override
+  String settingsAutoBackupSchedule(int threshold) {
+    return '自動備份每 24 小時執行一次，或在新增 $threshold 則訊息後執行（以先到者為準）。';
+  }
+
+  @override
+  String get settingsAutoBackupThreshold => '自動備份門檻';
+
+  @override
+  String get settingsAutoBackupDecreaseTooltip => '降低門檻';
+
+  @override
+  String get settingsAutoBackupIncreaseTooltip => '提高門檻';
+
+  @override
+  String get settingsMessagesUnit => '則訊息';
+
+  @override
+  String get settingsDeleteLocalChatsTitle => '刪除本機聊天資料';
+
+  @override
+  String get settingsDeleteLocalChatsMessage => '這會刪除此裝置上儲存的所有聊天紀錄。\n不會影響伺服器端資料。';
+
+  @override
+  String get settingsDeleteLocalChatsConfirm => '刪 除 本 機 聊 天';
+
+  @override
+  String get settingsSignOutMessage => '你將從此帳號登出。\n本機訊息會保留在裝置上。';
+
+  @override
+  String get settingsSignOutConfirm => '登 出';
+
+  @override
+  String get settingsPlanetUnknownName => '未知 Planet';
+
+  @override
+  String get settingsPlanetNoDescription => '目前尚無 Planet 描述。';
+
+  @override
+  String get settingsOnline => '在線';
+
+  @override
+  String get settingsOffline => '離線';
+
+  @override
+  String get settingsNotificationsOn => '通知已開啟';
+
+  @override
+  String get settingsNotificationsOff => '通知已關閉';
+
+  @override
+  String get settingsResidents => '居民';
+
+  @override
+  String get settingsStickers => '貼圖';
+
+  @override
+  String get settingsEncrypted => '已加密';
+
+  @override
+  String get profileTitle => '個人檔案';
+
+  @override
+  String get profileNoDescriptionYet => '尚無描述';
+
+  @override
+  String get profileFriendLinkCopied => '已複製好友連結';
+
+  @override
+  String get profileCopyFriendLink => '複製好友連結';
+
+  @override
+  String get profileFriendQrTitle => '好友 QR';
+
+  @override
+  String get profileFriendQrHint => '包含你的伺服器網址與 ID';
+
+  @override
+  String get profileQrPayloadCopied => '已複製 QR 內容';
+
+  @override
+  String get profileCopyQrPayload => '複製 QR 內容';
+
+  @override
+  String get profileAboutYouLabel => '關於你';
+
+  @override
+  String get profileAboutYouTitle => '寫幾句關於你自己的介紹';
+
+  @override
+  String get profileDescriptionHint => '你希望別人認識你哪些事…';
+
+  @override
+  String get profileDescriptionExceeded => '已超過 100 字上限';
+
+  @override
+  String profileWordCount(int words) {
+    return '$words / 100';
+  }
+
+  @override
+  String get profileUsernameValidationError => '使用者名稱需為 3-32 字元：a-zA-Z0-9._-';
+
+  @override
+  String get profileUsernameUpdated => '已更新使用者名稱';
+
+  @override
+  String get profileUsernameUpdateFailed => '更新使用者名稱失敗';
+
+  @override
+  String get profileDescriptionWordLimitError => '描述不可超過 100 個單字';
+
+  @override
+  String get profileDescriptionUpdated => '已更新描述';
+
+  @override
+  String get profileAvatarTooLarge => '頭像過大（上限 256KB），請選擇較小圖片。';
+
+  @override
+  String get profileAvatarUploadFailed => '上傳頭像失敗';
+
+  @override
+  String get profileAvatarUpdated => '已更新頭像';
+
+  @override
+  String get profileUsernameDialogTitle => '使用者名稱';
+
+  @override
+  String get profileUsernameHint => '3–32 字元，a-zA-Z0-9._-';
+
+  @override
+  String homeUnreadSummary(int count) {
+    return '$count 則未讀訊息';
+  }
+
+  @override
+  String get homeViewProfile => '查看個人檔案';
+
+  @override
+  String get homeUsernameDialogTitle => '使用者名稱';
+
+  @override
+  String get homeUsernameHint => '3–32 字元，a-z A-Z 0-9 . _ -';
+
+  @override
+  String get chatHomeTitle => 'Sync 聊天';
+
+  @override
+  String chatHomeServerLabel(String server) {
+    return '伺服器：$server';
+  }
+
+  @override
+  String chatHomeRealtimeStatus(String status) {
+    return '即時連線：$status';
+  }
+
+  @override
+  String get chatHomeDisconnected => '未連線';
+
+  @override
+  String get chatHomePushInitialized => '推播：已初始化';
+
+  @override
+  String get chatHomePushPending => '推播：初始化中';
+
+  @override
+  String get chatHomePartnerHint => '對方使用者 UUID';
+
+  @override
+  String get chatHomeOpenAction => '開啟';
+
+  @override
+  String get chatHomeRefreshUnread => '重新整理未讀';
+
+  @override
+  String chatHomeActiveUnread(int count) {
+    return '目前對話未讀：$count';
+  }
+
+  @override
+  String get chatHomeEnterPartnerPrompt => '輸入對方 UUID 以載入對話。';
+
+  @override
+  String chatHomeFailedToLoadMessages(String error) {
+    return '載入訊息失敗：$error';
+  }
+
+  @override
+  String get chatHomeLoadOlder => '載入較舊訊息';
+
+  @override
+  String get chatHomeSelectedImage => '已選取圖片';
+
+  @override
+  String get chatHomeRemoveMediaTooltip => '移除媒體';
+
+  @override
+  String get chatHomeTyping => '輸入中…';
+
+  @override
+  String get actionBack => '返回';
+
+  @override
+  String get actionCopy => '複製';
+
+  @override
+  String get actionEdit => '編輯';
+
+  @override
+  String get actionSave => '儲 存';
+
+  @override
   String get actionCancel => '取消';
 
   @override
@@ -558,6 +838,286 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatAddFriendInputHint => '好友連結或使用者 ID';
+
+  @override
+  String chatMarkReadPartial(int success, int total) {
+    return '已標記 $success/$total 個對話為已讀';
+  }
+
+  @override
+  String get chatSelectedMediaFallback => '圖片';
+
+  @override
+  String get chatMessageDetailTitleMine => '你的訊息';
+
+  @override
+  String get chatMessageDetailTitleOther => '訊息';
+
+  @override
+  String get chatCopiedToClipboard => '已複製到剪貼簿';
+
+  @override
+  String get chatQuickNewHeader => '新增';
+
+  @override
+  String get chatQuickFriendOrStart => '好友 / 開始聊天';
+
+  @override
+  String get chatQuickScanFriendQr => '掃描好友 QR';
+
+  @override
+  String get chatScanFriendQrInstruction => '將鏡頭對準好友的 QR 碼';
+
+  @override
+  String get chatTargetCancelFriend => '取消好友';
+
+  @override
+  String get chatTargetAddFriend => '新 增 好 友';
+
+  @override
+  String get chatTargetFriend => '好友';
+
+  @override
+  String get chatTargetStartChat => '開 始 聊 天';
+
+  @override
+  String get chatTargetFriendSince => '成為好友時間';
+
+  @override
+  String get chatTargetMessagesSent => '已傳送訊息';
+
+  @override
+  String get chatTargetAbout => '關於';
+
+  @override
+  String get settingsMissingAccessTokenBackup => '建立備份缺少存取權杖。';
+
+  @override
+  String get settingsMissingAccessTokenRestore => '還原備份缺少存取權杖。';
+
+  @override
+  String get settingsDeleteBackupTitle => '刪除備份資料';
+
+  @override
+  String get settingsDeleteBackupMessage => '這會移除此裝置上的加密備份檔案。\n此操作無法復原。';
+
+  @override
+  String get settingsDeleteBackupConfirm => '刪 除 備 份';
+
+  @override
+  String get settingsMissingAccessTokenBackupDelete => '刪除備份缺少存取權杖。';
+
+  @override
+  String settingsAutoBackupSchedule(int threshold) {
+    return '自動備份每 24 小時執行一次，或在新增 $threshold 則訊息後執行（以先到者為準）。';
+  }
+
+  @override
+  String get settingsAutoBackupThreshold => '自動備份門檻';
+
+  @override
+  String get settingsAutoBackupDecreaseTooltip => '降低門檻';
+
+  @override
+  String get settingsAutoBackupIncreaseTooltip => '提高門檻';
+
+  @override
+  String get settingsMessagesUnit => '則訊息';
+
+  @override
+  String get settingsDeleteLocalChatsTitle => '刪除本機聊天資料';
+
+  @override
+  String get settingsDeleteLocalChatsMessage => '這會刪除此裝置上儲存的所有聊天紀錄。\n不會影響伺服器端資料。';
+
+  @override
+  String get settingsDeleteLocalChatsConfirm => '刪 除 本 機 聊 天';
+
+  @override
+  String get settingsSignOutMessage => '你將從此帳號登出。\n本機訊息會保留在裝置上。';
+
+  @override
+  String get settingsSignOutConfirm => '登 出';
+
+  @override
+  String get settingsPlanetUnknownName => '未知 Planet';
+
+  @override
+  String get settingsPlanetNoDescription => '目前尚無 Planet 描述。';
+
+  @override
+  String get settingsOnline => '在線';
+
+  @override
+  String get settingsOffline => '離線';
+
+  @override
+  String get settingsNotificationsOn => '通知已開啟';
+
+  @override
+  String get settingsNotificationsOff => '通知已關閉';
+
+  @override
+  String get settingsResidents => '居民';
+
+  @override
+  String get settingsStickers => '貼圖';
+
+  @override
+  String get settingsEncrypted => '已加密';
+
+  @override
+  String get profileTitle => '個人檔案';
+
+  @override
+  String get profileNoDescriptionYet => '尚無描述';
+
+  @override
+  String get profileFriendLinkCopied => '已複製好友連結';
+
+  @override
+  String get profileCopyFriendLink => '複製好友連結';
+
+  @override
+  String get profileFriendQrTitle => '好友 QR';
+
+  @override
+  String get profileFriendQrHint => '包含你的伺服器網址與 ID';
+
+  @override
+  String get profileQrPayloadCopied => '已複製 QR 內容';
+
+  @override
+  String get profileCopyQrPayload => '複製 QR 內容';
+
+  @override
+  String get profileAboutYouLabel => '關於你';
+
+  @override
+  String get profileAboutYouTitle => '寫幾句關於你自己的介紹';
+
+  @override
+  String get profileDescriptionHint => '你希望別人認識你哪些事…';
+
+  @override
+  String get profileDescriptionExceeded => '已超過 100 字上限';
+
+  @override
+  String profileWordCount(int words) {
+    return '$words / 100';
+  }
+
+  @override
+  String get profileUsernameValidationError => '使用者名稱需為 3-32 字元：a-zA-Z0-9._-';
+
+  @override
+  String get profileUsernameUpdated => '已更新使用者名稱';
+
+  @override
+  String get profileUsernameUpdateFailed => '更新使用者名稱失敗';
+
+  @override
+  String get profileDescriptionWordLimitError => '描述不可超過 100 個單字';
+
+  @override
+  String get profileDescriptionUpdated => '已更新描述';
+
+  @override
+  String get profileAvatarTooLarge => '頭像過大（上限 256KB），請選擇較小圖片。';
+
+  @override
+  String get profileAvatarUploadFailed => '上傳頭像失敗';
+
+  @override
+  String get profileAvatarUpdated => '已更新頭像';
+
+  @override
+  String get profileUsernameDialogTitle => '使用者名稱';
+
+  @override
+  String get profileUsernameHint => '3–32 字元，a-zA-Z0-9._-';
+
+  @override
+  String homeUnreadSummary(int count) {
+    return '$count 則未讀訊息';
+  }
+
+  @override
+  String get homeViewProfile => '查看個人檔案';
+
+  @override
+  String get homeUsernameDialogTitle => '使用者名稱';
+
+  @override
+  String get homeUsernameHint => '3–32 字元，a-z A-Z 0-9 . _ -';
+
+  @override
+  String get chatHomeTitle => 'Sync 聊天';
+
+  @override
+  String chatHomeServerLabel(String server) {
+    return '伺服器：$server';
+  }
+
+  @override
+  String chatHomeRealtimeStatus(String status) {
+    return '即時連線：$status';
+  }
+
+  @override
+  String get chatHomeDisconnected => '未連線';
+
+  @override
+  String get chatHomePushInitialized => '推播：已初始化';
+
+  @override
+  String get chatHomePushPending => '推播：初始化中';
+
+  @override
+  String get chatHomePartnerHint => '對方使用者 UUID';
+
+  @override
+  String get chatHomeOpenAction => '開啟';
+
+  @override
+  String get chatHomeRefreshUnread => '重新整理未讀';
+
+  @override
+  String chatHomeActiveUnread(int count) {
+    return '目前對話未讀：$count';
+  }
+
+  @override
+  String get chatHomeEnterPartnerPrompt => '輸入對方 UUID 以載入對話。';
+
+  @override
+  String chatHomeFailedToLoadMessages(String error) {
+    return '載入訊息失敗：$error';
+  }
+
+  @override
+  String get chatHomeLoadOlder => '載入較舊訊息';
+
+  @override
+  String get chatHomeSelectedImage => '已選取圖片';
+
+  @override
+  String get chatHomeRemoveMediaTooltip => '移除媒體';
+
+  @override
+  String get chatHomeTyping => '輸入中…';
+
+  @override
+  String get actionBack => '返回';
+
+  @override
+  String get actionCopy => '複製';
+
+  @override
+  String get actionEdit => '編輯';
+
+  @override
+  String get actionSave => '儲 存';
 
   @override
   String get actionCancel => '取消';

@@ -279,6 +279,292 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatAddFriendInputHint => 'friend link or user ID';
 
   @override
+  String chatMarkReadPartial(int success, int total) {
+    return 'Marked as read for $success/$total conversations';
+  }
+
+  @override
+  String get chatSelectedMediaFallback => 'Image';
+
+  @override
+  String get chatMessageDetailTitleMine => 'Your message';
+
+  @override
+  String get chatMessageDetailTitleOther => 'Message';
+
+  @override
+  String get chatCopiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get chatQuickNewHeader => 'NEW';
+
+  @override
+  String get chatQuickFriendOrStart => 'friend / start chat';
+
+  @override
+  String get chatQuickScanFriendQr => 'scan friend qr';
+
+  @override
+  String get chatScanFriendQrInstruction => 'point camera at a friend\'s qr code';
+
+  @override
+  String get chatTargetCancelFriend => 'cancel friend';
+
+  @override
+  String get chatTargetAddFriend => 'A D D   F R I E N D';
+
+  @override
+  String get chatTargetFriend => 'friend';
+
+  @override
+  String get chatTargetStartChat => 'S T A R T   C H A T';
+
+  @override
+  String get chatTargetFriendSince => 'FRIEND SINCE';
+
+  @override
+  String get chatTargetMessagesSent => 'MESSAGES SENT';
+
+  @override
+  String get chatTargetAbout => 'ABOUT';
+
+  @override
+  String get settingsMissingAccessTokenBackup => 'Missing access token for backup.';
+
+  @override
+  String get settingsMissingAccessTokenRestore => 'Missing access token for restore.';
+
+  @override
+  String get settingsDeleteBackupTitle => 'Delete backup data';
+
+  @override
+  String get settingsDeleteBackupMessage => 'This removes the encrypted backup file from this device.\nThis cannot be undone.';
+
+  @override
+  String get settingsDeleteBackupConfirm => 'D E L E T E   B A C K U P';
+
+  @override
+  String get settingsMissingAccessTokenBackupDelete => 'Missing access token for backup delete.';
+
+  @override
+  String settingsAutoBackupSchedule(int threshold) {
+    return 'Auto backup runs every 24h or after $threshold new messages (whichever comes first).';
+  }
+
+  @override
+  String get settingsAutoBackupThreshold => 'Auto backup threshold';
+
+  @override
+  String get settingsAutoBackupDecreaseTooltip => 'Decrease threshold';
+
+  @override
+  String get settingsAutoBackupIncreaseTooltip => 'Increase threshold';
+
+  @override
+  String get settingsMessagesUnit => 'messages';
+
+  @override
+  String get settingsDeleteLocalChatsTitle => 'Delete local chat data';
+
+  @override
+  String get settingsDeleteLocalChatsMessage => 'This deletes all chat history stored on this device.\nServer-side data is not changed.';
+
+  @override
+  String get settingsDeleteLocalChatsConfirm => 'D E L E T E   L O C A L   C H A T S';
+
+  @override
+  String get settingsSignOutMessage => 'You will be signed out of this account.\nLocal messages remain on device.';
+
+  @override
+  String get settingsSignOutConfirm => 'S I G N   O U T';
+
+  @override
+  String get settingsPlanetUnknownName => 'Unknown planet';
+
+  @override
+  String get settingsPlanetNoDescription => 'No planet description available yet.';
+
+  @override
+  String get settingsOnline => 'online';
+
+  @override
+  String get settingsOffline => 'offline';
+
+  @override
+  String get settingsNotificationsOn => 'notifications on';
+
+  @override
+  String get settingsNotificationsOff => 'notifications off';
+
+  @override
+  String get settingsResidents => 'residents';
+
+  @override
+  String get settingsStickers => 'stickers';
+
+  @override
+  String get settingsEncrypted => 'encrypted';
+
+  @override
+  String get profileTitle => 'profile';
+
+  @override
+  String get profileNoDescriptionYet => 'no description yet';
+
+  @override
+  String get profileFriendLinkCopied => 'Friend link copied';
+
+  @override
+  String get profileCopyFriendLink => 'copy friend link';
+
+  @override
+  String get profileFriendQrTitle => 'FRIEND QR';
+
+  @override
+  String get profileFriendQrHint => 'contains your server url and id';
+
+  @override
+  String get profileQrPayloadCopied => 'QR payload copied';
+
+  @override
+  String get profileCopyQrPayload => 'copy qr payload';
+
+  @override
+  String get profileAboutYouLabel => 'ABOUT YOU';
+
+  @override
+  String get profileAboutYouTitle => 'A few words about yourself';
+
+  @override
+  String get profileDescriptionHint => 'What would you like others to know…';
+
+  @override
+  String get profileDescriptionExceeded => 'exceeded 100-word limit';
+
+  @override
+  String profileWordCount(int words) {
+    return '$words / 100';
+  }
+
+  @override
+  String get profileUsernameValidationError => 'Username must be 3-32 chars: a-zA-Z0-9._-';
+
+  @override
+  String get profileUsernameUpdated => 'Username updated';
+
+  @override
+  String get profileUsernameUpdateFailed => 'Failed to update username';
+
+  @override
+  String get profileDescriptionWordLimitError => 'Description must be 100 words or less';
+
+  @override
+  String get profileDescriptionUpdated => 'Description updated';
+
+  @override
+  String get profileAvatarTooLarge => 'Avatar too large (max 256KB). Choose a smaller image.';
+
+  @override
+  String get profileAvatarUploadFailed => 'Failed to upload avatar';
+
+  @override
+  String get profileAvatarUpdated => 'Avatar updated';
+
+  @override
+  String get profileUsernameDialogTitle => 'USERNAME';
+
+  @override
+  String get profileUsernameHint => '3–32 chars, a-zA-Z0-9._-';
+
+  @override
+  String homeUnreadSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unread messages',
+      one: '$count unread message',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeViewProfile => 'View profile';
+
+  @override
+  String get homeUsernameDialogTitle => 'USERNAME';
+
+  @override
+  String get homeUsernameHint => '3–32 characters, a-z A-Z 0-9 . _ -';
+
+  @override
+  String get chatHomeTitle => 'Sync Chats';
+
+  @override
+  String chatHomeServerLabel(String server) {
+    return 'Server: $server';
+  }
+
+  @override
+  String chatHomeRealtimeStatus(String status) {
+    return 'Realtime: $status';
+  }
+
+  @override
+  String get chatHomeDisconnected => 'disconnected';
+
+  @override
+  String get chatHomePushInitialized => 'Push: initialized';
+
+  @override
+  String get chatHomePushPending => 'Push: pending';
+
+  @override
+  String get chatHomePartnerHint => 'Partner user UUID';
+
+  @override
+  String get chatHomeOpenAction => 'Open';
+
+  @override
+  String get chatHomeRefreshUnread => 'Refresh unread';
+
+  @override
+  String chatHomeActiveUnread(int count) {
+    return 'Unread from active partner: $count';
+  }
+
+  @override
+  String get chatHomeEnterPartnerPrompt => 'Enter a partner UUID to load conversation.';
+
+  @override
+  String chatHomeFailedToLoadMessages(String error) {
+    return 'Failed to load messages: $error';
+  }
+
+  @override
+  String get chatHomeLoadOlder => 'Load older';
+
+  @override
+  String get chatHomeSelectedImage => 'Selected image';
+
+  @override
+  String get chatHomeRemoveMediaTooltip => 'Remove media';
+
+  @override
+  String get chatHomeTyping => 'Typing…';
+
+  @override
+  String get actionBack => 'back';
+
+  @override
+  String get actionCopy => 'copy';
+
+  @override
+  String get actionEdit => 'edit';
+
+  @override
+  String get actionSave => 'S A V E';
+
+  @override
   String get actionCancel => 'cancel';
 
   @override

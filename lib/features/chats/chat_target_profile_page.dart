@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
 enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
@@ -29,6 +30,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -63,10 +65,10 @@ class ChatTargetProfileScreen extends StatelessWidget {
               onTap: () => Navigator.of(
                 context,
               ).pop(ChatTargetProfileAction.cancelFriend),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text(
-                  'cancel friend',
+                  l10n.chatTargetCancelFriend,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppPalette.danger700,
@@ -147,7 +149,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                     context,
                   ).pop(ChatTargetProfileAction.addFriend),
                   child: Text(
-                    'A D D   F R I E N D',
+                    l10n.chatTargetAddFriend,
                     style: TextStyle(
                       fontSize: 10,
                       letterSpacing: 2.2,
@@ -158,7 +160,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                 )
               else
                 Text(
-                  'friend',
+                  l10n.chatTargetFriend,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w300,
@@ -172,7 +174,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                     context,
                   ).pop(ChatTargetProfileAction.startChat),
                   child: Text(
-                    'S T A R T   C H A T',
+                    l10n.chatTargetStartChat,
                     style: TextStyle(
                       fontSize: 10,
                       letterSpacing: 2.2,
@@ -190,8 +192,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
             const SizedBox(height: 28),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
-            const Text(
-              'FRIEND SINCE',
+            Text(
+              l10n.chatTargetFriendSince,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
@@ -215,8 +217,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
-            const Text(
-              'MESSAGES SENT',
+            Text(
+              l10n.chatTargetMessagesSent,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
@@ -240,8 +242,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
-            const Text(
-              'ABOUT',
+            Text(
+              l10n.chatTargetAbout,
               style: TextStyle(
                 fontSize: 10,
                 letterSpacing: 2.4,
