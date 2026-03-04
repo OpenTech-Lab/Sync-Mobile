@@ -48,6 +48,22 @@ class RealtimeSyncService {
     );
   }
 
+  void sendTyping({required String partnerId, required bool isTyping}) {
+    final channel = _channel;
+    if (channel == null) {
+      return;
+    }
+    try {
+      channel.sink.add(
+        jsonEncode({
+          'type': 'typing',
+          'partner_id': partnerId,
+          'is_typing': isTyping,
+        }),
+      );
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
     await disconnect();
     await _events.close();
@@ -178,31 +194,42 @@ class RealtimeSyncService {
     }
 
     final type = decoded['type'];
-    if (type != 'new_message') {
-      return null;
+    if (type == 'new_message') {
+      final messageJson = decoded['message'];
+      if (messageJson is! Map<String, dynamic>) {
+        return null;
+      }
+
+      final senderId = messageJson['sender_id'] as String?;
+      final recipientId = messageJson['recipient_id'] as String?;
+      if (senderId == null || recipientId == null) {
+        return null;
+      }
+
+      final partnerId = senderId == currentUserId ? recipientId : senderId;
+
+      final message = LocalChatMessage(
+        id: messageJson['id'] as String,
+        conversationId: partnerId,
+        senderId: senderId,
+        body: messageJson['content'] as String,
+        createdAt: DateTime.parse(messageJson['created_at'] as String).toUtc(),
+      );
+      return RealtimeEvent.message(message);
     }
 
-    final messageJson = decoded['message'];
-    if (messageJson is! Map<String, dynamic>) {
-      return null;
+    if (type == 'typing') {
+      final senderId = decoded['sender_id'] as String?;
+      final recipientId = decoded['recipient_id'] as String?;
+      final isTyping = decoded['is_typing'] as bool?;
+      if (senderId == null || recipientId == null || isTyping == null) {
+        return null;
+      }
+      final partnerId = senderId == currentUserId ? recipientId : senderId;
+      return RealtimeEvent.typing(partnerId: partnerId, isTyping: isTyping);
     }
 
-    final senderId = messageJson['sender_id'] as String?;
-    final recipientId = messageJson['recipient_id'] as String?;
-    if (senderId == null || recipientId == null) {
-      return null;
-    }
-
-    final partnerId = senderId == currentUserId ? recipientId : senderId;
-
-    final message = LocalChatMessage(
-      id: messageJson['id'] as String,
-      conversationId: partnerId,
-      senderId: senderId,
-      body: messageJson['content'] as String,
-      createdAt: DateTime.parse(messageJson['created_at'] as String).toUtc(),
-    );
-    return RealtimeEvent.message(message);
+    return null;
   }
 
   @visibleForTesting

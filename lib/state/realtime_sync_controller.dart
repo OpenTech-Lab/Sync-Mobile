@@ -10,16 +10,26 @@ import 'conversation_messages_controller.dart';
 import 'unread_counts_controller.dart';
 
 class RealtimeSyncState {
-  const RealtimeSyncState({required this.status, required this.error});
+  const RealtimeSyncState({
+    required this.status,
+    required this.error,
+    required this.typingPartnerIds,
+  });
 
   final RealtimeConnectionStatus status;
   final String? error;
+  final Set<String> typingPartnerIds;
 
   RealtimeSyncState copyWith({
     RealtimeConnectionStatus? status,
     String? error,
+    Set<String>? typingPartnerIds,
   }) {
-    return RealtimeSyncState(status: status ?? this.status, error: error);
+    return RealtimeSyncState(
+      status: status ?? this.status,
+      error: error,
+      typingPartnerIds: typingPartnerIds ?? this.typingPartnerIds,
+    );
   }
 }
 
@@ -40,12 +50,14 @@ final realtimeSyncControllerProvider =
 
 class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
   StreamSubscription<RealtimeEvent>? _subscription;
+  final Set<String> _conversationSyncInFlight = <String>{};
 
   @override
   Future<RealtimeSyncState> build() async {
     return const RealtimeSyncState(
       status: RealtimeConnectionStatus.disconnected,
       error: null,
+      typingPartnerIds: <String>{},
     );
   }
 
@@ -54,17 +66,18 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
   }) async {
-    final current =
-        state.value ??
-        const RealtimeSyncState(
-          status: RealtimeConnectionStatus.disconnected,
-          error: null,
-        );
-
     final service = ref.read(realtimeSyncServiceProvider);
 
     await _subscription?.cancel();
     _subscription = service.events.listen((event) async {
+      final current =
+          state.value ??
+          const RealtimeSyncState(
+            status: RealtimeConnectionStatus.disconnected,
+            error: null,
+            typingPartnerIds: <String>{},
+          );
+
       if (event.connectionStatus != null) {
         state = AsyncData(
           current.copyWith(status: event.connectionStatus, error: null),
@@ -80,12 +93,34 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         );
       }
 
+      if (event.typingPartnerId != null && event.isTyping != null) {
+        final nextTyping = {...current.typingPartnerIds};
+        if (event.isTyping!) {
+          nextTyping.add(event.typingPartnerId!);
+        } else {
+          nextTyping.remove(event.typingPartnerId!);
+        }
+        state = AsyncData(current.copyWith(typingPartnerIds: nextTyping));
+      }
+
       if (event.message != null) {
         final message = event.message!;
+        final typingAfterMessage = {...current.typingPartnerIds}
+          ..remove(message.conversationId);
+        state = AsyncData(current.copyWith(typingPartnerIds: typingAfterMessage));
         await ref.read(chatRepositoryProvider).upsertMessages([message]);
         final partnerId = message.conversationId;
-        ref.invalidate(conversationMessagesProvider(partnerId));
-        ref.invalidate(conversationSummariesProvider);
+        final accessToken = await accessTokenProvider();
+        if (accessToken == null || accessToken.isEmpty) {
+          ref.invalidate(conversationMessagesProvider(partnerId));
+          ref.invalidate(conversationSummariesProvider);
+          return;
+        }
+        await _syncConversationSnapshot(
+          partnerId: partnerId,
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+        );
         final visibility = ref.read(chatVisibilityProvider);
         if (!visibility.isConversationOpen(partnerId) &&
             message.senderId != currentUserId) {
@@ -95,10 +130,6 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
                 partnerId: partnerId,
                 body: message.body,
               );
-        }
-        final accessToken = await accessTokenProvider();
-        if (accessToken == null || accessToken.isEmpty) {
-          return;
         }
         await ref
             .read(unreadCountsProvider.notifier)
@@ -123,8 +154,38 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         current.copyWith(
           status: RealtimeConnectionStatus.disconnected,
           error: null,
+          typingPartnerIds: <String>{},
         ),
       );
+    }
+  }
+
+  void sendTyping({required String partnerId, required bool isTyping}) {
+    ref
+        .read(realtimeSyncServiceProvider)
+        .sendTyping(partnerId: partnerId, isTyping: isTyping);
+  }
+
+  Future<void> _syncConversationSnapshot({
+    required String partnerId,
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    if (_conversationSyncInFlight.contains(partnerId)) {
+      return;
+    }
+
+    _conversationSyncInFlight.add(partnerId);
+    try {
+      await ref
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: accessToken);
+    } catch (_) {
+      // Keep UI reactive even if remote sync fails transiently.
+      ref.invalidate(conversationMessagesProvider(partnerId));
+      ref.invalidate(conversationSummariesProvider);
+    } finally {
+      _conversationSyncInFlight.remove(partnerId);
     }
   }
 }

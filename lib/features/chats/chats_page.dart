@@ -14,6 +14,7 @@ import 'chat_target_profile_page.dart';
 import '../../services/local_chat_repository.dart';
 import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
+import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
@@ -45,8 +46,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   final _messageController = TextEditingController();
   final _messageScrollController = ScrollController();
   String? _activePartnerId;
-  bool _isTyping = false;
-  Timer? _typingTimer;
+  bool _typingSignalSent = false;
+  Timer? _typingIdleTimer;
   Uint8List? _selectedMediaBytes;
   String? _selectedMediaName;
   final Set<String> _profileSyncInFlight = <String>{};
@@ -88,7 +89,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   @override
   void dispose() {
-    _typingTimer?.cancel();
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
+    }
+    _typingIdleTimer?.cancel();
     _partnerController.removeListener(_onSearchChanged);
     _partnerController.dispose();
     _partnerFocusNode.dispose();
@@ -97,14 +102,38 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     super.dispose();
   }
 
+  void _sendTypingSignal(bool isTyping) {
+    final partnerId = _activePartnerId;
+    if (partnerId == null || partnerId.isEmpty) {
+      return;
+    }
+    ref
+        .read(realtimeSyncControllerProvider.notifier)
+        .sendTyping(partnerId: partnerId, isTyping: isTyping);
+  }
+
   void _onComposerChanged(String value) {
-    _typingTimer?.cancel();
-    final typing = value.trim().isNotEmpty;
-    if (typing != _isTyping) setState(() => _isTyping = typing);
-    if (typing) {
-      _typingTimer = Timer(const Duration(milliseconds: 900), () {
-        if (mounted) setState(() => _isTyping = false);
+    final hasText = value.trim().isNotEmpty;
+    _typingIdleTimer?.cancel();
+
+    if (hasText) {
+      if (!_typingSignalSent) {
+        _sendTypingSignal(true);
+        _typingSignalSent = true;
+      }
+      _typingIdleTimer = Timer(const Duration(milliseconds: 1200), () {
+        if (!_typingSignalSent) {
+          return;
+        }
+        _sendTypingSignal(false);
+        _typingSignalSent = false;
       });
+      return;
+    }
+
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
     }
   }
 
@@ -170,6 +199,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 
   Future<void> _openPartner(String partnerId) async {
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
+    }
     setState(() => _activePartnerId = partnerId);
     widget.onPartnerChanged(partnerId);
     await _syncUserProfile(partnerId, force: true);
@@ -492,7 +525,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     if (content.isEmpty) return;
 
     _messageController.clear();
-    setState(() => _isTyping = false);
+    _typingIdleTimer?.cancel();
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
+    }
 
     final accessToken = await _effectiveAccessToken();
 
@@ -697,6 +734,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             _activePartnerId!,
             ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
           );
+    final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
+    final isTargetTyping = _activePartnerId != null &&
+        (realtimeState?.typingPartnerIds.contains(_activePartnerId!) ?? false);
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
@@ -723,6 +763,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
+                  if (_typingSignalSent) {
+                    _sendTypingSignal(false);
+                    _typingSignalSent = false;
+                  }
                   setState(() => _activePartnerId = null);
                   widget.onPartnerChanged(null);
                 },
@@ -826,13 +870,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 ),
 
                 // Typing indicator
-                if (_isTyping)
+                if (isTargetTyping)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Typing…',
+                        '${activeDisplayName ?? 'Partner'} is typing…',
                         style: TextStyle(
                           fontSize: 12,
                           color: cs.onSurfaceVariant,
@@ -1048,7 +1092,6 @@ class _ConversationStarter extends ConsumerWidget {
               ref,
               userId,
               summariesById,
-              ruleColor,
               inkColor,
               AppPalette.neutral500,
             ),
@@ -1090,7 +1133,6 @@ class _ConversationStarter extends ConsumerWidget {
               ref,
               userId,
               summariesById,
-              ruleColor,
               inkColor,
               AppPalette.neutral500,
             ),
@@ -1104,7 +1146,6 @@ class _ConversationStarter extends ConsumerWidget {
     WidgetRef ref,
     String userId,
     Map<String, ConversationSummary> summariesById,
-    Color ruleColor,
     Color inkColor,
     Color mutedColor,
   ) {
@@ -1226,7 +1267,6 @@ class _ConversationStarter extends ConsumerWidget {
             ),
           ),
         ),
-        Divider(height: 1, thickness: 1, color: ruleColor),
       ],
     );
   }
