@@ -203,6 +203,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
   }
 
+  void _closeActiveConversation() {
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
+    }
+    setState(() => _activePartnerId = null);
+    widget.onPartnerChanged(null);
+  }
+
   Future<void> _openPartner(String partnerId) async {
     if (_typingSignalSent) {
       _sendTypingSignal(false);
@@ -473,6 +482,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted || resolved == null) {
         return;
       }
+      final historyCount = await _conversationMessageCountForPartner(
+        resolved.partnerId,
+      );
       final sentMessageCount = await _sentMessageCountForPartner(
         resolved.partnerId,
       );
@@ -496,6 +508,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             isFriend: isFriend,
             friendAddedAt: friendAddedAt,
             sentMessageCount: sentMessageCount,
+            hasChatHistory: historyCount > 0,
             description: resolved.description,
           ),
         ),
@@ -521,9 +534,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_l10n.friendAdded)));
+        _showMinimalChatToast(context: context, message: _l10n.friendAdded);
       }
       if (action == ChatTargetProfileAction.startChat ||
           action == ChatTargetProfileAction.addFriend) {
@@ -726,6 +737,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     );
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
     final description = ref.read(userDescriptionProvider(partnerId)).value;
+    final historyCount = await _conversationMessageCountForPartner(partnerId);
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final prefs = ref.read(userProfilePreferencesProvider);
     final isFriend = (await prefs.readFriendIds()).contains(partnerId);
@@ -744,6 +756,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           isFriend: isFriend,
           friendAddedAt: friendAddedAt,
           sentMessageCount: sentMessageCount,
+          hasChatHistory: historyCount > 0,
           description: description,
           showActions: false,
         ),
@@ -758,9 +771,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_l10n.friendAdded)));
+      _showMinimalChatToast(context: context, message: _l10n.friendAdded);
       return;
     }
     if (action == ChatTargetProfileAction.cancelFriend) {
@@ -772,7 +783,18 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_l10n.friendRemoved)));
+      return;
     }
+    if (action == ChatTargetProfileAction.startChat) {
+      await _openPartner(partnerId);
+    }
+  }
+
+  Future<int> _conversationMessageCountForPartner(String partnerId) async {
+    final messages = await ref
+        .read(chatRepositoryProvider)
+        .listMessages(conversationId: partnerId, limit: 5000);
+    return messages.length;
   }
 
   Future<int> _sentMessageCountForPartner(String partnerId) async {
@@ -930,14 +952,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  if (_typingSignalSent) {
-                    _sendTypingSignal(false);
-                    _typingSignalSent = false;
-                  }
-                  setState(() => _activePartnerId = null);
-                  widget.onPartnerChanged(null);
-                },
+                onPressed: _closeActiveConversation,
               ),
               automaticallyImplyLeading: false,
               actions: [
@@ -976,177 +991,189 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   onAddFriend: _openNewFriendOrChat,
                 ),
               )
-            : Column(
-                children: [
-                  // Messages list
-                  Expanded(
-                    child: messagesAsync == null
-                        ? const Center(child: CircularProgressIndicator())
-                        : messagesAsync.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, _) => Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  '$err',
-                                  textAlign: TextAlign.center,
-                                ),
+            : GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragEnd: (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+                  if (velocity > 450) {
+                    _closeActiveConversation();
+                  }
+                },
+                child: Column(
+                  children: [
+                    // Messages list
+                    Expanded(
+                      child: messagesAsync == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : messagesAsync.when(
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
                               ),
-                            ),
-                            data: (messages) {
-                              final activePartnerId = _activePartnerId;
-                              final draftMessages = activePartnerId == null
-                                  ? const <_OutgoingMessageDraft>[]
-                                  : (_outgoingDraftsByPartner[activePartnerId] ??
-                                        const <_OutgoingMessageDraft>[]);
-                              final draftById = <String, _OutgoingMessageDraft>{
-                                for (final draft in draftMessages)
-                                  draft.id: draft,
-                              };
-                              final displayedMessages = <LocalChatMessage>[
-                                ...draftMessages.map(
-                                  (draft) => LocalChatMessage(
-                                    id: draft.id,
-                                    conversationId: draft.partnerId,
-                                    senderId: widget.currentUserId,
-                                    body: draft.body,
-                                    createdAt: draft.createdAt,
+                              error: (err, _) => Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    '$err',
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
-                                ...messages,
-                              ];
+                              ),
+                              data: (messages) {
+                                final activePartnerId = _activePartnerId;
+                                final draftMessages = activePartnerId == null
+                                    ? const <_OutgoingMessageDraft>[]
+                                    : (_outgoingDraftsByPartner[activePartnerId] ??
+                                          const <_OutgoingMessageDraft>[]);
+                                final draftById =
+                                    <String, _OutgoingMessageDraft>{
+                                      for (final draft in draftMessages)
+                                        draft.id: draft,
+                                    };
+                                final displayedMessages = <LocalChatMessage>[
+                                  ...draftMessages.map(
+                                    (draft) => LocalChatMessage(
+                                      id: draft.id,
+                                      conversationId: draft.partnerId,
+                                      senderId: widget.currentUserId,
+                                      body: draft.body,
+                                      createdAt: draft.createdAt,
+                                    ),
+                                  ),
+                                  ...messages,
+                                ];
 
-                              return displayedMessages.isEmpty
-                                  ? Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.chat_bubble_outline,
-                                            size: 48,
-                                            color: cs.outlineVariant,
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            _l10n.chatNoMessagesYet,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: cs.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : ListView.separated(
-                                      reverse: true,
-                                      controller: _messageScrollController,
-                                      padding: const EdgeInsets.fromLTRB(
-                                        12,
-                                        8,
-                                        12,
-                                        8,
-                                      ),
-                                      itemCount: displayedMessages.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(height: 6),
-                                      itemBuilder: (ctx, i) {
-                                        final message = displayedMessages[i];
-                                        final draft = draftById[message.id];
-                                        final showDayDivider =
-                                            i == displayedMessages.length - 1 ||
-                                            !_isSameDay(
-                                              message.createdAt,
-                                              displayedMessages[i + 1]
-                                                  .createdAt,
-                                            );
-                                        return Column(
+                                return displayedMessages.isEmpty
+                                    ? Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            if (showDayDivider)
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                      0,
-                                                      8,
-                                                      0,
-                                                      6,
-                                                    ),
-                                                child: _DayDivider(
-                                                  label: _dayLabel(
-                                                    context,
-                                                    message.createdAt,
-                                                  ),
-                                                ),
+                                            Icon(
+                                              Icons.chat_bubble_outline,
+                                              size: 48,
+                                              color: cs.outlineVariant,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              _l10n.chatNoMessagesYet,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: cs.onSurfaceVariant,
                                               ),
-                                            _MessageBubble(
-                                              message: message,
-                                              isMine:
-                                                  message.senderId ==
-                                                  widget.currentUserId,
-                                              currentUserId:
-                                                  widget.currentUserId,
-                                              currentUserAvatarBase64:
-                                                  currentUserAvatarBase64,
-                                              partnerAvatarBase64:
-                                                  partnerAvatarBase64,
-                                              onPartnerAvatarTap:
-                                                  _openActivePartnerProfile,
-                                              deliveryState: draft?.state,
-                                              onRetryTap: draft == null
-                                                  ? null
-                                                  : () => _retryOutgoingDraft(
-                                                      draft,
-                                                    ),
                                             ),
                                           ],
-                                        );
-                                      },
-                                    );
-                            },
-                          ),
-                  ),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        reverse: true,
+                                        controller: _messageScrollController,
+                                        padding: const EdgeInsets.fromLTRB(
+                                          12,
+                                          8,
+                                          12,
+                                          8,
+                                        ),
+                                        itemCount: displayedMessages.length,
+                                        separatorBuilder: (_, _) =>
+                                            const SizedBox(height: 6),
+                                        itemBuilder: (ctx, i) {
+                                          final message = displayedMessages[i];
+                                          final draft = draftById[message.id];
+                                          final showDayDivider =
+                                              i ==
+                                                  displayedMessages.length -
+                                                      1 ||
+                                              !_isSameDay(
+                                                message.createdAt,
+                                                displayedMessages[i + 1]
+                                                    .createdAt,
+                                              );
+                                          return Column(
+                                            children: [
+                                              if (showDayDivider)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.fromLTRB(
+                                                        0,
+                                                        8,
+                                                        0,
+                                                        6,
+                                                      ),
+                                                  child: _DayDivider(
+                                                    label: _dayLabel(
+                                                      context,
+                                                      message.createdAt,
+                                                    ),
+                                                  ),
+                                                ),
+                                              _MessageBubble(
+                                                message: message,
+                                                isMine:
+                                                    message.senderId ==
+                                                    widget.currentUserId,
+                                                currentUserId:
+                                                    widget.currentUserId,
+                                                currentUserAvatarBase64:
+                                                    currentUserAvatarBase64,
+                                                partnerAvatarBase64:
+                                                    partnerAvatarBase64,
+                                                onPartnerAvatarTap:
+                                                    _openActivePartnerProfile,
+                                                deliveryState: draft?.state,
+                                                onRetryTap: draft == null
+                                                    ? null
+                                                    : () => _retryOutgoingDraft(
+                                                        draft,
+                                                      ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                              },
+                            ),
+                    ),
 
-                  // Typing indicator
-                  if (isTargetTyping)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _l10n.chatTypingIndicator(
-                            activeDisplayName ?? _l10n.chatDefaultPartner,
-                          ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
+                    // Typing indicator
+                    if (isTargetTyping)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _l10n.chatTypingIndicator(
+                              activeDisplayName ?? _l10n.chatDefaultPartner,
+                            ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                  // Composer
-                  SafeArea(
-                    top: false,
-                    child: _Composer(
-                      messageController: _messageController,
-                      selectedMediaBytes: _selectedMediaBytes,
-                      selectedMediaName: _selectedMediaName,
-                      stickers: stickers,
-                      onChanged: _onComposerChanged,
-                      onSend: _sendMessage,
-                      onPickMedia: _pickMedia,
-                      onClearMedia: _clearMedia,
-                      onStickerSelected: (sticker) async {
-                        if (_activePartnerId == null) return;
-                        await _sendMessageWithOptimisticBubble(
-                          '[sticker:${sticker.id}:${sticker.name}]',
-                        );
-                      },
+                    // Composer
+                    SafeArea(
+                      top: false,
+                      child: _Composer(
+                        messageController: _messageController,
+                        selectedMediaBytes: _selectedMediaBytes,
+                        selectedMediaName: _selectedMediaName,
+                        stickers: stickers,
+                        onChanged: _onComposerChanged,
+                        onSend: _sendMessage,
+                        onPickMedia: _pickMedia,
+                        onClearMedia: _clearMedia,
+                        onStickerSelected: (sticker) async {
+                          if (_activePartnerId == null) return;
+                          await _sendMessageWithOptimisticBubble(
+                            '[sticker:${sticker.id}:${sticker.name}]',
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
       ),
     );
@@ -1181,6 +1208,37 @@ class _OutgoingMessageDraft {
       state: state ?? this.state,
     );
   }
+}
+
+void _showMinimalChatToast({
+  required BuildContext context,
+  required String message,
+}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final background = isDark ? AppPalette.neutral800 : AppPalette.neutral700;
+  const foreground = AppPalette.neutral100;
+
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w300,
+          color: foreground,
+          letterSpacing: 0.2,
+        ),
+      ),
+      duration: const Duration(milliseconds: 900),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+      backgroundColor: background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    ),
+  );
 }
 
 bool _isSameDay(DateTime a, DateTime b) {
@@ -2148,15 +2206,9 @@ class _MessageDetailScreen extends StatelessWidget {
           GestureDetector(
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.body));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context)!.chatCopiedToClipboard,
-                  ),
-                  duration: Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                  width: 200,
-                ),
+              _showMinimalChatToast(
+                context: context,
+                message: AppLocalizations.of(context)!.chatCopiedToClipboard,
               );
             },
             child: Padding(

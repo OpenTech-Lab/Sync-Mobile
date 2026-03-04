@@ -231,6 +231,7 @@ class HomeTab extends ConsumerWidget {
                       final messages = await ref
                           .read(chatRepositoryProvider)
                           .listMessages(conversationId: id, limit: 5000);
+                      final hasChatHistory = messages.isNotEmpty;
                       final sentMessageCount = messages
                           .where((message) => message.senderId == currentUserId)
                           .length;
@@ -248,13 +249,20 @@ class HomeTab extends ConsumerWidget {
                                 isFriend: true,
                                 friendAddedAt: friendAddedAt,
                                 sentMessageCount: sentMessageCount,
+                                hasChatHistory: hasChatHistory,
                                 description: description,
                                 showActions: false,
                               ),
                             ),
                           );
-                      if (!context.mounted ||
-                          action != ChatTargetProfileAction.cancelFriend) {
+                      if (!context.mounted || action == null) {
+                        return;
+                      }
+                      if (action == ChatTargetProfileAction.startChat) {
+                        onOpenChat?.call(id);
+                        return;
+                      }
+                      if (action != ChatTargetProfileAction.cancelFriend) {
                         return;
                       }
                       await prefs.removeFriendId(id);
