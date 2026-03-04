@@ -9,7 +9,6 @@ import '../../state/backup_controller.dart';
 import '../../state/chat_visibility_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
-import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../home/home_page.dart';
 import '../planet/planet_page.dart';
@@ -60,9 +59,6 @@ class _MainShellState extends ConsumerState<MainShell>
         ref
             .read(unreadCountsProvider.notifier)
             .refresh(baseUrl: widget.serverUrl, accessToken: effectiveToken),
-        ref
-            .read(stickerControllerProvider.notifier)
-            .sync(baseUrl: widget.serverUrl, accessToken: effectiveToken),
         ref
             .read(notificationControllerProvider.notifier)
             .initialize(baseUrl: widget.serverUrl, accessToken: effectiveToken),

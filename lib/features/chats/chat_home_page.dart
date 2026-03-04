@@ -49,9 +49,6 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _refreshUnreadCounts();
       await ref
-          .read(stickerControllerProvider.notifier)
-          .sync(baseUrl: widget.serverUrl, accessToken: widget.accessToken);
-      await ref
           .read(notificationControllerProvider.notifier)
           .initialize(
             baseUrl: widget.serverUrl,

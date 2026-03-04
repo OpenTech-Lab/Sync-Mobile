@@ -1,14 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
+import '../../models/sticker.dart';
 import '../../services/server_health_service.dart';
 import '../../services/server_news_service.dart';
+import '../../services/sticker_service.dart';
 import '../../models/server_news.dart';
+import '../../state/sticker_controller.dart';
 import '../../ui/components/atoms/simple_markdown.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
-class PlanetTab extends StatefulWidget {
+class PlanetTab extends ConsumerStatefulWidget {
   const PlanetTab({
     super.key,
     required this.serverUrl,
@@ -19,11 +25,12 @@ class PlanetTab extends StatefulWidget {
   final String accessToken;
 
   @override
-  State<PlanetTab> createState() => _PlanetTabState();
+  ConsumerState<PlanetTab> createState() => _PlanetTabState();
 }
 
-class _PlanetTabState extends State<PlanetTab> {
+class _PlanetTabState extends ConsumerState<PlanetTab> {
   late Future<_PlanetTabData> _future;
+  final Set<String> _downloadingStickerIds = <String>{};
 
   @override
   void initState() {
@@ -51,13 +58,58 @@ class _PlanetTabState extends State<PlanetTab> {
       limit: 30,
     );
 
-    return _PlanetTabData(planets: planets, news: news);
+    List<Sticker> stickers;
+    try {
+      stickers = await StickerService().syncAll(
+        baseUrl: widget.serverUrl,
+        accessToken: widget.accessToken,
+      );
+    } catch (_) {
+      stickers = const <Sticker>[];
+    }
+
+    return _PlanetTabData(planets: planets, news: news, stickers: stickers);
   }
 
   Future<void> _refresh() async {
     final next = _load();
     setState(() => _future = next);
     await next;
+  }
+
+  Future<void> _downloadSticker(Sticker sticker) async {
+    if (_downloadingStickerIds.contains(sticker.id)) {
+      return;
+    }
+
+    setState(() {
+      _downloadingStickerIds.add(sticker.id);
+    });
+
+    try {
+      await ref.read(stickerControllerProvider.notifier).downloadToLocal(sticker);
+      if (!mounted) {
+        return;
+      }
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.planetStickerDownloadedToast(sticker.name))),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.planetStickerDownloadFailed)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingStickerIds.remove(sticker.id);
+        });
+      }
+    }
   }
 
   @override
@@ -67,6 +119,9 @@ class _PlanetTabState extends State<PlanetTab> {
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final localStickers =
+        ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
+    final localStickerIds = localStickers.map((item) => item.id).toSet();
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -119,6 +174,7 @@ class _PlanetTabState extends State<PlanetTab> {
                 const _PlanetTabData(
                   planets: <PlanetInfo>[],
                   news: <ServerNewsItem>[],
+                  stickers: <Sticker>[],
                 );
 
             return RefreshIndicator(
@@ -224,6 +280,95 @@ class _PlanetTabState extends State<PlanetTab> {
                         );
                       },
                     ),
+                  if (data.stickers.isNotEmpty) ...[
+                    const SizedBox(height: 32),
+                    _SectionLabel(
+                      text: l10n.planetStickersTitle,
+                      ruleColor: ruleColor,
+                    ),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: data.stickers.length,
+                      separatorBuilder: (_, _) =>
+                          Divider(height: 1, color: ruleColor),
+                      itemBuilder: (ctx, index) {
+                        final sticker = data.stickers[index];
+                        final isDownloaded = localStickerIds.contains(sticker.id);
+                        final isDownloading = _downloadingStickerIds.contains(
+                          sticker.id,
+                        );
+
+                        ImageProvider<Object>? previewImage;
+                        try {
+                          previewImage = MemoryImage(
+                            base64Decode(sticker.contentBase64),
+                          );
+                        } catch (_) {
+                          previewImage = null;
+                        }
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 6,
+                          ),
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: ruleColor),
+                              borderRadius: BorderRadius.circular(8),
+                              color: isDark
+                                  ? AppPalette.neutral800
+                                  : AppPalette.neutral100,
+                              image: previewImage == null
+                                  ? null
+                                  : DecorationImage(
+                                      image: previewImage,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
+                            child: previewImage == null
+                                ? const Icon(
+                                    Icons.image_outlined,
+                                    size: 18,
+                                    color: AppPalette.neutral500,
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            sticker.name,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w300,
+                              color: inkColor,
+                            ),
+                          ),
+                          subtitle: Text(
+                            sticker.groupName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppPalette.neutral500,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          trailing: TextButton(
+                            onPressed: isDownloaded || isDownloading
+                                ? null
+                                : () => _downloadSticker(sticker),
+                            child: Text(
+                              isDownloading
+                                  ? l10n.planetStickerDownloading
+                                  : isDownloaded
+                                  ? l10n.planetStickerDownloaded
+                                  : l10n.planetStickerDownload,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   _SectionLabel(
                     text: l10n.planetOtherPlanetsTitle,
@@ -430,10 +575,15 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
 }
 
 class _PlanetTabData {
-  const _PlanetTabData({required this.planets, required this.news});
+  const _PlanetTabData({
+    required this.planets,
+    required this.news,
+    required this.stickers,
+  });
 
   final List<PlanetInfo> planets;
   final List<ServerNewsItem> news;
+  final List<Sticker> stickers;
 }
 
 class _SectionLabel extends StatelessWidget {

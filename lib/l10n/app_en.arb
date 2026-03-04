@@ -92,6 +92,19 @@
   "planetNewsTitle": "MY PLAENT",
   "planetNewsEmpty": "No server news yet",
   "planetNewsDetailTitle": "News",
+  "planetStickersTitle": "PLANET STICKERS",
+  "planetStickerDownload": "Download",
+  "planetStickerDownloaded": "Downloaded",
+  "planetStickerDownloading": "Downloading…",
+  "planetStickerDownloadFailed": "Failed to download sticker.",
+  "planetStickerDownloadedToast": "Downloaded {name} to local stickers.",
+  "@planetStickerDownloadedToast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "settingsMyPlanet": "My Planet",
   "settingsAppearance": "Appearance",
   "settingsTheme": "THEME",

@@ -484,9 +484,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted || resolved == null) {
         return;
       }
-      final historyCount = await _conversationMessageCountForPartner(
-        resolved.partnerId,
-      );
       final sentMessageCount = await _sentMessageCountForPartner(
         resolved.partnerId,
       );
@@ -510,7 +507,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             isFriend: isFriend,
             friendAddedAt: friendAddedAt,
             sentMessageCount: sentMessageCount,
-            hasChatHistory: historyCount > 0,
             description: resolved.description,
           ),
         ),
@@ -739,7 +735,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     );
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
     final description = ref.read(userDescriptionProvider(partnerId)).value;
-    final historyCount = await _conversationMessageCountForPartner(partnerId);
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final prefs = ref.read(userProfilePreferencesProvider);
     final isFriend = (await prefs.readFriendIds()).contains(partnerId);
@@ -758,9 +753,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           isFriend: isFriend,
           friendAddedAt: friendAddedAt,
           sentMessageCount: sentMessageCount,
-          hasChatHistory: historyCount > 0,
           description: description,
-          showActions: false,
         ),
       ),
     );
@@ -790,13 +783,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     if (action == ChatTargetProfileAction.startChat) {
       await _openPartner(partnerId);
     }
-  }
-
-  Future<int> _conversationMessageCountForPartner(String partnerId) async {
-    final messages = await ref
-        .read(chatRepositoryProvider)
-        .listMessages(conversationId: partnerId, limit: 5000);
-    return messages.length;
   }
 
   Future<int> _sentMessageCountForPartner(String partnerId) async {

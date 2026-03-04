@@ -228,6 +228,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planetNewsDetailTitle => '公告內容';
 
   @override
+  String get planetStickersTitle => '本星球貼圖';
+
+  @override
+  String get planetStickerDownload => '下載';
+
+  @override
+  String get planetStickerDownloaded => '已下載';
+
+  @override
+  String get planetStickerDownloading => '下載中…';
+
+  @override
+  String get planetStickerDownloadFailed => '下載貼圖失敗。';
+
+  @override
+  String planetStickerDownloadedToast(String name) {
+    return '已將 $name 下載到本機貼圖。';
+  }
+
+  @override
   String get settingsMyPlanet => '我的 Planet';
 
   @override
@@ -878,6 +898,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get planetNewsDetailTitle => '公告內容';
+
+  @override
+  String get planetStickersTitle => '本星球貼圖';
+
+  @override
+  String get planetStickerDownload => '下載';
+
+  @override
+  String get planetStickerDownloaded => '已下載';
+
+  @override
+  String get planetStickerDownloading => '下載中…';
+
+  @override
+  String get planetStickerDownloadFailed => '下載貼圖失敗。';
+
+  @override
+  String planetStickerDownloadedToast(String name) {
+    return '已將 $name 下載到本機貼圖。';
+  }
 
   @override
   String get settingsMyPlanet => '我的 Planet';

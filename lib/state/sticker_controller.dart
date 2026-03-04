@@ -42,4 +42,15 @@ class StickerController extends AsyncNotifier<List<Sticker>> {
       state = AsyncData(cached);
     }
   }
+
+  Future<void> downloadToLocal(Sticker sticker) async {
+    final current = await _cache.read();
+    final next = <Sticker>[
+      for (final item in current)
+        if (item.id != sticker.id) item,
+      sticker,
+    ];
+    await _cache.write(next);
+    state = AsyncData(next);
+  }
 }

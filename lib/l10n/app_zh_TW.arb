@@ -78,6 +78,19 @@
   "planetNewsTitle": "伺服器公告",
   "planetNewsEmpty": "目前尚無公告",
   "planetNewsDetailTitle": "公告內容",
+  "planetStickersTitle": "本星球貼圖",
+  "planetStickerDownload": "下載",
+  "planetStickerDownloaded": "已下載",
+  "planetStickerDownloading": "下載中…",
+  "planetStickerDownloadFailed": "下載貼圖失敗。",
+  "planetStickerDownloadedToast": "已將 {name} 下載到本機貼圖。",
+  "@planetStickerDownloadedToast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "settingsMyPlanet": "我的 Planet",
   "settingsAppearance": "外觀",
   "settingsTheme": "主題",

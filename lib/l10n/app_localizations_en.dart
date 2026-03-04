@@ -228,6 +228,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planetNewsDetailTitle => 'News';
 
   @override
+  String get planetStickersTitle => 'PLANET STICKERS';
+
+  @override
+  String get planetStickerDownload => 'Download';
+
+  @override
+  String get planetStickerDownloaded => 'Downloaded';
+
+  @override
+  String get planetStickerDownloading => 'Downloading…';
+
+  @override
+  String get planetStickerDownloadFailed => 'Failed to download sticker.';
+
+  @override
+  String planetStickerDownloadedToast(String name) {
+    return 'Downloaded $name to local stickers.';
+  }
+
+  @override
   String get settingsMyPlanet => 'My Planet';
 
   @override

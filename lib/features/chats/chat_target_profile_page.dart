@@ -15,9 +15,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
     this.isFriend = false,
     this.friendAddedAt,
     this.sentMessageCount,
-    this.hasChatHistory,
     this.description,
-    this.showActions = true,
   });
 
   final String displayName;
@@ -26,9 +24,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
   final bool isFriend;
   final DateTime? friendAddedAt;
   final int? sentMessageCount;
-  final bool? hasChatHistory;
   final String? description;
-  final bool showActions;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +48,6 @@ class ChatTargetProfileScreen extends StatelessWidget {
     final initials = displayName.trim().isEmpty
         ? '?'
         : displayName.trim().substring(0, 1).toUpperCase();
-    final shouldShowChatShortcut = (hasChatHistory ?? false) == false;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -170,52 +165,23 @@ class ChatTargetProfileScreen extends StatelessWidget {
                     color: AppPalette.success700,
                   ),
                 ),
-              if (showActions) ...[
-                const SizedBox(width: 32),
-                GestureDetector(
-                  onTap: () => Navigator.of(
-                    context,
-                  ).pop(ChatTargetProfileAction.startChat),
-                  child: Text(
-                    l10n.chatTargetStartChat,
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 2.2,
-                      fontWeight: FontWeight.w500,
-                      color: inkColor,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (shouldShowChatShortcut) ...[
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.center,
-              child: GestureDetector(
+              const SizedBox(width: 32),
+              GestureDetector(
                 onTap: () => Navigator.of(
                   context,
                 ).pop(ChatTargetProfileAction.startChat),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.chat_bubble_outline, size: 16, color: inkColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.chatTargetStartChat,
-                      style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 2.2,
-                        fontWeight: FontWeight.w500,
-                        color: inkColor,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  l10n.chatTargetStartChat,
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w500,
+                    color: inkColor,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
 
           // ── friend since ──
           if (isFriend && friendAddedAt != null) ...[

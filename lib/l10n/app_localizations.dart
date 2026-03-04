@@ -522,6 +522,42 @@ abstract class AppLocalizations {
   /// **'News'**
   String get planetNewsDetailTitle;
 
+  /// No description provided for @planetStickersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PLANET STICKERS'**
+  String get planetStickersTitle;
+
+  /// No description provided for @planetStickerDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get planetStickerDownload;
+
+  /// No description provided for @planetStickerDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded'**
+  String get planetStickerDownloaded;
+
+  /// No description provided for @planetStickerDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get planetStickerDownloading;
+
+  /// No description provided for @planetStickerDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to download sticker.'**
+  String get planetStickerDownloadFailed;
+
+  /// No description provided for @planetStickerDownloadedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {name} to local stickers.'**
+  String planetStickerDownloadedToast(String name);
+
   /// No description provided for @settingsMyPlanet.
   ///
   /// In en, this message translates to:
