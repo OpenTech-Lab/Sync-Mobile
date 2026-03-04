@@ -1,13 +1,14 @@
 import 'local_chat_message.dart';
 
-enum RealtimeConnectionStatus { disconnected, connecting, connected, reconnecting }
+enum RealtimeConnectionStatus {
+  disconnected,
+  connecting,
+  connected,
+  reconnecting,
+}
 
 class RealtimeEvent {
-  const RealtimeEvent._({
-    this.message,
-    this.connectionStatus,
-    this.error,
-  });
+  const RealtimeEvent._({this.message, this.connectionStatus, this.error});
 
   final LocalChatMessage? message;
   final RealtimeConnectionStatus? connectionStatus;

@@ -7,7 +7,7 @@ import '../models/user_profile.dart';
 
 class RemoteUserProfileService {
   RemoteUserProfileService([http.Client? httpClient])
-      : _httpClient = createDevHttpClient(httpClient);
+    : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 
@@ -74,11 +74,7 @@ class RemoteUserProfileService {
     }
 
     final response = await _httpClient
-        .patch(
-          uri,
-          headers: _authHeaders(accessToken),
-          body: jsonEncode(body),
-        )
+        .patch(uri, headers: _authHeaders(accessToken), body: jsonEncode(body))
         .timeout(const Duration(seconds: 12));
 
     if (response.statusCode != 200) {

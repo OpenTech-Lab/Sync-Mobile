@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../constants/planet_presets.dart';
-import '../state/conversation_messages_controller.dart';
-import 'chat_target_profile_screen.dart';
-import 'my_profile_screen.dart';
-import '../state/unread_counts_controller.dart';
-import '../state/user_profile_controller.dart';
+import '../../constants/planet_presets.dart';
+import '../../state/conversation_messages_controller.dart';
+import '../chats/chat_target_profile_page.dart';
+import '../profile/my_profile_page.dart';
+import '../../state/unread_counts_controller.dart';
+import '../../state/user_profile_controller.dart';
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({
@@ -30,17 +30,17 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
@@ -133,10 +133,8 @@ class HomeTab extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 itemCount: friendIds.length,
-                separatorBuilder: (_, _) => Divider(
-                  height: 1,
-                  color: ruleColor,
-                ),
+                separatorBuilder: (_, _) =>
+                    Divider(height: 1, color: ruleColor),
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
                   final displayName = _displayNameOrFallback(
@@ -199,9 +197,7 @@ class HomeTab extends ConsumerWidget {
                       ],
                     ),
                     subtitle: Text(
-                      description.trim().isEmpty
-                          ? ''
-                          : description.trim(),
+                      description.trim().isEmpty ? '' : description.trim(),
                       style: TextStyle(
                         fontSize: 12,
                         color: mujiMuted,
@@ -222,22 +218,21 @@ class HomeTab extends ConsumerWidget {
                       if (!context.mounted) {
                         return;
                       }
-                      final action = await Navigator.of(
-                        context,
-                      ).push<ChatTargetProfileAction>(
-                        MaterialPageRoute<ChatTargetProfileAction>(
-                          builder: (_) => ChatTargetProfileScreen(
-                            displayName: displayName,
-                            displayHandle: id,
-                            avatarBase64: avatarBase64,
-                            isFriend: true,
-                            friendAddedAt: friendAddedAt,
-                            sentMessageCount: sentMessageCount,
-                            description: description,
-                            showActions: false,
-                          ),
-                        ),
-                      );
+                      final action = await Navigator.of(context)
+                          .push<ChatTargetProfileAction>(
+                            MaterialPageRoute<ChatTargetProfileAction>(
+                              builder: (_) => ChatTargetProfileScreen(
+                                displayName: displayName,
+                                displayHandle: id,
+                                avatarBase64: avatarBase64,
+                                isFriend: true,
+                                friendAddedAt: friendAddedAt,
+                                sentMessageCount: sentMessageCount,
+                                description: description,
+                                showActions: false,
+                              ),
+                            ),
+                          );
                       if (!context.mounted ||
                           action != ChatTargetProfileAction.cancelFriend) {
                         return;
@@ -300,10 +295,7 @@ String _planetNameFromServerUrl(String serverUrl) {
 }
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({
-    required this.text,
-    required this.ruleColor,
-  });
+  const _SectionLabel({required this.text, required this.ruleColor});
   final String text;
   final Color ruleColor;
 
@@ -330,8 +322,6 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
-
-
 
 class _ProfileCard extends ConsumerWidget {
   const _ProfileCard({
@@ -476,17 +466,17 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     return Dialog(
       backgroundColor: bgColor,
@@ -548,7 +538,9 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                   onTap: () => Navigator.of(context).pop(),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: const Text(
                       'cancel',
                       style: TextStyle(
@@ -564,7 +556,9 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                   onTap: () => Navigator.of(context).pop(_ctrl.text.trim()),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Text(
                       'S A V E',
                       style: TextStyle(

@@ -34,9 +34,13 @@ class JwtService {
       final payload = jsonDecode(decoded) as Map<String, dynamic>;
       final exp = payload['exp'];
       if (exp is! int) return true;
-      final expiry = DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
-      return DateTime.now().toUtc()
-          .isAfter(expiry.subtract(Duration(seconds: bufferSeconds)));
+      final expiry = DateTime.fromMillisecondsSinceEpoch(
+        exp * 1000,
+        isUtc: true,
+      );
+      return DateTime.now().toUtc().isAfter(
+        expiry.subtract(Duration(seconds: bufferSeconds)),
+      );
     } catch (_) {
       return true;
     }

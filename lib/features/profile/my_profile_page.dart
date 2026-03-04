@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-import '../constants/planet_presets.dart';
-import '../models/friend_qr_payload.dart';
-import '../state/app_controller.dart';
-import '../state/user_profile_controller.dart';
+import '../../constants/planet_presets.dart';
+import '../../models/friend_qr_payload.dart';
+import '../../state/app_controller.dart';
+import '../../state/user_profile_controller.dart';
 
 class MyProfileScreen extends ConsumerWidget {
   const MyProfileScreen({
@@ -27,8 +27,6 @@ class MyProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
@@ -115,14 +113,19 @@ class MyProfileScreen extends ConsumerWidget {
       if (words > 100) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Description must be 100 words or less')),
+          const SnackBar(
+            content: Text('Description must be 100 words or less'),
+          ),
         );
         return;
       }
 
       await ref
           .read(userProfilePreferencesProvider)
-          .writeDescription(currentUserId, normalized.isEmpty ? null : normalized);
+          .writeDescription(
+            currentUserId,
+            normalized.isEmpty ? null : normalized,
+          );
       ref.invalidate(userDescriptionProvider(currentUserId));
 
       if (!context.mounted) return;
@@ -199,21 +202,25 @@ class MyProfileScreen extends ConsumerWidget {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     // warm muted avatar palette
     const palette = [
-      Color(0xFF8A8069), Color(0xFF7A9080), Color(0xFF9B7B6E),
-      Color(0xFF7D8A74), Color(0xFF8E8278), Color(0xFF7B8A8A),
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
     ];
     final hash2 = currentUserId.codeUnits.fold(0, (a, b) => a ^ b);
     final mujiAvatarColor = palette[hash2.abs() % palette.length];
@@ -504,18 +511,18 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // ── Muji warm-neutral palette ────────────────────────────────────────
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    const mujiRed     = Color(0xFF9B3A2A);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    const mujiRed = Color(0xFF9B3A2A);
 
-    final bgColor      = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor     = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor    = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
     final counterColor = isOverLimit ? mujiRed : mujiMuted;
 
     return Dialog(
@@ -570,7 +577,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                 hintStyle: TextStyle(
                   fontSize: 14,
                   height: 1.8,
-                  color: mujiMuted.withOpacity(0.65),
+                  color: mujiMuted.withValues(alpha: 0.65),
                   fontWeight: FontWeight.w300,
                 ),
                 filled: false,
@@ -655,7 +662,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
                         letterSpacing: 2.5,
                         fontWeight: FontWeight.w500,
                         color: isOverLimit
-                            ? mujiMuted.withOpacity(0.35)
+                            ? mujiMuted.withValues(alpha: 0.35)
                             : inkColor,
                       ),
                     ),
@@ -669,8 +676,6 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
     );
   }
 }
-
-
 
 int _wordCount(String text) {
   final normalized = text.trim();
@@ -721,16 +726,16 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     return Dialog(
       backgroundColor: bgColor,
@@ -765,7 +770,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 hintText: '3–32 chars, a-zA-Z0-9._-',
                 hintStyle: TextStyle(
                   fontSize: 13,
-                  color: mujiMuted.withOpacity(0.55),
+                  color: mujiMuted.withValues(alpha: 0.55),
                   fontWeight: FontWeight.w300,
                 ),
                 border: UnderlineInputBorder(
@@ -804,11 +809,12 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
                 ),
                 const SizedBox(width: 28),
                 GestureDetector(
-                  onTap: () =>
-                      Navigator.of(context).pop(_ctrl.text.trim()),
+                  onTap: () => Navigator.of(context).pop(_ctrl.text.trim()),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Text(
                       'S A V E',
                       style: TextStyle(

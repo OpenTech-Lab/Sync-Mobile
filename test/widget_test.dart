@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 
-import 'package:mobile/screens/onboarding_screen.dart';
+import 'package:mobile/features/onboarding/onboarding_page.dart';
 import 'package:mobile/state/app_controller.dart';
 
 void main() {
@@ -20,6 +20,6 @@ void main() {
     );
 
     expect(find.text('Welcome to Sync'), findsOneWidget);
-    expect(find.text('Check connection'), findsOneWidget);
+    expect(find.text('C H E C K   C O N N E C T I O N'), findsOneWidget);
   });
 }

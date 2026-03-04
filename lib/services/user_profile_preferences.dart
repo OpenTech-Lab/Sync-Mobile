@@ -82,10 +82,7 @@ class UserProfilePreferences {
         .map((id) => id.trim())
         .where((id) => id.isNotEmpty)
         .toSet();
-    final next = {
-      ...existingNormalized,
-      normalized,
-    }.toList(growable: false);
+    final next = {...existingNormalized, normalized}.toList(growable: false);
     await prefs.setStringList(_friendIdsKey, next);
     if (!existingNormalized.contains(normalized)) {
       await prefs.setString(

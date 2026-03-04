@@ -83,8 +83,8 @@ class ServerPreferences {
         instanceDomain: decoded['instance_domain'] as String?,
         countryCode: decoded['country_code'] as String?,
         countryName: decoded['country_name'] as String?,
-        healthStatus: (decoded['health_status'] as String?)?.trim().isNotEmpty ==
-                true
+        healthStatus:
+            (decoded['health_status'] as String?)?.trim().isNotEmpty == true
             ? (decoded['health_status'] as String).trim()
             : 'ok',
         latencyMs: (decoded['latency_ms'] as int?) ?? 0,

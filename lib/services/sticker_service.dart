@@ -7,7 +7,7 @@ import '../models/sticker.dart';
 
 class StickerService {
   StickerService([http.Client? httpClient])
-      : _httpClient = createDevHttpClient(httpClient);
+    : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 
@@ -15,7 +15,9 @@ class StickerService {
     required String baseUrl,
     required String accessToken,
   }) async {
-    final listUri = Uri.parse('${_normalizeBaseUrl(baseUrl)}/api/stickers/list');
+    final listUri = Uri.parse(
+      '${_normalizeBaseUrl(baseUrl)}/api/stickers/list',
+    );
     final listResponse = await _httpClient
         .get(listUri, headers: _headers(accessToken))
         .timeout(const Duration(seconds: 10));
@@ -31,8 +33,9 @@ class StickerService {
 
     final stickers = <Sticker>[];
     for (final id in ids) {
-      final detailUri =
-          Uri.parse('${_normalizeBaseUrl(baseUrl)}/api/stickers/$id');
+      final detailUri = Uri.parse(
+        '${_normalizeBaseUrl(baseUrl)}/api/stickers/$id',
+      );
       final detailResponse = await _httpClient
           .get(detailUri, headers: _headers(accessToken))
           .timeout(const Duration(seconds: 10));
@@ -47,9 +50,9 @@ class StickerService {
   }
 
   Map<String, String> _headers(String accessToken) => {
-        'Authorization': 'Bearer $accessToken',
-        'Accept': 'application/json',
-      };
+    'Authorization': 'Bearer $accessToken',
+    'Accept': 'application/json',
+  };
 
   String _normalizeBaseUrl(String raw) {
     final trimmed = raw.trim();

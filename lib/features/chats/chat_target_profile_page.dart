@@ -29,20 +29,24 @@ class ChatTargetProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     const palette = [
-      Color(0xFF8A8069), Color(0xFF7A9080), Color(0xFF9B7B6E),
-      Color(0xFF7D8A74), Color(0xFF8E8278), Color(0xFF7B8A8A),
+      Color(0xFF8A8069),
+      Color(0xFF7A9080),
+      Color(0xFF9B7B6E),
+      Color(0xFF7D8A74),
+      Color(0xFF8E8278),
+      Color(0xFF7B8A8A),
     ];
     final hash = displayHandle.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
@@ -62,8 +66,9 @@ class ChatTargetProfileScreen extends StatelessWidget {
         actions: [
           if (isFriend)
             GestureDetector(
-              onTap: () => Navigator.of(context)
-                  .pop(ChatTargetProfileAction.cancelFriend),
+              onTap: () => Navigator.of(
+                context,
+              ).pop(ChatTargetProfileAction.cancelFriend),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text(
@@ -144,8 +149,9 @@ class ChatTargetProfileScreen extends StatelessWidget {
             children: [
               if (!isFriend)
                 GestureDetector(
-                  onTap: () => Navigator.of(context)
-                      .pop(ChatTargetProfileAction.addFriend),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(ChatTargetProfileAction.addFriend),
                   child: Text(
                     'A D D   F R I E N D',
                     style: TextStyle(
@@ -168,8 +174,9 @@ class ChatTargetProfileScreen extends StatelessWidget {
               if (showActions) ...[
                 const SizedBox(width: 32),
                 GestureDetector(
-                  onTap: () => Navigator.of(context)
-                      .pop(ChatTargetProfileAction.startChat),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(ChatTargetProfileAction.startChat),
                   child: Text(
                     'S T A R T   C H A T',
                     style: TextStyle(
@@ -273,5 +280,3 @@ String _friendSinceLabel(DateTime value) {
   final mm = value.minute.toString().padLeft(2, '0');
   return '$y-$m-$d $hh:$mm';
 }
-
-

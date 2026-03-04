@@ -13,7 +13,7 @@ class AuthTokens {
 
 class AuthService {
   AuthService([http.Client? httpClient])
-      : _httpClient = createDevHttpClient(httpClient);
+    : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 
@@ -26,11 +26,7 @@ class AuthService {
     final response = await _postAuth(
       baseUrl: baseUrl,
       path: 'register',
-      body: {
-        'username': username,
-        'email': email,
-        'password': password,
-      },
+      body: {'username': username, 'email': email, 'password': password},
     );
 
     if (response.statusCode != 201) {

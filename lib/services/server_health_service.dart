@@ -37,7 +37,7 @@ class PlanetInfo {
 
 class ServerHealthService {
   ServerHealthService([http.Client? httpClient])
-      : _httpClient = createDevHttpClient(httpClient);
+    : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
 

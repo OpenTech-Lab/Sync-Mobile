@@ -4,7 +4,7 @@ import 'package:cryptography/cryptography.dart';
 
 class BackupCryptoService {
   BackupCryptoService([Cipher? cipher])
-      : _cipher = cipher ?? AesGcm.with256bits();
+    : _cipher = cipher ?? AesGcm.with256bits();
 
   final Cipher _cipher;
 

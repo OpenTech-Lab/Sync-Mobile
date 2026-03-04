@@ -7,7 +7,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 class EncryptedDatabase {
   EncryptedDatabase([FlutterSecureStorage? secureStorage])
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _databaseName = 'sync_local_chat.db';
   static const _databaseVersion = 1;

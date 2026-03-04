@@ -108,11 +108,13 @@ class InMemoryChatRepository implements ChatRepository {
       if (entry.value.isEmpty) continue;
       final sorted = [...entry.value]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      summaries.add(ConversationSummary(
-        conversationId: entry.key,
-        lastBody: sorted.first.body,
-        lastAt: sorted.first.createdAt,
-      ));
+      summaries.add(
+        ConversationSummary(
+          conversationId: entry.key,
+          lastBody: sorted.first.body,
+          lastAt: sorted.first.createdAt,
+        ),
+      );
     }
     summaries.sort((a, b) => b.lastAt.compareTo(a.lastAt));
     return summaries;
@@ -121,7 +123,7 @@ class InMemoryChatRepository implements ChatRepository {
 
 class LocalChatRepository implements ChatRepository {
   LocalChatRepository([EncryptedDatabase? encryptedDatabase])
-      : _encryptedDatabase = encryptedDatabase ?? EncryptedDatabase();
+    : _encryptedDatabase = encryptedDatabase ?? EncryptedDatabase();
 
   final EncryptedDatabase _encryptedDatabase;
 

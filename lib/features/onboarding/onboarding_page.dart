@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../constants/planet_presets.dart';
-import '../services/server_health_service.dart';
-import '../state/app_controller.dart';
+import '../../constants/planet_presets.dart';
+import '../../services/server_health_service.dart';
+import '../../state/app_controller.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
@@ -44,22 +44,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRed     = Color(0xFF9B3A2A);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRed = Color(0xFF9B3A2A);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     final isValidating = widget.connectionStatus == ConnectionStatus.validating;
-    final isSuccess    = widget.connectionStatus == ConnectionStatus.success;
-    final isFailure    = widget.connectionStatus == ConnectionStatus.failure;
+    final isSuccess = widget.connectionStatus == ConnectionStatus.success;
+    final isFailure = widget.connectionStatus == ConnectionStatus.failure;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -121,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 hintText: 'https://my-planet.example.com',
                 hintStyle: TextStyle(
                   fontSize: 14,
-                  color: mujiMuted.withOpacity(0.5),
+                  color: mujiMuted.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w300,
                 ),
                 border: UnderlineInputBorder(
@@ -141,7 +141,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             // ── presets ──
             if (officialPlanetPresets.isNotEmpty) ...[
               const SizedBox(height: 20),
-              Divider(height: 1, color: ruleColor),
               const SizedBox(height: 14),
               const Text(
                 'QUICK CONNECT',
@@ -199,7 +198,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   if (isValidating) const SizedBox(width: 10),
                   Text(
-                    isValidating ? 'checking…' : 'C H E C K   C O N N E C T I O N',
+                    isValidating
+                        ? 'checking…'
+                        : 'C H E C K   C O N N E C T I O N',
                     style: TextStyle(
                       fontSize: isValidating ? 13 : 10,
                       letterSpacing: isValidating ? 0.2 : 2.2,
@@ -298,7 +299,7 @@ class _PlanetInfoCard extends StatelessWidget {
               height: 28,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: mujiMuted.withOpacity(0.15),
+                color: mujiMuted.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: planetImageUri == null

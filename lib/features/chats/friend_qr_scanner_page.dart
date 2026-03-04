@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../models/friend_qr_payload.dart';
+import '../../models/friend_qr_payload.dart';
 
 class FriendQrScannerScreen extends StatefulWidget {
   const FriendQrScannerScreen({super.key});
@@ -18,8 +18,7 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const mujiMuted = Color(0xFF8A8680);
-    final inkColor =
-        isDark ? const Color(0xFFE8E4DC) : const Color(0xFF2C2A27);
+    final inkColor = isDark ? const Color(0xFFE8E4DC) : const Color(0xFF2C2A27);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -55,7 +54,9 @@ class _FriendQrScannerScreenState extends State<FriendQrScannerScreen> {
                   onTap: () => Navigator.of(context).pop(),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     child: Text(
                       'back',
                       style: TextStyle(
@@ -119,7 +120,10 @@ class _OverlayPainter extends CustomPainter {
     final cx = size.width / 2;
     final cy = size.height / 2;
     final rect = Rect.fromCenter(
-        center: Offset(cx, cy), width: frameSize, height: frameSize);
+      center: Offset(cx, cy),
+      width: frameSize,
+      height: frameSize,
+    );
 
     // dimmed surround
     final dimPaint = Paint()..color = dimColor;

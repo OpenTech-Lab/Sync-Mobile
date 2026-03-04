@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/realtime_event.dart';
-import '../services/server_health_service.dart';
-import '../state/backup_controller.dart';
-import '../state/conversation_messages_controller.dart';
-import '../state/notification_controller.dart';
-import '../state/realtime_sync_controller.dart';
-import '../state/sticker_controller.dart';
-import '../state/theme_mode_controller.dart';
-import '../state/unread_counts_controller.dart';
+import '../../models/realtime_event.dart';
+import '../../services/server_health_service.dart';
+import '../../state/backup_controller.dart';
+import '../../state/conversation_messages_controller.dart';
+import '../../state/notification_controller.dart';
+import '../../state/realtime_sync_controller.dart';
+import '../../state/sticker_controller.dart';
+import '../../state/theme_mode_controller.dart';
+import '../../state/unread_counts_controller.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({
@@ -47,23 +47,23 @@ class SettingsTab extends ConsumerWidget {
     );
 
     // ── Muji warm-neutral palette ────────────────────────────────────────
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    const mujiRed     = Color(0xFF9B3A2A);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    const mujiRed = Color(0xFF9B3A2A);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     final themeModes = [
-      (ThemeMode.light,  'Light'),
+      (ThemeMode.light, 'Light'),
       (ThemeMode.system, 'System'),
-      (ThemeMode.dark,   'Dark'),
+      (ThemeMode.dark, 'Dark'),
     ];
 
     return Scaffold(
@@ -117,9 +117,7 @@ class SettingsTab extends ConsumerWidget {
                               fontWeight: themeMode == mode
                                   ? FontWeight.w500
                                   : FontWeight.w300,
-                              color: themeMode == mode
-                                  ? inkColor
-                                  : mujiMuted,
+                              color: themeMode == mode ? inkColor : mujiMuted,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -169,10 +167,14 @@ class SettingsTab extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Switch(
+                _MujiSwitch(
                   value: backupState?.enabled ?? false,
-                  onChanged: (v) =>
-                      ref.read(backupControllerProvider.notifier).setEnabled(v),
+                  activeColor: inkColor,
+                  inactiveColor: mujiMuted,
+                  trackColor: ruleColor,
+                  onChanged: (v) => ref
+                      .read(backupControllerProvider.notifier)
+                      .setEnabled(v),
                 ),
               ],
             ),
@@ -353,6 +355,64 @@ class _BackupTextButton extends StatelessWidget {
   }
 }
 
+class _MujiSwitch extends StatelessWidget {
+  const _MujiSwitch({
+    required this.value,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.trackColor,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final Color activeColor;
+  final Color inactiveColor;
+  final Color trackColor;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      toggled: value,
+      child: GestureDetector(
+        onTap: () => onChanged(!value),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          width: 52,
+          height: 28,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: value
+                ? activeColor.withValues(alpha: 0.12)
+                : trackColor.withValues(alpha: 0.35),
+            border: Border.all(
+              color: value ? activeColor : inactiveColor.withValues(alpha: 0.7),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Align(
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: value ? activeColor : inactiveColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlanetCard extends StatelessWidget {
   const _PlanetCard({
     required this.planetName,
@@ -512,11 +572,7 @@ class _TextStat extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            color: mujiMuted,
-            letterSpacing: 0.3,
-          ),
+          style: TextStyle(fontSize: 10, color: mujiMuted, letterSpacing: 0.3),
         ),
       ],
     );
@@ -538,18 +594,18 @@ class _MujiConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
-    const mujiRed     = Color(0xFF9B3A2A);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
+    const mujiRed = Color(0xFF9B3A2A);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     return Dialog(
       backgroundColor: bgColor,
@@ -591,7 +647,9 @@ class _MujiConfirmDialog extends StatelessWidget {
                   onTap: () => Navigator.of(context).pop(false),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Text(
                       'cancel',
                       style: TextStyle(
@@ -607,7 +665,9 @@ class _MujiConfirmDialog extends StatelessWidget {
                   onTap: () => Navigator.of(context).pop(true),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Text(
                       confirmLabel,
                       style: const TextStyle(

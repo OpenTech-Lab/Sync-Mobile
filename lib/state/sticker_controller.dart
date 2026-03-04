@@ -14,8 +14,8 @@ final stickerCacheServiceProvider = Provider<StickerCacheService>((ref) {
 
 final stickerControllerProvider =
     AsyncNotifierProvider<StickerController, List<Sticker>>(
-  StickerController.new,
-);
+      StickerController.new,
+    );
 
 class StickerController extends AsyncNotifier<List<Sticker>> {
   StickerService get _service => ref.read(stickerServiceProvider);

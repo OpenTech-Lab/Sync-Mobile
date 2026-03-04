@@ -15,11 +15,7 @@ class BackupState {
   final bool isBusy;
   final String? statusMessage;
 
-  BackupState copyWith({
-    bool? enabled,
-    bool? isBusy,
-    String? statusMessage,
-  }) {
+  BackupState copyWith({bool? enabled, bool? isBusy, String? statusMessage}) {
     return BackupState(
       enabled: enabled ?? this.enabled,
       isBusy: isBusy ?? this.isBusy,
@@ -61,19 +57,16 @@ class BackupController extends AsyncNotifier<BackupState> {
 
     try {
       final messages = await ref.read(chatRepositoryProvider).listAllMessages();
-      final backupPath = await _backupService.backupMessages(messages);
+      await _backupService.backupMessages(messages);
       state = AsyncData(
         current.copyWith(
           isBusy: false,
-          statusMessage: 'Backup saved at $backupPath',
+          statusMessage: 'Backup created.',
         ),
       );
     } catch (error) {
       state = AsyncData(
-        current.copyWith(
-          isBusy: false,
-          statusMessage: 'Backup failed: $error',
-        ),
+        current.copyWith(isBusy: false, statusMessage: 'Backup failed: $error'),
       );
     }
   }

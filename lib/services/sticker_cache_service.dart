@@ -22,7 +22,9 @@ class StickerCacheService {
 
   Future<void> write(List<Sticker> stickers) async {
     final prefs = await SharedPreferences.getInstance();
-    final payload = jsonEncode(stickers.map((sticker) => sticker.toMap()).toList());
+    final payload = jsonEncode(
+      stickers.map((sticker) => sticker.toMap()).toList(),
+    );
     await prefs.setString(_cacheKey, payload);
   }
 }

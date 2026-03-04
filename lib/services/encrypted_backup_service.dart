@@ -12,7 +12,7 @@ import 'backup_crypto_service.dart';
 
 class EncryptedBackupService {
   EncryptedBackupService([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _backupKeyStorageKey = 'local_backup_encryption_key';
   static const _backupFileName = 'sync_local_backup.enc';
@@ -56,7 +56,9 @@ class EncryptedBackupService {
 
     final messages = payload['messages'] as List<dynamic>? ?? const [];
     return messages
-        .map((item) => LocalChatMessage.fromMap(Map<String, Object?>.from(item)))
+        .map(
+          (item) => LocalChatMessage.fromMap(Map<String, Object?>.from(item)),
+        )
         .toList(growable: false);
   }
 

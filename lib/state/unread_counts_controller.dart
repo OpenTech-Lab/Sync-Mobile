@@ -4,8 +4,8 @@ import 'conversation_messages_controller.dart';
 
 final unreadCountsProvider =
     AsyncNotifierProvider<UnreadCountsController, Map<String, int>>(
-  UnreadCountsController.new,
-);
+      UnreadCountsController.new,
+    );
 
 class UnreadCountsController extends AsyncNotifier<Map<String, int>> {
   @override

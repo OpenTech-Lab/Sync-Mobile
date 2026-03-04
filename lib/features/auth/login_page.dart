@@ -19,7 +19,7 @@ class LoginScreen extends StatefulWidget {
   final String? errorMessage;
   final Future<void> Function(String email, String password) onSignIn;
   final Future<void> Function(String username, String email, String password)
-      onSignUp;
+  onSignUp;
   final VoidCallback onBackToUrl;
   final Future<void> Function(String email)? onForgotPassword;
 
@@ -63,17 +63,17 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const mujiPaper   = Color(0xFFFAF9F6);
+    const mujiPaper = Color(0xFFFAF9F6);
     const mujiPaperDk = Color(0xFF1E1C19);
-    const mujiInk     = Color(0xFF2C2A27);
-    const mujiInkDk   = Color(0xFFE8E4DC);
-    const mujiMuted   = Color(0xFF8A8680);
-    const mujiRule    = Color(0xFFDDD8CF);
-    const mujiRuleDk  = Color(0xFF3A3730);
+    const mujiInk = Color(0xFF2C2A27);
+    const mujiInkDk = Color(0xFFE8E4DC);
+    const mujiMuted = Color(0xFF8A8680);
+    const mujiRule = Color(0xFFDDD8CF);
+    const mujiRuleDk = Color(0xFF3A3730);
 
-    final bgColor   = isDark ? mujiPaperDk : mujiPaper;
-    final inkColor  = isDark ? mujiInkDk   : mujiInk;
-    final ruleColor = isDark ? mujiRuleDk  : mujiRule;
+    final bgColor = isDark ? mujiPaperDk : mujiPaper;
+    final inkColor = isDark ? mujiInkDk : mujiInk;
+    final ruleColor = isDark ? mujiRuleDk : mujiRule;
 
     final hasAccount = widget.savedEmail != null;
 
@@ -91,11 +91,7 @@ class _LoginScreenState extends State<LoginScreen>
                     onTap: widget.isSubmitting ? null : widget.onBackToUrl,
                     child: Padding(
                       padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.arrow_back,
-                        size: 20,
-                        color: mujiMuted,
-                      ),
+                      child: Icon(Icons.arrow_back, size: 20, color: mujiMuted),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -231,7 +227,9 @@ class _LoginScreenState extends State<LoginScreen>
                         setState(() => _obscureSignIn = !_obscureSignIn),
                     isSubmitting: widget.isSubmitting,
                     onSubmit: () => widget.onSignIn(
-                        _signInEmail.text, _signInPassword.text),
+                      _signInEmail.text,
+                      _signInPassword.text,
+                    ),
                     onForgotPassword: widget.onForgotPassword,
                     inkColor: inkColor,
                     mujiMuted: mujiMuted,
@@ -247,8 +245,11 @@ class _LoginScreenState extends State<LoginScreen>
                       onToggleObscure: () =>
                           setState(() => _obscureSignUp = !_obscureSignUp),
                       isSubmitting: widget.isSubmitting,
-                      onSubmit: () => widget.onSignUp(_signUpUsername.text,
-                          _signUpEmail.text, _signUpPassword.text),
+                      onSubmit: () => widget.onSignUp(
+                        _signUpUsername.text,
+                        _signUpEmail.text,
+                        _signUpPassword.text,
+                      ),
                       inkColor: inkColor,
                       mujiMuted: mujiMuted,
                       ruleColor: ruleColor,
@@ -320,7 +321,9 @@ class _SignInForm extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               insetPadding: const EdgeInsets.symmetric(
-                horizontal: 36, vertical: 60),
+                horizontal: 36,
+                vertical: 60,
+              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
                 child: Column(
@@ -367,8 +370,7 @@ class _SignInForm extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 28),
-                    Divider(
-                      height: 1, thickness: 1, color: ruleColor),
+                    Divider(height: 1, thickness: 1, color: ruleColor),
                     const SizedBox(height: 16),
                     if (done)
                       Align(
@@ -377,7 +379,9 @@ class _SignInForm extends StatelessWidget {
                           onTap: () => Navigator.of(ctx).pop(),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 4),
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
                             child: Text(
                               'close',
                               style: TextStyle(
@@ -399,7 +403,9 @@ class _SignInForm extends StatelessWidget {
                                 : () => Navigator.of(ctx).pop(),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 4),
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
                               child: Text(
                                 'cancel',
                                 style: TextStyle(
@@ -418,7 +424,8 @@ class _SignInForm extends StatelessWidget {
                                     setState(() => sending = true);
                                     try {
                                       await onForgotPassword!(
-                                          emailCtrl.text.trim());
+                                        emailCtrl.text.trim(),
+                                      );
                                     } catch (_) {}
                                     setState(() {
                                       sending = false;
@@ -427,7 +434,9 @@ class _SignInForm extends StatelessWidget {
                                   },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 4),
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
                               child: sending
                                   ? SizedBox(
                                       width: 14,
@@ -488,9 +497,7 @@ class _SignInForm extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: isSubmitting
-                  ? null
-                  : () => _showForgotDialog(context),
+              onTap: isSubmitting ? null : () => _showForgotDialog(context),
               child: Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 4),
                 child: Text(
@@ -577,7 +584,9 @@ class _SignUpForm extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         _SubmitButton(
-          label: isSubmitting ? 'creating account…' : 'C R E A T E   A C C O U N T',
+          label: isSubmitting
+              ? 'creating account…'
+              : 'C R E A T E   A C C O U N T',
           busy: isSubmitting,
           onPressed: isSubmitting ? null : onSubmit,
           inkColor: inkColor,
@@ -613,7 +622,9 @@ class _AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveInk = readOnly ? mujiMuted.withOpacity(0.45) : inkColor;
+    final effectiveInk = readOnly
+        ? mujiMuted.withValues(alpha: 0.45)
+        : inkColor;
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -639,9 +650,7 @@ class _AuthField extends StatelessWidget {
           letterSpacing: 1.0,
           color: mujiMuted,
         ),
-        border: UnderlineInputBorder(
-          borderSide: BorderSide(color: ruleColor),
-        ),
+        border: UnderlineInputBorder(borderSide: BorderSide(color: ruleColor)),
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: ruleColor),
         ),
@@ -654,7 +663,9 @@ class _AuthField extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Icon(
-                    obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     size: 18,
                     color: mujiMuted,
                   ),
@@ -708,7 +719,9 @@ class _SubmitButton extends StatelessWidget {
               fontSize: busy ? 13 : 12,
               letterSpacing: busy ? 0.2 : 2.4,
               fontWeight: FontWeight.w500,
-              color: onPressed == null ? mujiMuted.withOpacity(0.4) : inkColor,
+              color: onPressed == null
+                  ? mujiMuted.withValues(alpha: 0.4)
+                  : inkColor,
             ),
           ),
         ],
