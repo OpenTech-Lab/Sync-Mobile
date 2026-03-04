@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
@@ -86,6 +87,9 @@ final appControllerProvider = AsyncNotifierProvider<AppController, AppState>(
 );
 
 class AppController extends AsyncNotifier<AppState> {
+  static const _genericConnectError =
+      'Connection failed. Please try again later or ask planet manager.';
+
   final _serverPreferences = ServerPreferences();
   final _sessionStorage = const SessionStorage();
   final _serverHealthService = ServerHealthService();
@@ -233,11 +237,13 @@ class AppController extends AsyncNotifier<AppState> {
           planetInfo: planetInfo,
         ),
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('validateServer failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
       state = AsyncData(
         current.copyWith(
           connectionStatus: ConnectionStatus.failure,
-          connectionError: error.toString(),
+          connectionError: _genericConnectError,
           clearPlanetInfo: true,
         ),
       );
@@ -328,9 +334,11 @@ class AppController extends AsyncNotifier<AppState> {
       if (userId != null && username != null) {
         await _userProfilePreferences.writeDisplayName(userId, username);
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('loginWithDeviceIdentity failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
       state = AsyncData(
-        current.copyWith(isSubmitting: false, authError: error.toString()),
+        current.copyWith(isSubmitting: false, authError: _genericConnectError),
       );
     }
   }
