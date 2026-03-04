@@ -8,7 +8,6 @@ import 'ui/theme/light_theme.dart';
 import 'features/auth/login_page.dart';
 import 'features/onboarding/onboarding_page.dart';
 import 'features/shell/main_shell.dart';
-import 'services/auth_service.dart';
 import 'state/app_controller.dart';
 import 'state/app_locale_controller.dart';
 import 'state/theme_mode_controller.dart';
@@ -72,31 +71,14 @@ class SyncMobileApp extends ConsumerWidget {
             case AppStage.login:
               return LoginScreen(
                 serverUrl: state.serverUrl!,
-                savedEmail: state.savedEmail,
+                savedUserId: state.savedUserId,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
-                onSignIn: (email, password) => ref
+                onAutoLogin: () => ref
                     .read(appControllerProvider.notifier)
-                    .login(email: email, password: password),
-                onQrSignIn: (accessToken, refreshToken) => ref
-                    .read(appControllerProvider.notifier)
-                    .loginWithQrTokens(
-                      accessToken: accessToken,
-                      refreshToken: refreshToken,
-                    ),
-                onSignUp: (username, email, password) => ref
-                    .read(appControllerProvider.notifier)
-                    .signUp(
-                      username: username,
-                      email: email,
-                      password: password,
-                    ),
+                    .loginWithDeviceIdentity(),
                 onBackToUrl: () =>
                     ref.read(appControllerProvider.notifier).resetServerUrl(),
-                onForgotPassword: (email) => AuthService().forgotPassword(
-                  baseUrl: state.serverUrl!,
-                  email: email,
-                ),
               );
             case AppStage.home:
               return MainShell(

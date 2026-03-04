@@ -36,7 +36,7 @@ class CachedPlanetInfo {
 
 class ServerPreferences {
   static const _serverUrlKey = 'server_url';
-  static const _savedEmailPrefix = 'saved_email_';
+  static const _savedUserIdPrefix = 'saved_user_id_';
   static const _planetInfoPrefix = 'planet_info_';
 
   Future<String?> readServerUrl() async {
@@ -54,17 +54,17 @@ class ServerPreferences {
     await prefs.remove(_serverUrlKey);
   }
 
-  String _emailKey(String serverUrl) =>
-      '$_savedEmailPrefix${Uri.tryParse(serverUrl)?.host ?? serverUrl}';
+  String _userIdKey(String serverUrl) =>
+      '$_savedUserIdPrefix${Uri.tryParse(serverUrl)?.host ?? serverUrl}';
 
-  Future<String?> readSavedEmail(String serverUrl) async {
+  Future<String?> readSavedUserId(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_emailKey(serverUrl));
+    return prefs.getString(_userIdKey(serverUrl));
   }
 
-  Future<void> writeSavedEmail(String serverUrl, String email) async {
+  Future<void> writeSavedUserId(String serverUrl, String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_emailKey(serverUrl), email);
+    await prefs.setString(_userIdKey(serverUrl), userId);
   }
 
   String _planetInfoKey(String serverUrl) =>

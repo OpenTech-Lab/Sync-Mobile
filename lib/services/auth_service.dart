@@ -45,6 +45,31 @@ class AuthService {
 
   final http.Client _httpClient;
 
+  Future<AuthTokens> deviceLogin({
+    required String baseUrl,
+    required String deviceAuthPublicKey,
+  }) async {
+    final response = await _postAuth(
+      baseUrl: baseUrl,
+      path: 'device-login',
+      body: {'device_auth_pubkey': deviceAuthPublicKey},
+    );
+
+    if (response.statusCode != 200) {
+      throw StateError('Device login failed (${response.statusCode}).');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final accessToken = json['access_token'] as String?;
+    final refreshToken = json['refresh_token'] as String?;
+
+    if (accessToken == null || refreshToken == null) {
+      throw const FormatException('Invalid device login response.');
+    }
+
+    return AuthTokens(accessToken: accessToken, refreshToken: refreshToken);
+  }
+
   Future<void> register({
     required String baseUrl,
     required String username,

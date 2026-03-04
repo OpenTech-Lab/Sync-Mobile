@@ -19,7 +19,7 @@ class AppState {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
-    required this.savedEmail,
+    required this.savedUserId,
     required this.connectionStatus,
     required this.connectionError,
     required this.planetInfo,
@@ -31,7 +31,7 @@ class AppState {
   final String? accessToken;
   final String? currentUserId;
   final String? currentUsername;
-  final String? savedEmail;
+  final String? savedUserId;
   final ConnectionStatus connectionStatus;
   final String? connectionError;
   final PlanetInfo? planetInfo;
@@ -53,8 +53,8 @@ class AppState {
     String? accessToken,
     String? currentUserId,
     String? currentUsername,
-    String? savedEmail,
-    bool clearSavedEmail = false,
+    String? savedUserId,
+    bool clearSavedUserId = false,
     ConnectionStatus? connectionStatus,
     String? connectionError,
     bool clearConnectionError = false,
@@ -69,7 +69,7 @@ class AppState {
       accessToken: accessToken ?? this.accessToken,
       currentUserId: currentUserId ?? this.currentUserId,
       currentUsername: currentUsername ?? this.currentUsername,
-      savedEmail: clearSavedEmail ? null : savedEmail ?? this.savedEmail,
+      savedUserId: clearSavedUserId ? null : savedUserId ?? this.savedUserId,
       connectionStatus: connectionStatus ?? this.connectionStatus,
       connectionError: clearConnectionError
           ? null
@@ -99,16 +99,14 @@ class AppController extends AsyncNotifier<AppState> {
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
     final normalizedServerUrl = (serverUrl ?? '').trim();
-    final savedEmail = serverUrl != null && serverUrl.isNotEmpty
-        ? await _serverPreferences.readSavedEmail(serverUrl)
+    final savedUserId = serverUrl != null && serverUrl.isNotEmpty
+        ? await _serverPreferences.readSavedUserId(serverUrl)
         : null;
     final cachedPlanet = serverUrl != null && serverUrl.isNotEmpty
         ? await _serverPreferences.readPlanetInfo(serverUrl)
         : null;
     var accessToken = await _sessionStorage.readAccessToken();
 
-    // Proactively refresh an expired (or nearly-expired) access token so that
-    // the rest of the startup flow has a valid token to work with.
     if (accessToken != null &&
         accessToken.isNotEmpty &&
         serverUrl != null &&
@@ -127,9 +125,7 @@ class AppController extends AsyncNotifier<AppState> {
           );
           accessToken = tokens.accessToken;
         }
-      } catch (_) {
-        // Refresh failed — continue with the stale token; routes will 401.
-      }
+      } catch (_) {}
     }
 
     final currentUserId = accessToken == null
@@ -170,14 +166,11 @@ class AppController extends AsyncNotifier<AppState> {
           currentUserId,
           profile.avatarBase64,
         );
-        if (savedEmail != null && savedEmail.isNotEmpty) {
-          await _ensureChatPublicKeyRegistered(
-            serverUrl: serverUrl,
-            accessToken: accessToken,
-            email: savedEmail,
-            remoteProfilePublicKey: profile.messagePublicKey,
-          );
-        }
+        await _ensureChatPublicKeyRegistered(
+          serverUrl: serverUrl,
+          accessToken: accessToken,
+          remoteProfilePublicKey: profile.messagePublicKey,
+        );
       } catch (_) {}
     }
 
@@ -186,7 +179,7 @@ class AppController extends AsyncNotifier<AppState> {
       accessToken: accessToken,
       currentUserId: currentUserId,
       currentUsername: currentUsername,
-      savedEmail: savedEmail,
+      savedUserId: savedUserId,
       connectionStatus: ConnectionStatus.idle,
       connectionError: null,
       planetInfo: cachedPlanet == null
@@ -270,9 +263,9 @@ class AppController extends AsyncNotifier<AppState> {
     );
   }
 
-  Future<void> login({required String email, required String password}) async {
+  Future<void> loginWithDeviceIdentity() async {
     final current = state.value;
-    if (current == null || current.serverUrl == null) {
+    if (current == null || current.serverUrl == null || current.isSubmitting) {
       return;
     }
 
@@ -281,10 +274,11 @@ class AppController extends AsyncNotifier<AppState> {
     );
 
     try {
-      final tokens = await _authService.login(
+      final deviceAuthPublicKey = await _messageE2eeService
+          .ensureDevicePublicKeyBase64();
+      final tokens = await _authService.deviceLogin(
         baseUrl: current.serverUrl!,
-        email: email.trim().toLowerCase(),
-        password: password,
+        deviceAuthPublicKey: deviceAuthPublicKey,
       );
       await _sessionStorage.writeTokens(
         accessToken: tokens.accessToken,
@@ -294,6 +288,7 @@ class AppController extends AsyncNotifier<AppState> {
       final userId = _jwtService.tryReadUserId(tokens.accessToken);
       var username = _jwtService.tryReadDisplayName(tokens.accessToken);
       if (current.serverUrl != null && userId != null) {
+        await _serverPreferences.writeSavedUserId(current.serverUrl!, userId);
         try {
           final profile = await _remoteUserProfileService.getMyProfile(
             baseUrl: current.serverUrl!,
@@ -309,96 +304,6 @@ class AppController extends AsyncNotifier<AppState> {
           await _ensureChatPublicKeyRegistered(
             serverUrl: current.serverUrl!,
             accessToken: tokens.accessToken,
-            email: email,
-            password: password,
-            remoteProfilePublicKey: profile.messagePublicKey,
-          );
-        } catch (_) {}
-      }
-
-      final normalizedEmail = email.trim().toLowerCase();
-      await _serverPreferences.writeSavedEmail(
-        current.serverUrl!,
-        normalizedEmail,
-      );
-
-      state = AsyncData(
-        current.copyWith(
-          accessToken: tokens.accessToken,
-          currentUserId: userId,
-          currentUsername: username,
-          savedEmail: normalizedEmail,
-          isSubmitting: false,
-          clearAuthError: true,
-        ),
-      );
-
-      if (userId != null && username != null) {
-        await _userProfilePreferences.writeDisplayName(userId, username);
-      }
-    } catch (error) {
-      state = AsyncData(
-        current.copyWith(isSubmitting: false, authError: error.toString()),
-      );
-    }
-  }
-
-  Future<void> signUp({
-    required String username,
-    required String email,
-    required String password,
-  }) async {
-    final current = state.value;
-    if (current == null || current.serverUrl == null) {
-      return;
-    }
-
-    state = AsyncData(
-      current.copyWith(isSubmitting: true, clearAuthError: true),
-    );
-
-    try {
-      await _authService.register(
-        baseUrl: current.serverUrl!,
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        password: password,
-      );
-      await _serverPreferences.writeSavedEmail(
-        current.serverUrl!,
-        email.trim().toLowerCase(),
-      );
-      final tokens = await _authService.login(
-        baseUrl: current.serverUrl!,
-        email: email.trim().toLowerCase(),
-        password: password,
-      );
-      await _sessionStorage.writeTokens(
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      );
-
-      final userId = _jwtService.tryReadUserId(tokens.accessToken);
-      var resolvedName =
-          _jwtService.tryReadDisplayName(tokens.accessToken) ?? username.trim();
-      if (current.serverUrl != null && userId != null) {
-        try {
-          final profile = await _remoteUserProfileService.getMyProfile(
-            baseUrl: current.serverUrl!,
-            accessToken: tokens.accessToken,
-          );
-          resolvedName = profile.username.trim().isEmpty
-              ? resolvedName
-              : profile.username.trim();
-          await _userProfilePreferences.writeAvatarBase64(
-            userId,
-            profile.avatarBase64,
-          );
-          await _ensureChatPublicKeyRegistered(
-            serverUrl: current.serverUrl!,
-            accessToken: tokens.accessToken,
-            email: email,
-            password: password,
             remoteProfilePublicKey: profile.messagePublicKey,
           );
         } catch (_) {}
@@ -408,80 +313,8 @@ class AppController extends AsyncNotifier<AppState> {
         current.copyWith(
           accessToken: tokens.accessToken,
           currentUserId: userId,
-          currentUsername: resolvedName,
-          savedEmail: email.trim().toLowerCase(),
-          isSubmitting: false,
-          clearAuthError: true,
-        ),
-      );
-
-      if (userId != null && resolvedName.isNotEmpty) {
-        await _userProfilePreferences.writeDisplayName(userId, resolvedName);
-      }
-    } catch (error) {
-      state = AsyncData(
-        current.copyWith(isSubmitting: false, authError: error.toString()),
-      );
-    }
-  }
-
-  Future<void> loginWithQrTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    final current = state.value;
-    if (current == null || current.serverUrl == null) {
-      return;
-    }
-
-    state = AsyncData(
-      current.copyWith(isSubmitting: true, clearAuthError: true),
-    );
-
-    try {
-      await _sessionStorage.writeTokens(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-
-      final userId = _jwtService.tryReadUserId(accessToken);
-      var username = _jwtService.tryReadDisplayName(accessToken);
-      if (current.serverUrl != null && userId != null) {
-        try {
-          final profile = await _remoteUserProfileService.getMyProfile(
-            baseUrl: current.serverUrl!,
-            accessToken: accessToken,
-          );
-          username = profile.username.trim().isEmpty
-              ? username
-              : profile.username.trim();
-          await _userProfilePreferences.writeAvatarBase64(
-            userId,
-            profile.avatarBase64,
-          );
-        } catch (_) {}
-      }
-
-      final email = await _authService.fetchMyEmail(
-        baseUrl: current.serverUrl!,
-        accessToken: accessToken,
-      );
-      if (email != null && email.isNotEmpty) {
-        await _serverPreferences.writeSavedEmail(current.serverUrl!, email);
-        await _ensureChatPublicKeyRegistered(
-          serverUrl: current.serverUrl!,
-          accessToken: accessToken,
-          email: email,
-          remoteProfilePublicKey: null,
-        );
-      }
-
-      state = AsyncData(
-        current.copyWith(
-          accessToken: accessToken,
-          currentUserId: userId,
           currentUsername: username,
-          savedEmail: email,
+          savedUserId: userId,
           isSubmitting: false,
           clearAuthError: true,
         ),
@@ -544,10 +377,6 @@ class AppController extends AsyncNotifier<AppState> {
     return trimmed;
   }
 
-  /// Returns a valid (non-expired) access token.
-  /// If the current token is expired or expiring within 60 s, it silently
-  /// exchanges the stored refresh token for a fresh pair and updates AppState.
-  /// Falls back to the existing token if refresh fails.
   Future<String?> ensureFreshAccessToken() async {
     final current = state.value;
     final token = current?.accessToken;
@@ -575,7 +404,7 @@ class AppController extends AsyncNotifier<AppState> {
       state = AsyncData(current!.copyWith(accessToken: tokens.accessToken));
       return tokens.accessToken;
     } catch (_) {
-      return token; // best-effort: return stale token, caller handles 401
+      return token;
     }
   }
 
@@ -591,17 +420,11 @@ class AppController extends AsyncNotifier<AppState> {
   Future<void> _ensureChatPublicKeyRegistered({
     required String serverUrl,
     required String accessToken,
-    required String email,
     required String? remoteProfilePublicKey,
-    String? password,
   }) async {
     String? localPublicKey;
     try {
-      localPublicKey = await _messageE2eeService.ensurePublicKeyBase64(
-        serverUrl: serverUrl,
-        email: email,
-        password: password,
-      );
+      localPublicKey = await _messageE2eeService.ensureDevicePublicKeyBase64();
     } catch (_) {
       localPublicKey = await _messageE2eeService.readStoredPublicKey();
     }
