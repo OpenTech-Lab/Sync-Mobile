@@ -93,25 +93,22 @@ class NotificationService {
   }
 
   Future<void> showIncomingMessageNotification({
-    required String partnerId,
-    required String body,
+    String? avatarBase64,
   }) async {
     if (kIsWeb) {
       return;
     }
 
-    final trimmedPartner = partnerId.trim();
-    if (trimmedPartner.isEmpty) {
-      return;
-    }
-
-    final normalizedBody = body.trim();
-    final preview = normalizedBody.isEmpty ? 'New message' : normalizedBody;
+    final normalizedAvatar = avatarBase64?.trim();
 
     try {
       await _channel.invokeMethod<void>('showLocalNotification', {
-        'title': trimmedPartner,
-        'body': preview,
+        'title': 'Sync',
+        'body': 'New message',
+        'avatarBase64':
+            normalizedAvatar == null || normalizedAvatar.isEmpty
+                ? null
+                : normalizedAvatar,
       });
     } catch (_) {}
   }

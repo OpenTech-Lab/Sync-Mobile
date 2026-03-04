@@ -1,4 +1,5 @@
 import Flutter
+import Foundation
 import UIKit
 import UserNotifications
 
@@ -106,6 +107,7 @@ import UserNotifications
 
     let title = (args["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     let body = (args["body"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let avatarBase64 = (args["avatarBase64"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
     if title.isEmpty && body.isEmpty {
       result(nil)
       return
@@ -115,6 +117,11 @@ import UserNotifications
     content.title = title
     content.body = body
     content.sound = .default
+    if let avatarBase64, !avatarBase64.isEmpty {
+      if let attachment = makeAvatarAttachment(base64: avatarBase64) {
+        content.attachments = [attachment]
+      }
+    }
 
     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
     let request = UNNotificationRequest(
@@ -135,6 +142,35 @@ import UserNotifications
       }
       result(nil)
     }
+  }
+
+  private func makeAvatarAttachment(base64: String) -> UNNotificationAttachment? {
+    guard let data = Data(base64Encoded: base64, options: [.ignoreUnknownCharacters]) else {
+      return nil
+    }
+    let fileExtension = imageFileExtension(data: data)
+    let tempDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+    let fileUrl = tempDir.appendingPathComponent("sync_avatar_\(UUID().uuidString).\(fileExtension)")
+    do {
+      try data.write(to: fileUrl, options: [.atomic])
+      return try UNNotificationAttachment(identifier: UUID().uuidString, url: fileUrl)
+    } catch {
+      return nil
+    }
+  }
+
+  private func imageFileExtension(data: Data) -> String {
+    let bytes = [UInt8](data.prefix(12))
+    if bytes.count >= 8 &&
+      bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
+      bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A {
+      return "png"
+    }
+    if bytes.count >= 3 &&
+      bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
+      return "jpg"
+    }
+    return "png"
   }
 
   override func userNotificationCenter(

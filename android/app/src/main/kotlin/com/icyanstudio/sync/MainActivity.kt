@@ -4,7 +4,12 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
+import android.util.Base64
+import kotlin.math.min
+import kotlin.math.roundToInt
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -66,6 +71,7 @@ class MainActivity : FlutterActivity() {
 
         val title = (map["title"] as? String)?.trim().orEmpty()
         val body = (map["body"] as? String)?.trim().orEmpty()
+        val avatarBase64 = (map["avatarBase64"] as? String)?.trim().orEmpty()
         if (title.isEmpty() && body.isEmpty()) {
             result.success(null)
             return
@@ -82,16 +88,43 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        val notification = NotificationCompat.Builder(this, notificationChannelId)
+        val builder = NotificationCompat.Builder(this, notificationChannelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .build()
+        if (avatarBase64.isNotEmpty()) {
+            try {
+                val bitmap = decodeCenteredAvatarLargeIcon(avatarBase64)
+                if (bitmap != null) {
+                    builder.setLargeIcon(bitmap)
+                }
+            } catch (_: IllegalArgumentException) {
+                // Ignore malformed base64 avatar payloads.
+            }
+        }
+
+        val notification = builder.build()
 
         NotificationManagerCompat.from(this).notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), notification)
         result.success(null)
+    }
+
+    private fun decodeCenteredAvatarLargeIcon(avatarBase64: String): Bitmap? {
+        val bytes = Base64.decode(avatarBase64, Base64.DEFAULT)
+        val raw = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        val squareSize = min(raw.width, raw.height)
+        if (squareSize <= 0) {
+            return null
+        }
+
+        val left = (raw.width - squareSize) / 2
+        val top = (raw.height - squareSize) / 2
+        val square = Bitmap.createBitmap(raw, left, top, squareSize, squareSize)
+
+        val targetPx = (56f * resources.displayMetrics.density).roundToInt().coerceAtLeast(64)
+        return Bitmap.createScaledBitmap(square, targetPx, targetPx, true)
     }
 
     private fun createNotificationChannel() {

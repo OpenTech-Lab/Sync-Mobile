@@ -45,12 +45,16 @@ final conversationMessagesProvider =
 
 class ConversationMessagesController
     extends FamilyAsyncNotifier<List<LocalChatMessage>, String> {
+  static const _recipientKeyCacheTtl = Duration(minutes: 5);
+
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
   RemoteChatService get _remoteChatService =>
       ref.read(remoteChatServiceProvider);
   RemoteUserProfileService get _profileService =>
       ref.read(remoteUserProfileServiceProvider);
   MessageE2eeService get _e2eeService => ref.read(messageE2eeServiceProvider);
+  String? _cachedRecipientPublicKey;
+  DateTime? _cachedRecipientPublicKeyAt;
 
   @override
   Future<List<LocalChatMessage>> build(String partnerId) {
@@ -125,30 +129,11 @@ class ConversationMessagesController
       return;
     }
 
-    final me = await _profileService.getMyProfile(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-    );
     final senderPublicKey = await _e2eeService.ensureDevicePublicKeyBase64();
-    if (me.messagePublicKey != senderPublicKey) {
-      await _profileService.updateMyProfile(
-        baseUrl: baseUrl,
-        accessToken: accessToken,
-        messagePublicKey: senderPublicKey,
-      );
-    }
-
-    final partnerProfile = await _profileService.getUserProfile(
+    final recipientPublicKey = await _resolveRecipientPublicKey(
       baseUrl: baseUrl,
       accessToken: accessToken,
-      userId: arg,
     );
-    final recipientPublicKey = partnerProfile.messagePublicKey;
-    if (recipientPublicKey == null || recipientPublicKey.isEmpty) {
-      throw StateError(
-        'Recipient has no secure chat key yet. Ask them to sign in again.',
-      );
-    }
 
     final sent = await _remoteChatService.sendMessage(
       baseUrl: baseUrl,
@@ -174,6 +159,37 @@ class ConversationMessagesController
       limit: 200,
     );
     state = AsyncData(local);
+  }
+
+  Future<String> _resolveRecipientPublicKey({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final now = DateTime.now();
+    final cached = _cachedRecipientPublicKey;
+    final cachedAt = _cachedRecipientPublicKeyAt;
+    if (cached != null &&
+        cached.isNotEmpty &&
+        cachedAt != null &&
+        now.difference(cachedAt) < _recipientKeyCacheTtl) {
+      return cached;
+    }
+
+    final partnerProfile = await _profileService.getUserProfile(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      userId: arg,
+    );
+    final recipientPublicKey = partnerProfile.messagePublicKey?.trim();
+    if (recipientPublicKey == null || recipientPublicKey.isEmpty) {
+      throw StateError(
+        'Recipient has no secure chat key yet. Ask them to sign in again.',
+      );
+    }
+
+    _cachedRecipientPublicKey = recipientPublicKey;
+    _cachedRecipientPublicKeyAt = now;
+    return recipientPublicKey;
   }
 
   Future<int> markRead({required String baseUrl, required String accessToken}) {

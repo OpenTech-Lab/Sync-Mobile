@@ -6,6 +6,7 @@ import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
 import '../services/realtime_sync_service.dart';
 import '../services/notification_service.dart';
+import 'user_profile_controller.dart';
 import 'chat_visibility_controller.dart';
 import 'conversation_messages_controller.dart';
 import 'backup_controller.dart';
@@ -143,14 +144,13 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         final visibility = ref.read(chatVisibilityProvider);
         if (!visibility.isConversationOpen(partnerId) &&
             message.senderId != currentUserId) {
-          final body = e2eeService.isEncryptedEnvelope(message.body)
-              ? 'Sent you an encrypted message'
-              : message.body;
+          final avatarBase64 = await ref
+              .read(userProfilePreferencesProvider)
+              .readAvatarBase64(partnerId);
           await ref
               .read(realtimeNotificationServiceProvider)
               .showIncomingMessageNotification(
-                partnerId: partnerId,
-                body: body,
+                avatarBase64: avatarBase64,
               );
         }
         await ref
