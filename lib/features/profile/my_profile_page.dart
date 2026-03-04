@@ -476,30 +476,70 @@ class MyProfileScreen extends ConsumerWidget {
             ),
           ),
           if (isMobileDevice) ...[
-            const SizedBox(height: 18),
-            Center(
-              child: GestureDetector(
-                onTap: scanDeviceLoginQr,
-                child: Text(
-                  l10n.profileDeviceLoginAction,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppPalette.neutral500,
-                    letterSpacing: 0.3,
-                    decoration: TextDecoration.underline,
-                    decorationColor: ruleColor,
-                  ),
-                ),
+            const SizedBox(height: 28),
+            Divider(height: 1, color: ruleColor),
+            const SizedBox(height: 16),
+            Text(
+              l10n.profileDeviceLoginSectionTitle,
+              style: const TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: AppPalette.neutral500,
+                fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                l10n.profileDeviceLoginHint,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w300,
-                  color: AppPalette.neutral500,
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: scanDeviceLoginQr,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: ruleColor),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      size: 20,
+                      color: AppPalette.neutral500,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.profileDeviceLoginAction,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: inkColor,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.profileDeviceLoginHint,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w300,
+                              color: AppPalette.neutral500,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppPalette.neutral500,
+                    ),
+                  ],
                 ),
               ),
             ),

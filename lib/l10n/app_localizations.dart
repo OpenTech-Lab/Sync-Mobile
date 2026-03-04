@@ -1104,22 +1104,34 @@ abstract class AppLocalizations {
   /// **'copy qr payload'**
   String get profileCopyQrPayload;
 
+  /// No description provided for @profileDeviceLoginSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DEVICE LOGIN'**
+  String get profileDeviceLoginSectionTitle;
+
+  /// No description provided for @profileDeviceLoginPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to Approve Login'**
+  String get profileDeviceLoginPageTitle;
+
   /// No description provided for @profileDeviceLoginAction.
   ///
   /// In en, this message translates to:
-  /// **'scan qr to login other device'**
+  /// **'Approve Login on Another Device'**
   String get profileDeviceLoginAction;
 
   /// No description provided for @profileDeviceLoginHint.
   ///
   /// In en, this message translates to:
-  /// **'use your phone camera to approve desktop/web login'**
+  /// **'use your phone to approve a desktop or browser login'**
   String get profileDeviceLoginHint;
 
   /// No description provided for @profileDeviceLoginScanHint.
   ///
   /// In en, this message translates to:
-  /// **'scan login qr shown on desktop/web'**
+  /// **'Point camera at the QR code shown on your desktop or browser'**
   String get profileDeviceLoginScanHint;
 
   /// No description provided for @profileDeviceLoginApproved.

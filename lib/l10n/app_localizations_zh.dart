@@ -529,13 +529,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileCopyQrPayload => '複製 QR 內容';
 
   @override
-  String get profileDeviceLoginAction => '掃描 QR 以登入其他裝置';
+  String get profileDeviceLoginSectionTitle => '裝置登入';
 
   @override
-  String get profileDeviceLoginHint => '用手機相機核准桌面/網頁登入';
+  String get profileDeviceLoginPageTitle => '掃描以核准登入';
 
   @override
-  String get profileDeviceLoginScanHint => '掃描桌面/網頁顯示的登入 QR';
+  String get profileDeviceLoginAction => '核准其他裝置登入';
+
+  @override
+  String get profileDeviceLoginHint => '使用手機核准桌面或瀏覽器登入';
+
+  @override
+  String get profileDeviceLoginScanHint => '將相機對準桌面或瀏覽器顯示的 QR 碼';
 
   @override
   String get profileDeviceLoginApproved => '已核准登入';
@@ -1204,13 +1210,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get profileCopyQrPayload => '複製 QR 內容';
 
   @override
-  String get profileDeviceLoginAction => '掃描 QR 以登入其他裝置';
+  String get profileDeviceLoginSectionTitle => '裝置登入';
 
   @override
-  String get profileDeviceLoginHint => '用手機相機核准桌面/網頁登入';
+  String get profileDeviceLoginPageTitle => '掃描以核准登入';
 
   @override
-  String get profileDeviceLoginScanHint => '掃描桌面/網頁顯示的登入 QR';
+  String get profileDeviceLoginAction => '核准其他裝置登入';
+
+  @override
+  String get profileDeviceLoginHint => '使用手機核准桌面或瀏覽器登入';
+
+  @override
+  String get profileDeviceLoginScanHint => '將相機對準桌面或瀏覽器顯示的 QR 碼';
 
   @override
   String get profileDeviceLoginApproved => '已核准登入';

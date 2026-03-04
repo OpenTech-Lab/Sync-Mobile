@@ -529,13 +529,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCopyQrPayload => 'copy qr payload';
 
   @override
-  String get profileDeviceLoginAction => 'scan qr to login other device';
+  String get profileDeviceLoginSectionTitle => 'DEVICE LOGIN';
 
   @override
-  String get profileDeviceLoginHint => 'use your phone camera to approve desktop/web login';
+  String get profileDeviceLoginPageTitle => 'Scan to Approve Login';
 
   @override
-  String get profileDeviceLoginScanHint => 'scan login qr shown on desktop/web';
+  String get profileDeviceLoginAction => 'Approve Login on Another Device';
+
+  @override
+  String get profileDeviceLoginHint => 'use your phone to approve a desktop or browser login';
+
+  @override
+  String get profileDeviceLoginScanHint => 'Point camera at the QR code shown on your desktop or browser';
 
   @override
   String get profileDeviceLoginApproved => 'Login approved';
