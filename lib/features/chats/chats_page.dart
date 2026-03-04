@@ -209,7 +209,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final accessToken = await _effectiveAccessToken();
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
-        .syncLatest(baseUrl: widget.serverUrl, accessToken: accessToken);
+        .syncLatest(
+          baseUrl: widget.serverUrl,
+          accessToken: accessToken,
+          currentUserId: widget.currentUserId,
+        );
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
@@ -301,7 +305,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                         focusedBorder: const UnderlineInputBorder(
                           borderSide: BorderSide(color: AppPalette.neutral500),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 11,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -574,6 +580,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         .sendMessage(
           baseUrl: widget.serverUrl,
           accessToken: accessToken,
+          currentUserId: widget.currentUserId,
           body: content,
           recipientServerUrl: _partnerServerUrlOverrides[_activePartnerId!],
         );
@@ -771,7 +778,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
           );
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
-    final isTargetTyping = _activePartnerId != null &&
+    final isTargetTyping =
+        _activePartnerId != null &&
         (realtimeState?.typingPartnerIds.contains(_activePartnerId!) ?? false);
     final messagesAsync = _activePartnerId == null
         ? null
@@ -846,144 +854,150 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               )
             : Column(
                 children: [
-                // Messages list
-                Expanded(
-                  child: messagesAsync == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : messagesAsync.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (err, _) => Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text('$err', textAlign: TextAlign.center),
+                  // Messages list
+                  Expanded(
+                    child: messagesAsync == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : messagesAsync.when(
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
                             ),
-                          ),
-                          data: (messages) => messages.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.chat_bubble_outline,
-                                        size: 48,
-                                        color: cs.outlineVariant,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'No messages yet.\nSay hello!',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: cs.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : ListView.separated(
-                                  reverse: true,
-                                  controller: _messageScrollController,
-                                  padding: const EdgeInsets.fromLTRB(
-                                    12,
-                                    8,
-                                    12,
-                                    8,
-                                  ),
-                                  itemCount: messages.length,
-                                  separatorBuilder: (_, _) =>
-                                      const SizedBox(height: 6),
-                                  itemBuilder: (ctx, i) {
-                                    final message = messages[i];
-                                    final showDayDivider =
-                                        i == messages.length - 1 ||
-                                        !_isSameDay(
-                                          message.createdAt,
-                                          messages[i + 1].createdAt,
-                                        );
-                                    return Column(
+                            error: (err, _) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  '$err',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            data: (messages) => messages.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        if (showDayDivider)
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                              0,
-                                              8,
-                                              0,
-                                              6,
-                                            ),
-                                            child: _DayDivider(
-                                              label: _dayLabel(
-                                                message.createdAt,
-                                              ),
-                                            ),
+                                        Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 48,
+                                          color: cs.outlineVariant,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No messages yet.\nSay hello!',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: cs.onSurfaceVariant,
                                           ),
-                                        _MessageBubble(
-                                          message: message,
-                                          isMine:
-                                              message.senderId ==
-                                              widget.currentUserId,
-                                          currentUserId: widget.currentUserId,
-                                          currentUserAvatarBase64:
-                                              currentUserAvatarBase64,
-                                          partnerAvatarBase64:
-                                              partnerAvatarBase64,
-                                          onPartnerAvatarTap:
-                                              _openActivePartnerProfile,
                                         ),
                                       ],
-                                    );
-                                  },
-                                ),
-                        ),
-                ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    reverse: true,
+                                    controller: _messageScrollController,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      8,
+                                      12,
+                                      8,
+                                    ),
+                                    itemCount: messages.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 6),
+                                    itemBuilder: (ctx, i) {
+                                      final message = messages[i];
+                                      final showDayDivider =
+                                          i == messages.length - 1 ||
+                                          !_isSameDay(
+                                            message.createdAt,
+                                            messages[i + 1].createdAt,
+                                          );
+                                      return Column(
+                                        children: [
+                                          if (showDayDivider)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                    0,
+                                                    8,
+                                                    0,
+                                                    6,
+                                                  ),
+                                              child: _DayDivider(
+                                                label: _dayLabel(
+                                                  message.createdAt,
+                                                ),
+                                              ),
+                                            ),
+                                          _MessageBubble(
+                                            message: message,
+                                            isMine:
+                                                message.senderId ==
+                                                widget.currentUserId,
+                                            currentUserId: widget.currentUserId,
+                                            currentUserAvatarBase64:
+                                                currentUserAvatarBase64,
+                                            partnerAvatarBase64:
+                                                partnerAvatarBase64,
+                                            onPartnerAvatarTap:
+                                                _openActivePartnerProfile,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                          ),
+                  ),
 
-                // Typing indicator
-                if (isTargetTyping)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '${activeDisplayName ?? 'Partner'} is typing…',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
+                  // Typing indicator
+                  if (isTargetTyping)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${activeDisplayName ?? 'Partner'} is typing…',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                // Composer
-                SafeArea(
-                  top: false,
-                  child: _Composer(
-                    messageController: _messageController,
-                    selectedMediaBytes: _selectedMediaBytes,
-                    selectedMediaName: _selectedMediaName,
-                    stickers: stickers,
-                    onChanged: _onComposerChanged,
-                    onSend: _sendMessage,
-                    onPickMedia: _pickMedia,
-                    onClearMedia: _clearMedia,
-                    onStickerSelected: (sticker) async {
-                      if (_activePartnerId == null) return;
-                      final accessToken = await _effectiveAccessToken();
-                      await ref
-                          .read(
-                            conversationMessagesProvider(
-                              _activePartnerId!,
-                            ).notifier,
-                          )
-                          .sendMessage(
-                            baseUrl: widget.serverUrl,
-                            accessToken: accessToken,
-                            body: '[sticker:${sticker.id}:${sticker.name}]',
-                            recipientServerUrl:
-                                _partnerServerUrlOverrides[_activePartnerId!],
-                          );
-                    },
+                  // Composer
+                  SafeArea(
+                    top: false,
+                    child: _Composer(
+                      messageController: _messageController,
+                      selectedMediaBytes: _selectedMediaBytes,
+                      selectedMediaName: _selectedMediaName,
+                      stickers: stickers,
+                      onChanged: _onComposerChanged,
+                      onSend: _sendMessage,
+                      onPickMedia: _pickMedia,
+                      onClearMedia: _clearMedia,
+                      onStickerSelected: (sticker) async {
+                        if (_activePartnerId == null) return;
+                        final accessToken = await _effectiveAccessToken();
+                        await ref
+                            .read(
+                              conversationMessagesProvider(
+                                _activePartnerId!,
+                              ).notifier,
+                            )
+                            .sendMessage(
+                              baseUrl: widget.serverUrl,
+                              accessToken: accessToken,
+                              currentUserId: widget.currentUserId,
+                              body: '[sticker:${sticker.id}:${sticker.name}]',
+                              recipientServerUrl:
+                                  _partnerServerUrlOverrides[_activePartnerId!],
+                            );
+                      },
+                    ),
                   ),
-                ),
                 ],
               ),
       ),
@@ -1002,7 +1016,9 @@ bool _isSameDay(DateTime a, DateTime b) {
 String _dayLabel(DateTime dt) {
   final local = dt.toLocal();
   final now = DateTime.now();
-  if (local.year == now.year && local.month == now.month && local.day == now.day) {
+  if (local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day) {
     return 'Today';
   }
   final m = local.month.toString().padLeft(2, '0');
@@ -1712,7 +1728,9 @@ class _MessageBubble extends StatelessWidget {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
 
     // Warm bubble colours
-    final myBubble = isDark ? AppPalette.chatBubbleSelfDark : AppPalette.chatBubbleSelfLight;
+    final myBubble = isDark
+        ? AppPalette.chatBubbleSelfDark
+        : AppPalette.chatBubbleSelfLight;
     final theirBubble = isDark
         ? AppPalette.chatBubblePeerDark
         : AppPalette.chatBubblePeerLight;

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
 import '../services/realtime_sync_service.dart';
 import '../services/notification_service.dart';
@@ -104,10 +105,26 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
       }
 
       if (event.message != null) {
-        final message = event.message!;
+        var message = event.message!;
+        final e2eeService = ref.read(messageE2eeServiceProvider);
+        final decrypted = await e2eeService.tryDecryptEnvelope(
+          content: message.body,
+          sentByCurrentUser: message.senderId == currentUserId,
+        );
+        if (decrypted != null) {
+          message = LocalChatMessage(
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            body: decrypted,
+            createdAt: message.createdAt,
+          );
+        }
         final typingAfterMessage = {...current.typingPartnerIds}
           ..remove(message.conversationId);
-        state = AsyncData(current.copyWith(typingPartnerIds: typingAfterMessage));
+        state = AsyncData(
+          current.copyWith(typingPartnerIds: typingAfterMessage),
+        );
         await ref.read(chatRepositoryProvider).upsertMessages([message]);
         final partnerId = message.conversationId;
         final accessToken = await accessTokenProvider();
@@ -120,15 +137,19 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
           partnerId: partnerId,
           baseUrl: baseUrl,
           accessToken: accessToken,
+          currentUserId: currentUserId,
         );
         final visibility = ref.read(chatVisibilityProvider);
         if (!visibility.isConversationOpen(partnerId) &&
             message.senderId != currentUserId) {
+          final body = e2eeService.isEncryptedEnvelope(message.body)
+              ? 'Sent you an encrypted message'
+              : message.body;
           await ref
               .read(realtimeNotificationServiceProvider)
               .showIncomingMessageNotification(
                 partnerId: partnerId,
-                body: message.body,
+                body: body,
               );
         }
         await ref
@@ -170,6 +191,7 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required String partnerId,
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
   }) async {
     if (_conversationSyncInFlight.contains(partnerId)) {
       return;
@@ -179,7 +201,11 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     try {
       await ref
           .read(conversationMessagesProvider(partnerId).notifier)
-          .syncLatest(baseUrl: baseUrl, accessToken: accessToken);
+          .syncLatest(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+          );
     } catch (_) {
       // Keep UI reactive even if remote sync fails transiently.
       ref.invalidate(conversationMessagesProvider(partnerId));

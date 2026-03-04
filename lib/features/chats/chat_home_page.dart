@@ -206,6 +206,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                             .syncLatest(
                               baseUrl: widget.serverUrl,
                               accessToken: widget.accessToken,
+                              currentUserId: widget.currentUserId,
                             );
                         await ref
                             .read(
@@ -271,7 +272,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                         onPressed: backupState?.isBusy == true
                             ? null
                             : () => ref
-                              .read(backupControllerProvider.notifier)
+                                  .read(backupControllerProvider.notifier)
                                   .createBackup(
                                     baseUrl: widget.serverUrl,
                                     accessToken: widget.accessToken,
@@ -351,6 +352,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                     .loadMore(
                                       baseUrl: widget.serverUrl,
                                       accessToken: widget.accessToken,
+                                      currentUserId: widget.currentUserId,
                                     );
                               },
                               child: const Text('Load older'),
@@ -485,6 +487,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                                 .sendMessage(
                                   baseUrl: widget.serverUrl,
                                   accessToken: widget.accessToken,
+                                  currentUserId: widget.currentUserId,
                                   body:
                                       '[sticker:${selected.id}:${selected.name}]',
                                 );
@@ -536,6 +539,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                               .sendMessage(
                                 baseUrl: widget.serverUrl,
                                 accessToken: widget.accessToken,
+                                currentUserId: widget.currentUserId,
                                 body: content,
                               );
                           _clearMedia();

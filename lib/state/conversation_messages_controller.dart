@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/local_chat_message.dart';
 import '../services/local_chat_repository.dart';
+import '../services/message_e2ee_service.dart';
 import '../services/remote_chat_service.dart';
+import '../services/remote_user_profile_service.dart';
+import 'user_profile_controller.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   final supportsEncryptedLocalDb =
@@ -21,6 +24,10 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 
 final remoteChatServiceProvider = Provider<RemoteChatService>((ref) {
   return RemoteChatService();
+});
+
+final messageE2eeServiceProvider = Provider<MessageE2eeService>((ref) {
+  return MessageE2eeService();
 });
 
 final conversationSummariesProvider = FutureProvider<List<ConversationSummary>>(
@@ -41,6 +48,9 @@ class ConversationMessagesController
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
   RemoteChatService get _remoteChatService =>
       ref.read(remoteChatServiceProvider);
+  RemoteUserProfileService get _profileService =>
+      ref.read(remoteUserProfileServiceProvider);
+  MessageE2eeService get _e2eeService => ref.read(messageE2eeServiceProvider);
 
   @override
   Future<List<LocalChatMessage>> build(String partnerId) {
@@ -50,10 +60,12 @@ class ConversationMessagesController
   Future<void> syncLatest({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
   }) async {
     final latest = await _remoteChatService.getConversation(
       baseUrl: baseUrl,
       accessToken: accessToken,
+      currentUserId: currentUserId,
       partnerId: arg,
       limit: 30,
     );
@@ -70,10 +82,15 @@ class ConversationMessagesController
   Future<void> loadMore({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
   }) async {
     final current = state.value ?? [];
     if (current.isEmpty) {
-      await syncLatest(baseUrl: baseUrl, accessToken: accessToken);
+      await syncLatest(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        currentUserId: currentUserId,
+      );
       return;
     }
 
@@ -81,6 +98,7 @@ class ConversationMessagesController
     final older = await _remoteChatService.getConversation(
       baseUrl: baseUrl,
       accessToken: accessToken,
+      currentUserId: currentUserId,
       partnerId: arg,
       before: before,
       limit: 30,
@@ -98,6 +116,7 @@ class ConversationMessagesController
   Future<void> sendMessage({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
     required String body,
     String? recipientServerUrl,
   }) async {
@@ -106,9 +125,42 @@ class ConversationMessagesController
       return;
     }
 
+    final me = await _profileService.getMyProfile(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+    );
+    final senderPublicKey = await _e2eeService.readStoredPublicKey();
+    if (senderPublicKey == null || senderPublicKey.isEmpty) {
+      throw StateError(
+        'Secure chat key is missing on this device. Please sign in again.',
+      );
+    }
+    if (me.messagePublicKey != senderPublicKey) {
+      await _profileService.updateMyProfile(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        messagePublicKey: senderPublicKey,
+      );
+    }
+
+    final partnerProfile = await _profileService.getUserProfile(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      userId: arg,
+    );
+    final recipientPublicKey = partnerProfile.messagePublicKey;
+    if (recipientPublicKey == null || recipientPublicKey.isEmpty) {
+      throw StateError(
+        'Recipient has no secure chat key yet. Ask them to sign in again.',
+      );
+    }
+
     final sent = await _remoteChatService.sendMessage(
       baseUrl: baseUrl,
       accessToken: accessToken,
+      currentUserId: currentUserId,
+      senderPublicKey: senderPublicKey,
+      recipientPublicKey: recipientPublicKey,
       partnerId: arg,
       body: trimmed,
       recipientServerUrl: recipientServerUrl,

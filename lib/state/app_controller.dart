@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
 import '../services/jwt_service.dart';
+import '../services/message_e2ee_service.dart';
 import '../services/remote_user_profile_service.dart';
 import '../services/server_health_service.dart';
 import '../services/server_preferences.dart';
@@ -90,6 +91,7 @@ class AppController extends AsyncNotifier<AppState> {
   final _serverHealthService = ServerHealthService();
   final _authService = AuthService();
   final _jwtService = const JwtService();
+  final _messageE2eeService = MessageE2eeService();
   final _userProfilePreferences = UserProfilePreferences();
   final _remoteUserProfileService = RemoteUserProfileService();
 
@@ -168,6 +170,14 @@ class AppController extends AsyncNotifier<AppState> {
           currentUserId,
           profile.avatarBase64,
         );
+        if (savedEmail != null && savedEmail.isNotEmpty) {
+          await _ensureChatPublicKeyRegistered(
+            serverUrl: serverUrl,
+            accessToken: accessToken,
+            email: savedEmail,
+            remoteProfilePublicKey: profile.messagePublicKey,
+          );
+        }
       } catch (_) {}
     }
 
@@ -293,6 +303,13 @@ class AppController extends AsyncNotifier<AppState> {
             userId,
             profile.avatarBase64,
           );
+          await _ensureChatPublicKeyRegistered(
+            serverUrl: current.serverUrl!,
+            accessToken: tokens.accessToken,
+            email: email,
+            password: password,
+            remoteProfilePublicKey: profile.messagePublicKey,
+          );
         } catch (_) {}
       }
 
@@ -373,6 +390,13 @@ class AppController extends AsyncNotifier<AppState> {
           await _userProfilePreferences.writeAvatarBase64(
             userId,
             profile.avatarBase64,
+          );
+          await _ensureChatPublicKeyRegistered(
+            serverUrl: current.serverUrl!,
+            accessToken: tokens.accessToken,
+            email: email,
+            password: password,
+            remoteProfilePublicKey: profile.messagePublicKey,
           );
         } catch (_) {}
       }
@@ -487,5 +511,37 @@ class AppController extends AsyncNotifier<AppState> {
     }
     final normalized = username.trim();
     state = AsyncData(current.copyWith(currentUsername: normalized));
+  }
+
+  Future<void> _ensureChatPublicKeyRegistered({
+    required String serverUrl,
+    required String accessToken,
+    required String email,
+    required String? remoteProfilePublicKey,
+    String? password,
+  }) async {
+    String? localPublicKey;
+    try {
+      localPublicKey = await _messageE2eeService.ensurePublicKeyBase64(
+        serverUrl: serverUrl,
+        email: email,
+        password: password,
+      );
+    } catch (_) {
+      localPublicKey = await _messageE2eeService.readStoredPublicKey();
+    }
+    if (localPublicKey == null || localPublicKey.isEmpty) {
+      return;
+    }
+    if (remoteProfilePublicKey == localPublicKey) {
+      return;
+    }
+    try {
+      await _remoteUserProfileService.updateMyProfile(
+        baseUrl: serverUrl,
+        accessToken: accessToken,
+        messagePublicKey: localPublicKey,
+      );
+    } catch (_) {}
   }
 }

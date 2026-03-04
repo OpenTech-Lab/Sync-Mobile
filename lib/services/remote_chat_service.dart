@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'dev_http_client.dart';
+import 'message_e2ee_service.dart';
 import '../models/local_chat_message.dart';
 
 class ResolvedContact {
@@ -29,14 +30,17 @@ class ResolvedContact {
 }
 
 class RemoteChatService {
-  RemoteChatService([http.Client? httpClient])
-    : _httpClient = createDevHttpClient(httpClient);
+  RemoteChatService([http.Client? httpClient, MessageE2eeService? e2eeService])
+    : _httpClient = createDevHttpClient(httpClient),
+      _e2eeService = e2eeService ?? MessageE2eeService();
 
   final http.Client _httpClient;
+  final MessageE2eeService _e2eeService;
 
   Future<List<LocalChatMessage>> getConversation({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
     required String partnerId,
     String? before,
     int limit = 30,
@@ -58,19 +62,25 @@ class RemoteChatService {
     }
 
     final json = jsonDecode(response.body) as List<dynamic>;
-    return json
-        .map(
-          (raw) => _fromRemoteJson(
-            raw as Map<String, dynamic>,
-            conversationId: partnerId,
-          ),
-        )
-        .toList(growable: false);
+    final result = <LocalChatMessage>[];
+    for (final raw in json) {
+      result.add(
+        await _fromRemoteJson(
+          raw as Map<String, dynamic>,
+          conversationId: partnerId,
+          currentUserId: currentUserId,
+        ),
+      );
+    }
+    return result;
   }
 
   Future<LocalChatMessage> sendMessage({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
+    required String senderPublicKey,
+    required String recipientPublicKey,
     required String partnerId,
     required String body,
     String? recipientServerUrl,
@@ -79,6 +89,12 @@ class RemoteChatService {
     final uri = Uri.parse('$normalized/api/messages');
 
     final normalizedServerUrl = recipientServerUrl?.trim();
+    final encryptedContent = await _e2eeService.encryptEnvelope(
+      clearText: body,
+      recipientPublicKeyBase64: recipientPublicKey,
+      senderPublicKeyBase64: senderPublicKey,
+    );
+
     final response = await _httpClient
         .post(
           uri,
@@ -87,7 +103,7 @@ class RemoteChatService {
             'recipient_id': partnerId,
             if (normalizedServerUrl != null && normalizedServerUrl.isNotEmpty)
               'recipient_server_url': normalizedServerUrl,
-            'content': body,
+            'content': encryptedContent,
           }),
         )
         .timeout(const Duration(seconds: 10));
@@ -97,7 +113,11 @@ class RemoteChatService {
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
-    return _fromRemoteJson(json, conversationId: partnerId);
+    return _fromRemoteJson(
+      json,
+      conversationId: partnerId,
+      currentUserId: currentUserId,
+    );
   }
 
   Future<ResolvedContact> resolveContact({
@@ -185,15 +205,23 @@ class RemoteChatService {
     return trimmed;
   }
 
-  LocalChatMessage _fromRemoteJson(
+  Future<LocalChatMessage> _fromRemoteJson(
     Map<String, dynamic> json, {
     required String conversationId,
-  }) {
+    required String currentUserId,
+  }) async {
+    final senderId = json['sender_id'] as String;
+    final sentByCurrentUser = senderId == currentUserId;
+    final raw = (json['content'] as String?) ?? '';
+    final decrypted = await _e2eeService.tryDecryptEnvelope(
+      content: raw,
+      sentByCurrentUser: sentByCurrentUser,
+    );
     return LocalChatMessage(
       id: json['id'] as String,
       conversationId: conversationId,
-      senderId: json['sender_id'] as String,
-      body: json['content'] as String,
+      senderId: senderId,
+      body: decrypted ?? '[Encrypted message: key unavailable on this device]',
       createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
     );
   }

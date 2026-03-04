@@ -1,9 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/local_chat_message.dart';
+import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/services/local_chat_repository.dart';
+import 'package:mobile/services/message_e2ee_service.dart';
 import 'package:mobile/services/remote_chat_service.dart';
+import 'package:mobile/services/remote_user_profile_service.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
+import 'package:mobile/state/user_profile_controller.dart';
 
 class _InMemoryChatRepository implements ChatRepository {
   final List<LocalChatMessage> _messages = [];
@@ -100,6 +104,7 @@ class _FakeRemoteChatService extends RemoteChatService {
   Future<List<LocalChatMessage>> getConversation({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
     required String partnerId,
     String? before,
     int limit = 30,
@@ -117,6 +122,9 @@ class _FakeRemoteChatService extends RemoteChatService {
   Future<LocalChatMessage> sendMessage({
     required String baseUrl,
     required String accessToken,
+    required String currentUserId,
+    required String senderPublicKey,
+    required String recipientPublicKey,
     required String partnerId,
     required String body,
     String? recipientServerUrl,
@@ -138,6 +146,65 @@ class _FakeRemoteChatService extends RemoteChatService {
   }) async {
     return 1;
   }
+}
+
+class _FakeRemoteUserProfileService extends RemoteUserProfileService {
+  _FakeRemoteUserProfileService();
+
+  static const _publicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+
+  @override
+  Future<UserProfile> getMyProfile({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    return const UserProfile(
+      id: 'me',
+      username: 'me',
+      avatarBase64: null,
+      messagePublicKey: _publicKey,
+    );
+  }
+
+  @override
+  Future<UserProfile> getUserProfile({
+    required String baseUrl,
+    required String accessToken,
+    required String userId,
+  }) async {
+    return UserProfile(
+      id: userId,
+      username: userId,
+      avatarBase64: null,
+      messagePublicKey: _publicKey,
+    );
+  }
+
+  @override
+  Future<UserProfile> updateMyProfile({
+    required String baseUrl,
+    required String accessToken,
+    String? username,
+    String? avatarBase64,
+    String? messagePublicKey,
+    bool clearAvatar = false,
+  }) async {
+    return const UserProfile(
+      id: 'me',
+      username: 'me',
+      avatarBase64: null,
+      messagePublicKey: _publicKey,
+    );
+  }
+}
+
+class _FakeMessageE2eeService extends MessageE2eeService {
+  _FakeMessageE2eeService();
+
+  static const _publicKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+
+  @override
+  Future<String?> readStoredPublicKey() async => _publicKey;
 }
 
 void main() {
@@ -170,7 +237,11 @@ void main() {
     await container.read(conversationMessagesProvider(partnerId).future);
     await container
         .read(conversationMessagesProvider(partnerId).notifier)
-        .syncLatest(baseUrl: 'http://localhost:8080', accessToken: 'token');
+        .syncLatest(
+          baseUrl: 'http://localhost:8080',
+          accessToken: 'token',
+          currentUserId: 'me',
+        );
 
     final messages = container
         .read(conversationMessagesProvider(partnerId))
@@ -215,10 +286,18 @@ void main() {
     await container.read(conversationMessagesProvider(partnerId).future);
     await container
         .read(conversationMessagesProvider(partnerId).notifier)
-        .syncLatest(baseUrl: 'http://localhost:8080', accessToken: 'token');
+        .syncLatest(
+          baseUrl: 'http://localhost:8080',
+          accessToken: 'token',
+          currentUserId: 'me',
+        );
     await container
         .read(conversationMessagesProvider(partnerId).notifier)
-        .loadMore(baseUrl: 'http://localhost:8080', accessToken: 'token');
+        .loadMore(
+          baseUrl: 'http://localhost:8080',
+          accessToken: 'token',
+          currentUserId: 'me',
+        );
 
     final messages = container
         .read(conversationMessagesProvider(partnerId))
@@ -235,6 +314,10 @@ void main() {
       overrides: [
         chatRepositoryProvider.overrideWithValue(repo),
         remoteChatServiceProvider.overrideWithValue(remote),
+        remoteUserProfileServiceProvider.overrideWithValue(
+          _FakeRemoteUserProfileService(),
+        ),
+        messageE2eeServiceProvider.overrideWithValue(_FakeMessageE2eeService()),
       ],
     );
     addTearDown(container.dispose);
@@ -245,6 +328,7 @@ void main() {
         .sendMessage(
           baseUrl: 'http://localhost:8080',
           accessToken: 'token',
+          currentUserId: 'me',
           body: 'hi',
         );
 
