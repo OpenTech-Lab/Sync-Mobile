@@ -101,7 +101,12 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
   }
 
   Future<void> _pickMedia() async {
-    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 75,
+    );
     if (image == null) {
       return;
     }
@@ -480,12 +485,13 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           }
 
                           final text = _messageController.text.trim();
-                          final mediaLabel = _selectedMediaName == null
+                          final mediaBytes = _selectedMediaBytes;
+                          final mediaToken = mediaBytes == null
                               ? ''
-                              : '[media-preview:${_selectedMediaName!}]';
+                              : '[media-data:${base64Encode(mediaBytes)}]';
                           final content = [
                             text,
-                            mediaLabel,
+                            mediaToken,
                           ].where((part) => part.isNotEmpty).join('\n');
 
                           if (content.isEmpty) {

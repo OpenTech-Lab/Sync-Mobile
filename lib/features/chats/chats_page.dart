@@ -146,7 +146,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 
   Future<void> _pickMedia() async {
-    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 75,
+    );
     if (image == null) return;
     final bytes = await image.readAsBytes();
     setState(() {
@@ -571,10 +576,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   Future<void> _sendMessage() async {
     if (_activePartnerId == null) return;
     final text = _messageController.text.trim();
-    final mediaLabel = _selectedMediaName == null
+    final mediaBytes = _selectedMediaBytes;
+    final mediaToken = mediaBytes == null
         ? ''
-        : '[media-preview:${_selectedMediaName!}]';
-    final content = [text, mediaLabel].where((p) => p.isNotEmpty).join('\n');
+        : '[media-data:${base64Encode(mediaBytes)}]';
+    final content = [text, mediaToken].where((p) => p.isNotEmpty).join('\n');
     if (content.isEmpty) return;
 
     _messageController.clear();
@@ -2002,6 +2008,21 @@ class _MessageBubble extends ConsumerWidget {
     return match?.group(1);
   }
 
+  /// Returns the decoded image bytes and remaining text from a body that
+  /// contains a [media-data:base64] token. Returns null if none found.
+  static ({Uint8List bytes, String text})? _parseMediaData(String body) {
+    final match =
+        RegExp(r'\[media-data:([A-Za-z0-9+/=]+)\]').firstMatch(body);
+    if (match == null) return null;
+    try {
+      final bytes = base64Decode(match.group(1)!);
+      final text = body.replaceFirst(match.group(0)!, '').trim();
+      return (bytes: bytes, text: text);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _openDetail(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -2058,6 +2079,82 @@ class _MessageBubble extends ConsumerWidget {
     ];
     final hash = avatarId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
+
+    // ── Image/media message ──────────────────────────────────────────────────
+    final media = _parseMediaData(message.body);
+    if (media != null) {
+      return Align(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isMine) ...
+            [
+              GestureDetector(
+                onTap: onPartnerAvatarTap,
+                child: _MessageAvatar(
+                  userId: avatarId,
+                  avatarBase64: avatarBase64,
+                  avatarBg: avatarBg,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: isMine
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.memory(
+                        media.bytes,
+                        fit: BoxFit.cover,
+                        width: maxBubbleWidth,
+                      ),
+                      if (media.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+                          child: Text(media.text, style: messageTextStyle),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _timeLabel(message.createdAt),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppPalette.neutral500,
+                  ),
+                ),
+              ],
+            ),
+            if (isMine) ...
+            [
+              const SizedBox(width: 6),
+              _MessageAvatar(
+                userId: avatarId,
+                avatarBase64: avatarBase64,
+                avatarBg: avatarBg,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // ── Sticker message ─────────────────────────────────────────────────────
     final stickerId = _parseStickerId(message.body);
