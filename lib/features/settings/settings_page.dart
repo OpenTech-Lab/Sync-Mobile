@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -327,12 +328,10 @@ class SettingsTab extends ConsumerWidget {
                       final token = await resolveAccessToken();
                       if (token == null) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.settingsMissingAccessTokenBackup,
-                            ),
-                          ),
+                        showAppToast(
+                          context,
+                          l10n.settingsMissingAccessTokenBackup,
+                          variant: AppToastVariant.error,
                         );
                         return;
                       }
@@ -350,12 +349,10 @@ class SettingsTab extends ConsumerWidget {
                       final token = await resolveAccessToken();
                       if (token == null) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.settingsMissingAccessTokenRestore,
-                            ),
-                          ),
+                        showAppToast(
+                          context,
+                          l10n.settingsMissingAccessTokenRestore,
+                          variant: AppToastVariant.error,
                         );
                         return;
                       }
@@ -393,12 +390,10 @@ class SettingsTab extends ConsumerWidget {
                       final token = await resolveAccessToken();
                       if (token == null) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.settingsMissingAccessTokenBackupDelete,
-                            ),
-                          ),
+                        showAppToast(
+                          context,
+                          l10n.settingsMissingAccessTokenBackupDelete,
+                          variant: AppToastVariant.error,
                         );
                         return;
                       }

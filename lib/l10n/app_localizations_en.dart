@@ -248,6 +248,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String planetStickerGroupCount(int count) {
+    return '$count stickers';
+  }
+
+  @override
+  String planetStickerGroupDownloadedToast(String group) {
+    return 'Downloaded $group sticker pack.';
+  }
+
+  @override
   String get settingsMyPlanet => 'My Planet';
 
   @override

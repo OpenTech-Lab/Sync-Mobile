@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,11 +39,13 @@ class MyProfileScreen extends ConsumerWidget {
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
-    final displayName = (currentUsername ?? '').trim().isEmpty
+    final watchedUsername =
+        ref.watch(userDisplayNameProvider(currentUserId)).value ?? currentUsername;
+    final displayName = (watchedUsername ?? '').trim().isEmpty
         ? (currentUserId.length >= 8
               ? currentUserId.substring(0, 8)
               : currentUserId)
-        : currentUsername!.trim();
+        : watchedUsername!.trim();
     final description = ref.watch(userDescriptionProvider(currentUserId)).value;
     final oneLineDescription = (description ?? '').trim();
     final planetLabel = _planetNameFromServerUrl(serverUrl);
@@ -70,8 +73,10 @@ class MyProfileScreen extends ConsumerWidget {
       final usernamePattern = RegExp(r'^[a-zA-Z0-9._ -]{3,32}$');
       if (!usernamePattern.hasMatch(result)) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileUsernameValidationError)),
+        showAppToast(
+          context,
+          l10n.profileUsernameValidationError,
+          variant: AppToastVariant.error,
         );
         return;
       }
@@ -97,13 +102,13 @@ class MyProfileScreen extends ConsumerWidget {
             .setCurrentUsername(profile.username);
 
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profileUsernameUpdated)));
+        showAppToast(context, l10n.profileUsernameUpdated);
       } catch (_) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileUsernameUpdateFailed)),
+        showAppToast(
+          context,
+          l10n.profileUsernameUpdateFailed,
+          variant: AppToastVariant.error,
         );
       }
     }
@@ -123,8 +128,10 @@ class MyProfileScreen extends ConsumerWidget {
       final words = _wordCount(normalized);
       if (words > 100) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileDescriptionWordLimitError)),
+        showAppToast(
+          context,
+          l10n.profileDescriptionWordLimitError,
+          variant: AppToastVariant.error,
         );
         return;
       }
@@ -138,9 +145,7 @@ class MyProfileScreen extends ConsumerWidget {
       ref.invalidate(userDescriptionProvider(currentUserId));
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.profileDescriptionUpdated)));
+      showAppToast(context, l10n.profileDescriptionUpdated);
     }
 
     Future<void> editAvatar() async {
@@ -158,9 +163,11 @@ class MyProfileScreen extends ConsumerWidget {
       final bytes = await image.readAsBytes();
       if (bytes.length > 256 * 1024) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
+        showAppToast(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profileAvatarTooLarge)));
+          l10n.profileAvatarTooLarge,
+          variant: AppToastVariant.error,
+        );
         return;
       }
 
@@ -189,20 +196,19 @@ class MyProfileScreen extends ConsumerWidget {
             .setCurrentUsername(profile.username);
       } catch (_) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
+        showAppToast(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profileAvatarUploadFailed)));
+          l10n.profileAvatarUploadFailed,
+          variant: AppToastVariant.error,
+        );
         return;
       }
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.profileAvatarUpdated),
-          duration: Duration(seconds: 1),
-          behavior: SnackBarBehavior.floating,
-          width: 160,
-        ),
+      showAppToast(
+        context,
+        l10n.profileAvatarUpdated,
+        duration: const Duration(seconds: 1),
       );
     }
 
@@ -226,15 +232,18 @@ class MyProfileScreen extends ConsumerWidget {
           secret: payload.secret,
         );
         if (!context.mounted) return;
-        _showMinimalCopyToast(
-          context: context,
-          message: l10n.profileDeviceLoginApproved,
+        showAppToast(
+          context,
+          l10n.profileDeviceLoginApproved,
+          duration: const Duration(milliseconds: 900),
         );
       } catch (_) {
         if (!context.mounted) return;
-        _showMinimalCopyToast(
-          context: context,
-          message: l10n.profileDeviceLoginFailed,
+        showAppToast(
+          context,
+          l10n.profileDeviceLoginFailed,
+          variant: AppToastVariant.error,
+          duration: const Duration(milliseconds: 900),
         );
       }
     }
@@ -403,9 +412,10 @@ class MyProfileScreen extends ConsumerWidget {
                           userId: currentUserId,
                         );
                         Clipboard.setData(ClipboardData(text: link));
-                        _showMinimalCopyToast(
-                          context: context,
-                          message: l10n.profileFriendLinkCopied,
+                        showAppToast(
+                          context,
+                          l10n.profileFriendLinkCopied,
+                          duration: const Duration(milliseconds: 900),
                         );
                       },
                       child: Text(
@@ -596,9 +606,10 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
     final l10n = AppLocalizations.of(context)!;
     Clipboard.setData(ClipboardData(text: widget.payload));
     _showCopiedState();
-    _showMinimalCopyToast(
-      context: context,
-      message: l10n.profileQrPayloadCopied,
+    showAppToast(
+      context,
+      l10n.profileQrPayloadCopied,
+      duration: const Duration(milliseconds: 900),
     );
   }
 
@@ -643,37 +654,6 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
       ),
     );
   }
-}
-
-void _showMinimalCopyToast({
-  required BuildContext context,
-  required String message,
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final background = isDark ? AppPalette.neutral800 : AppPalette.neutral700;
-  final foreground = AppPalette.neutral100;
-
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w300,
-          color: foreground,
-          letterSpacing: 0.2,
-        ),
-      ),
-      duration: const Duration(milliseconds: 900),
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(28, 0, 28, 20),
-      backgroundColor: background,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-    ),
-  );
 }
 
 class _DescriptionEditDialog extends StatefulWidget {

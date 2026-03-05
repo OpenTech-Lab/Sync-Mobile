@@ -91,6 +91,22 @@
       }
     }
   },
+  "planetStickerGroupCount": "{count} 個貼圖",
+  "@planetStickerGroupCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planetStickerGroupDownloadedToast": "已下載 {group} 貼圖包。",
+  "@planetStickerGroupDownloadedToast": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "settingsMyPlanet": "我的 Planet",
   "settingsAppearance": "外觀",
   "settingsTheme": "主題",

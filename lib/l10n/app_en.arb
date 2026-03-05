@@ -105,6 +105,22 @@
       }
     }
   },
+  "planetStickerGroupCount": "{count} stickers",
+  "@planetStickerGroupCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planetStickerGroupDownloadedToast": "Downloaded {group} sticker pack.",
+  "@planetStickerGroupDownloadedToast": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "settingsMyPlanet": "My Planet",
   "settingsAppearance": "Appearance",
   "settingsTheme": "THEME",

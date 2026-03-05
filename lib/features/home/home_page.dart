@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
@@ -242,9 +243,7 @@ class HomeTab extends ConsumerWidget {
                       if (!context.mounted) {
                         return;
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.friendRemoved)),
-                      );
+                      showAppToast(context, l10n.friendRemoved);
                     },
                   );
                 },

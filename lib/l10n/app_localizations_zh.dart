@@ -695,6 +695,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get actionNext => '下 一 步';
+
+  @override
+  String planetStickerGroupCount(int count) {
+    return '$count 個貼圖';
+  }
+
+  @override
+  String planetStickerGroupDownloadedToast(String group) {
+    return '已下載 $group 貼圖包。';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).

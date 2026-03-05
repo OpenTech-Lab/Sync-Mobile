@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -433,9 +434,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
     if (friendId.isEmpty || serverUrl.isEmpty) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_l10n.chatAddFriendInputHint)));
+      showAppToast(context, _l10n.chatAddFriendInputHint);
       return null;
     }
 
@@ -523,9 +522,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_l10n.friendRemoved)));
+        showAppToast(context, _l10n.friendRemoved);
         return;
       }
       if (action == ChatTargetProfileAction.addFriend && mounted) {
@@ -534,7 +531,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         if (!mounted) {
           return;
         }
-        _showMinimalChatToast(context: context, message: _l10n.friendAdded);
+        showAppToast(context, _l10n.friendAdded, duration: const Duration(milliseconds: 900));
       }
       if (action == ChatTargetProfileAction.startChat ||
           action == ChatTargetProfileAction.addFriend) {
@@ -544,9 +541,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      showAppToast(context, error.toString(), variant: AppToastVariant.error);
     }
   }
 
@@ -623,9 +618,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      showAppToast(context, error.toString(), variant: AppToastVariant.error);
     }
   }
 
@@ -777,9 +770,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_l10n.friendRemoved)));
+      showAppToast(context, _l10n.friendRemoved);
       return;
     }
     if (action == ChatTargetProfileAction.startChat) {
@@ -1208,38 +1199,6 @@ class _OutgoingMessageDraft {
       state: state ?? this.state,
     );
   }
-}
-
-void _showMinimalChatToast({
-  required BuildContext context,
-  required String message,
-  Duration duration = const Duration(milliseconds: 900),
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final background = isDark ? AppPalette.neutral800 : AppPalette.neutral700;
-  const foreground = AppPalette.neutral100;
-
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w300,
-          color: foreground,
-          letterSpacing: 0.2,
-        ),
-      ),
-      duration: duration,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(28, 0, 28, 20),
-      backgroundColor: background,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-    ),
-  );
 }
 
 bool _isSameDay(DateTime a, DateTime b) {
@@ -1914,7 +1873,9 @@ class _StickerPickerState extends State<_StickerPicker> {
     final selectedGroup = groups.contains(_selectedGroup)
         ? _selectedGroup!
         : groups.first;
-    final visibleStickers = grouped[selectedGroup] ?? const <Sticker>[];
+    final visibleStickers = (grouped[selectedGroup] ?? const <Sticker>[])
+        .where((s) => s.name != '__tab__')
+        .toList(growable: false);
 
     return SizedBox(
       height: 320,

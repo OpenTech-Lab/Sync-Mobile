@@ -558,6 +558,18 @@ abstract class AppLocalizations {
   /// **'Downloaded {name} to local stickers.'**
   String planetStickerDownloadedToast(String name);
 
+  /// No description provided for @planetStickerGroupCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} stickers'**
+  String planetStickerGroupCount(int count);
+
+  /// No description provided for @planetStickerGroupDownloadedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {group} sticker pack.'**
+  String planetStickerGroupDownloadedToast(String group);
+
   /// No description provided for @settingsMyPlanet.
   ///
   /// In en, this message translates to:
