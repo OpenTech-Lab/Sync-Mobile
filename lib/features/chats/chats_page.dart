@@ -761,7 +761,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       if (!mounted) {
         return;
       }
-      _showMinimalChatToast(context: context, message: _l10n.friendAdded);
+      showAppToast(
+        context,
+        _l10n.friendAdded,
+        duration: const Duration(milliseconds: 900),
+      );
       return;
     }
     if (action == ChatTargetProfileAction.cancelFriend) {
@@ -818,15 +822,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       return;
     }
     if (failed.isEmpty) {
-      _showMinimalChatToast(
-        context: context,
-        message: _l10n.chatMarkedAllAsRead,
+      showAppToast(
+        context,
+        _l10n.chatMarkedAllAsRead,
+        duration: const Duration(milliseconds: 900),
       );
       return;
     }
-    _showMinimalChatToast(
-      context: context,
-      message: _l10n.chatMarkReadPartial(
+    showAppToast(
+      context,
+      _l10n.chatMarkReadPartial(
         partnerIds.length - failed.length,
         partnerIds.length,
       ),
@@ -1104,6 +1109,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                     partnerAvatarBase64,
                                                 onPartnerAvatarTap:
                                                     _openActivePartnerProfile,
+                                                stickers: stickers,
                                                 deliveryState: draft?.state,
                                                 onRetryTap: draft == null
                                                     ? null
@@ -1961,6 +1967,7 @@ class _MessageBubble extends StatelessWidget {
     required this.currentUserAvatarBase64,
     required this.partnerAvatarBase64,
     required this.onPartnerAvatarTap,
+    required this.stickers,
     this.deliveryState,
     this.onRetryTap,
     this.typingStyleModeEnabled = false,
@@ -1974,6 +1981,7 @@ class _MessageBubble extends StatelessWidget {
   final String? currentUserAvatarBase64;
   final String? partnerAvatarBase64;
   final VoidCallback onPartnerAvatarTap;
+  final List<Sticker> stickers;
   final _OutgoingDeliveryState? deliveryState;
   final VoidCallback? onRetryTap;
   final bool typingStyleModeEnabled;
@@ -1981,6 +1989,12 @@ class _MessageBubble extends StatelessWidget {
   final bool animateAsDraft;
 
   static const double _kMaxBubbleHeight = 180;
+
+  static String? _parseStickerId(String body) {
+    final match =
+        RegExp(r'^\[sticker:([^:\]]+):[^\]]*\]$').firstMatch(body.trim());
+    return match?.group(1);
+  }
 
   void _openDetail(BuildContext context) {
     Navigator.of(context).push(
@@ -2038,6 +2052,83 @@ class _MessageBubble extends StatelessWidget {
     ];
     final hash = avatarId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
+
+    // ── Sticker message ─────────────────────────────────────────────────────
+    final stickerId = _parseStickerId(message.body);
+    if (stickerId != null) {
+      Sticker? found;
+      for (final s in stickers) {
+        if (s.id == stickerId) {
+          found = s;
+          break;
+        }
+      }
+      if (found != null) {
+        Uint8List? stickerBytes;
+        try {
+          stickerBytes = base64Decode(found.contentBase64);
+        } catch (_) {}
+        if (stickerBytes != null) {
+          return Align(
+            alignment:
+                isMine ? Alignment.centerRight : Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isMine) ...
+                [
+                  GestureDetector(
+                    onTap: onPartnerAvatarTap,
+                    child: _MessageAvatar(
+                      userId: avatarId,
+                      avatarBase64: avatarBase64,
+                      avatarBg: avatarBg,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: isMine
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        stickerBytes,
+                        width: 128,
+                        height: 128,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _timeLabel(message.createdAt),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppPalette.neutral500,
+                      ),
+                    ),
+                  ],
+                ),
+                if (isMine) ...
+                [
+                  const SizedBox(width: 6),
+                  _MessageAvatar(
+                    userId: avatarId,
+                    avatarBase64: avatarBase64,
+                    avatarBg: avatarBg,
+                  ),
+                ],
+              ],
+            ),
+          );
+        }
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     Widget bubble = Container(
       constraints: BoxConstraints(
@@ -2353,9 +2444,10 @@ class _MessageDetailScreen extends StatelessWidget {
           GestureDetector(
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.body));
-              _showMinimalChatToast(
-                context: context,
-                message: AppLocalizations.of(context)!.chatCopiedToClipboard,
+              showAppToast(
+                context,
+                AppLocalizations.of(context)!.chatCopiedToClipboard,
+                duration: const Duration(milliseconds: 900),
               );
             },
             child: Padding(
