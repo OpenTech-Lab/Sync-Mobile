@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/local_chat_message.dart';
+import '../services/backup_preferences.dart';
 import '../services/local_chat_repository.dart';
 import '../services/message_e2ee_service.dart';
 import '../services/remote_chat_service.dart';
@@ -74,7 +75,13 @@ class ConversationMessagesController
       limit: 30,
     );
 
-    await _repository.upsertMessages(latest);
+    // Don't restore messages that pre-date a local-data deletion.
+    final clearedAt = await BackupPreferences().readChatClearedAt();
+    final toUpsert = clearedAt == null
+        ? latest
+        : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
+
+    await _repository.upsertMessages(toUpsert);
     ref.invalidate(conversationSummariesProvider);
     final local = await _repository.listMessages(
       conversationId: arg,

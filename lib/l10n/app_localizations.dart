@@ -1032,6 +1032,30 @@ abstract class AppLocalizations {
   /// **'S I G N   O U T'**
   String get settingsSignOutConfirm;
 
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @settingsDeleteAccountMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account will be permanently deleted. All local data and any server backup will be removed. This cannot be undone.'**
+  String get settingsDeleteAccountMessage;
+
+  /// No description provided for @settingsDeleteAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'D E L E T E   A C C O U N T'**
+  String get settingsDeleteAccountConfirm;
+
+  /// No description provided for @settingsDangerousActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Dangerous actions'**
+  String get settingsDangerousActions;
+
   /// No description provided for @settingsPlanetUnknownName.
   ///
   /// In en, this message translates to:

@@ -21,7 +21,7 @@ abstract final class AppPalette {
   static const Color red600 = Color(0xFFDC2626);
   static const Color green600 = Color(0xFF16A34A);
 
-  static const Color neutral50 = Color(0xFFFAF9F6);
+  static const Color neutral50 = Color(0xFFF8F3F0);
   static const Color neutral100 = Color(0xFFE8E4DC);
   static const Color neutral300 = Color(0xFFDDD8CF);
   static const Color neutral500 = Color(0xFF8A8680);

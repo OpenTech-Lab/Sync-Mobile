@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +30,7 @@ class SettingsTab extends ConsumerWidget {
     required this.currentUserId,
     required this.activePartnerId,
     required this.onSignOut,
+    required this.onDeleteAccount,
   });
 
   final String serverUrl;
@@ -35,6 +38,7 @@ class SettingsTab extends ConsumerWidget {
   final String currentUserId;
   final String? activePartnerId;
   final Future<void> Function() onSignOut;
+  final Future<void> Function() onDeleteAccount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -440,7 +444,7 @@ class SettingsTab extends ConsumerWidget {
                                         20) -
                                     1,
                               ),
-                    icon: const Icon(Icons.remove, size: 16),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMinusSign, color: AppPalette.neutral500, size: 16),
                     tooltip: l10n.settingsAutoBackupDecreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
@@ -471,7 +475,7 @@ class SettingsTab extends ConsumerWidget {
                                         20) +
                                     1,
                               ),
-                    icon: const Icon(Icons.add, size: 16),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedPlusSign, color: AppPalette.neutral500, size: 16),
                     tooltip: l10n.settingsAutoBackupIncreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
@@ -491,81 +495,145 @@ class SettingsTab extends ConsumerWidget {
                 ),
             ],
 
-            const SizedBox(height: 18),
-            const SizedBox(height: 14),
-            _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
-            _DangerActionButton(
-              label: l10n.settingsDeleteAllLocalChats,
-              icon: Icons.delete_sweep_outlined,
-              busy: backupState?.isBusy == true,
+            const SizedBox(height: 32),
+            _DangerNavRow(
+              label: l10n.settingsDangerousActions,
               isDark: isDark,
-              onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => _ConfirmDialog(
-                      title: l10n.settingsDeleteLocalChatsTitle,
-                      message: l10n.settingsDeleteLocalChatsMessage,
-                      confirmLabel: l10n.settingsDeleteLocalChatsConfirm,
-                      isDark: isDark,
-                    ),
-                  );
-                  if (confirmed != true) {
-                    return;
-                  }
-                  await ref
-                      .read(backupControllerProvider.notifier)
-                      .deleteLocalChatData();
-                  if (activePartnerId != null) {
-                    ref.invalidate(
-                      conversationMessagesProvider(activePartnerId!),
-                    );
-                  }
-                },
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => _DangerousActionsPage(
+                    serverUrl: serverUrl,
+                    activePartnerId: activePartnerId,
+                    onSignOut: onSignOut,
+                    onDeleteAccount: onDeleteAccount,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dangerous Actions Page ────────────────────────────────────────────────────
+
+class _DangerousActionsPage extends ConsumerWidget {
+  const _DangerousActionsPage({
+    required this.serverUrl,
+    required this.activePartnerId,
+    required this.onSignOut,
+    required this.onDeleteAccount,
+  });
+
+  final String serverUrl;
+  final String? activePartnerId;
+  final Future<void> Function() onSignOut;
+  final Future<void> Function() onDeleteAccount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final backupState = ref.watch(backupControllerProvider).value;
+
+    Future<String?> resolveAccessToken() async {
+      final fresh = await ref
+          .read(appControllerProvider.notifier)
+          .ensureFreshAccessToken();
+      if (fresh != null && fresh.isNotEmpty) return fresh;
+      final fallback = ref.read(appControllerProvider).value?.accessToken;
+      if (fallback != null && fallback.isNotEmpty) return fallback;
+      return null;
+    }
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        title: Text(
+          l10n.settingsDangerousActions,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+        backgroundColor: bgColor,
+        surfaceTintColor: AppPalette.transparent,
+        iconTheme: IconThemeData(color: inkColor),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
+          children: [
+            // ── Local Data ──────────────────────────────────────────────
+            _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
+            OutlineActionButton(
+              label: l10n.settingsDeleteAllLocalChats,
+              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+              textColor: AppPalette.danger700,
+              variant: OutlineActionVariant.danger,
+              disabled: backupState?.isBusy == true,
+              onTap: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsDeleteLocalChatsTitle,
+                    message: l10n.settingsDeleteLocalChatsMessage,
+                    confirmLabel: l10n.settingsDeleteLocalChatsConfirm,
+                    isDark: isDark,
+                  ),
+                );
+                if (confirmed != true) return;
+                await ref
+                    .read(backupControllerProvider.notifier)
+                    .deleteLocalChatData();
+                ref.invalidate(conversationMessagesProvider);
+              },
             ),
             const SizedBox(height: 10),
-            _DangerActionButton(
+            OutlineActionButton(
               label: l10n.settingsDeleteAllAppData,
-              icon: Icons.delete_forever_outlined,
-              busy: backupState?.isBusy == true,
-              isDark: isDark,
-              onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => _ConfirmDialog(
-                      title: l10n.settingsDeleteAllAppDataTitle,
-                      message: l10n.settingsDeleteAllAppDataMessage,
-                      confirmLabel: l10n.settingsDeleteAllAppDataConfirm,
-                      isDark: isDark,
-                    ),
-                  );
-                  if (confirmed != true) {
-                    return;
-                  }
-                  await ref
-                      .read(backupControllerProvider.notifier)
-                      .deleteAllLocalData();
-                  ref.invalidate(conversationSummariesProvider);
-                  ref.invalidate(friendIdsProvider);
-                  ref.invalidate(userAvatarBase64Provider);
-                  ref.invalidate(userDisplayNameProvider);
-                  ref.invalidate(userDescriptionProvider);
-                  ref.invalidate(friendAddedAtProvider);
-                  if (activePartnerId != null) {
-                    ref.invalidate(
-                      conversationMessagesProvider(activePartnerId!),
-                    );
-                  }
-                },
+              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+              textColor: AppPalette.danger700,
+              variant: OutlineActionVariant.danger,
+              disabled: backupState?.isBusy == true,
+              onTap: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsDeleteAllAppDataTitle,
+                    message: l10n.settingsDeleteAllAppDataMessage,
+                    confirmLabel: l10n.settingsDeleteAllAppDataConfirm,
+                    isDark: isDark,
+                  ),
+                );
+                if (confirmed != true) return;
+                await ref
+                    .read(backupControllerProvider.notifier)
+                    .deleteAllLocalData();
+                ref.invalidate(conversationSummariesProvider);
+                ref.invalidate(friendIdsProvider);
+                ref.invalidate(userAvatarBase64Provider);
+                ref.invalidate(userDisplayNameProvider);
+                ref.invalidate(userDescriptionProvider);
+                ref.invalidate(friendAddedAtProvider);
+                ref.invalidate(conversationMessagesProvider);
+              },
             ),
-
+            // ── Sign Out ────────────────────────────────────────────────
             const SizedBox(height: 32),
             _SectionHeader(label: l10n.settingsSignOut, ruleColor: ruleColor),
-            _DangerActionButton(
+            OutlineActionButton(
               label: l10n.settingsSignOut,
-              icon: Icons.logout_rounded,
-              busy: false,
-              isDark: isDark,
-              onPressed: () async {
+              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+              textColor: AppPalette.danger700,
+              variant: OutlineActionVariant.danger,
+              onTap: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
@@ -578,7 +646,103 @@ class SettingsTab extends ConsumerWidget {
                 if (confirmed == true) await onSignOut();
               },
             ),
+            const SizedBox(height: 12),
+            OutlineActionButton(
+              label: l10n.settingsDeleteAccount,
+              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+              textColor: AppPalette.danger700,
+              variant: OutlineActionVariant.danger,
+              onTap: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsDeleteAccount,
+                    message: l10n.settingsDeleteAccountMessage,
+                    confirmLabel: l10n.settingsDeleteAccountConfirm,
+                    isDark: isDark,
+                  ),
+                );
+                if (confirmed != true) return;
+                final token = await resolveAccessToken();
+                if (token != null) {
+                  await ref
+                      .read(backupControllerProvider.notifier)
+                      .deleteBackupData(
+                        baseUrl: serverUrl,
+                        accessToken: token,
+                      );
+                }
+                await ref
+                    .read(backupControllerProvider.notifier)
+                    .deleteAllLocalData();
+                await onDeleteAccount();
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Danger Nav Row ────────────────────────────────────────────────────────────
+
+class _DangerNavRow extends StatelessWidget {
+  const _DangerNavRow({
+    required this.label,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor =
+        AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45);
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor, width: 1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          splashColor: AppPalette.danger700.withValues(alpha: 0.10),
+          highlightColor: AppPalette.danger700.withValues(alpha: 0.06),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedAlert02,
+                  color: AppPalette.danger700,
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.5,
+                      color: AppPalette.danger700,
+                    ),
+                  ),
+                ),
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedArrowRight01,
+                  color: AppPalette.danger700,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -656,7 +820,7 @@ class _DangerActionButton extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final List<List<dynamic>> icon;
   final bool busy;
   final bool isDark;
   final VoidCallback onPressed;
@@ -698,8 +862,8 @@ class _DangerActionButton extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        icon,
+                      HugeIcon(
+                        icon: icon,
                         size: 18,
                         color: textColor,
                       ),
@@ -727,8 +891,8 @@ class _DangerActionButton extends StatelessWidget {
                       ),
                     )
                   else
-                    Icon(
-                      Icons.chevron_right_rounded,
+                    HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowRight01,
                       size: 18,
                       color: textColor.withValues(alpha: 0.5),
                     ),

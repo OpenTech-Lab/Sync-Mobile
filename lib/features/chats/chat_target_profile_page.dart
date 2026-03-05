@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
 
 enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
 
@@ -59,20 +61,16 @@ class ChatTargetProfileScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: AppPalette.neutral500),
         actions: [
           if (isFriend)
-            GestureDetector(
-              onTap: () => Navigator.of(
-                context,
-              ).pop(ChatTargetProfileAction.cancelFriend),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Text(
-                  l10n.chatTargetCancelFriend,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppPalette.danger700,
-                    letterSpacing: 0.2,
-                  ),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: OutlineActionButton(
+                label: l10n.chatTargetCancelFriend,
+                borderColor: AppPalette.danger700.withValues(alpha: 0.45),
+                textColor: AppPalette.danger700,
+                variant: OutlineActionVariant.danger,
+                compact: true,
+                onTap: () => Navigator.of(context)
+                    .pop(ChatTargetProfileAction.cancelFriend),
               ),
             ),
         ],
@@ -122,41 +120,17 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
-          Text(
-            displayHandle,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w300,
-              color: AppPalette.neutral500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 32),
-          Divider(height: 1, color: ruleColor),
-          const SizedBox(height: 20),
-
-          // ── actions row ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (!isFriend)
-                GestureDetector(
-                  onTap: () => Navigator.of(
-                    context,
-                  ).pop(ChatTargetProfileAction.addFriend),
-                  child: Text(
-                    l10n.chatTargetAddFriend,
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 2.2,
-                      fontWeight: FontWeight.w500,
-                      color: inkColor,
-                    ),
-                  ),
-                )
-              else
+          if (isFriend) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedUserCheck01,
+                  size: 13,
+                  color: AppPalette.success700,
+                ),
+                const SizedBox(width: 4),
                 Text(
                   l10n.chatTargetFriend,
                   style: const TextStyle(
@@ -165,19 +139,34 @@ class ChatTargetProfileScreen extends StatelessWidget {
                     color: AppPalette.success700,
                   ),
                 ),
-              const SizedBox(width: 32),
-              GestureDetector(
-                onTap: () => Navigator.of(
-                  context,
-                ).pop(ChatTargetProfileAction.startChat),
-                child: Text(
-                  l10n.chatTargetStartChat,
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 2.2,
-                    fontWeight: FontWeight.w500,
-                    color: inkColor,
-                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 32),
+          Divider(height: 1, color: ruleColor),
+          const SizedBox(height: 20),
+
+          // ── actions row ──
+          Row(
+            children: [
+              Expanded(
+                child: OutlineActionButton(
+                  label: l10n.chatTargetAddFriend,
+                  borderColor: ruleColor,
+                  textColor: inkColor,
+                  disabled: isFriend,
+                  onTap: () => Navigator.of(context)
+                      .pop(ChatTargetProfileAction.addFriend),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlineActionButton(
+                  label: l10n.chatTargetStartChat,
+                  borderColor: ruleColor,
+                  textColor: inkColor,
+                  onTap: () => Navigator.of(context)
+                      .pop(ChatTargetProfileAction.startChat),
                 ),
               ),
             ],
@@ -271,4 +260,76 @@ String _friendSinceLabel(DateTime value) {
   final hh = value.hour.toString().padLeft(2, '0');
   final mm = value.minute.toString().padLeft(2, '0');
   return '$y-$m-$d $hh:$mm';
+}
+
+enum _ProfileActionVariant { normal, danger }
+
+/// Bordered spaced-caps action button used on the target profile page.
+/// Handles normal (neutral border) and danger (red border + tint) variants.
+/// Set [disabled] to grey it out without removing it from the layout.
+/// Set [compact] for AppBar-sized padding; otherwise uses row padding.
+class _ProfileActionButton extends StatelessWidget {
+  const _ProfileActionButton({
+    required this.label,
+    required this.borderColor,
+    required this.textColor,
+    required this.onTap,
+    this.variant = _ProfileActionVariant.normal,
+    this.disabled = false,
+    this.compact = false,
+  });
+
+  final String label;
+  final Color borderColor;
+  final Color textColor;
+  final VoidCallback? onTap;
+  final _ProfileActionVariant variant;
+  final bool disabled;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDanger = variant == _ProfileActionVariant.danger;
+    final effectiveBorder =
+        disabled ? borderColor.withValues(alpha: 0.3) : borderColor;
+    final effectiveText =
+        disabled ? textColor.withValues(alpha: 0.35) : textColor;
+    final bgColor =
+        isDanger ? AppPalette.danger700.withValues(alpha: 0.06) : null;
+    final splashColor =
+        isDanger ? AppPalette.danger700.withValues(alpha: 0.12) : null;
+    final radius = compact ? 8.0 : 10.0;
+    final padding = compact
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+        : const EdgeInsets.symmetric(vertical: 14);
+
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border.all(color: effectiveBorder, width: 1),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: InkWell(
+          onTap: disabled ? null : onTap,
+          borderRadius: BorderRadius.circular(radius),
+          splashColor: splashColor,
+          child: Padding(
+            padding: padding,
+            child: Text(
+              label.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.2,
+                fontWeight: FontWeight.w500,
+                color: effectiveText,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

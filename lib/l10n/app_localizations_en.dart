@@ -497,6 +497,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSignOutConfirm => 'S I G N   O U T';
 
   @override
+  String get settingsDeleteAccount => 'Delete account';
+
+  @override
+  String get settingsDeleteAccountMessage => 'Your account will be permanently deleted. All local data and any server backup will be removed. This cannot be undone.';
+
+  @override
+  String get settingsDeleteAccountConfirm => 'D E L E T E   A C C O U N T';
+
+  @override
+  String get settingsDangerousActions => 'Dangerous actions';
+
+  @override
   String get settingsPlanetUnknownName => 'Unknown planet';
 
   @override

@@ -24,6 +24,7 @@ class MainShell extends ConsumerStatefulWidget {
     required this.currentUsername,
     required this.planetInfo,
     required this.onSignOut,
+    required this.onDeleteAccount,
   });
 
   final String serverUrl;
@@ -32,6 +33,7 @@ class MainShell extends ConsumerStatefulWidget {
   final String? currentUsername;
   final PlanetInfo? planetInfo;
   final Future<void> Function() onSignOut;
+  final Future<void> Function() onDeleteAccount;
 
   @override
   ConsumerState<MainShell> createState() => _MainShellState();
@@ -183,6 +185,7 @@ class _MainShellState extends ConsumerState<MainShell>
         currentUserId: widget.currentUserId,
         activePartnerId: _activePartnerId,
         onSignOut: widget.onSignOut,
+        onDeleteAccount: widget.onDeleteAccount,
       ),
     ];
 

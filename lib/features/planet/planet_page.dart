@@ -11,6 +11,7 @@ import '../../services/server_news_service.dart';
 import '../../services/sticker_service.dart';
 import '../../models/server_news.dart';
 import '../../state/sticker_controller.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/simple_markdown.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/tokens/colors/app_palette.dart';
@@ -258,87 +259,95 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                         }
                         final groups =
                             grouped.keys.toList(growable: false);
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          itemCount: groups.length,
-                          separatorBuilder: (_, _) =>
-                              Divider(height: 1, color: ruleColor),
-                          itemBuilder: (_, i) {
-                            final groupName = groups[i];
-                            final groupStickers = grouped[groupName]!;
-                            final tabSticker = groupStickers.firstWhere(
-                              (s) => s.name == '__tab__',
-                              orElse: () => groupStickers.first,
-                            );
-                            final contentCount = groupStickers
-                                .where((s) => s.name != '__tab__')
-                                .length;
-                            ImageProvider? tabImage;
-                            try {
-                              tabImage = MemoryImage(
-                                base64Decode(tabSticker.contentBase64),
+                        return SizedBox(
+                          height: 118,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.zero,
+                            itemCount: groups.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (_, i) {
+                              final groupName = groups[i];
+                              final groupStickers = grouped[groupName]!;
+                              final tabSticker = groupStickers.firstWhere(
+                                (s) => s.name == '__tab__',
+                                orElse: () => groupStickers.first,
                               );
-                            } catch (_) {}
-                            return ListTile(
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 6),
-                              leading: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: ruleColor),
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: isDark
-                                      ? AppPalette.neutral800
-                                      : AppPalette.neutral100,
-                                  image: tabImage == null
-                                      ? null
-                                      : DecorationImage(
-                                          image: tabImage,
-                                          fit: BoxFit.cover,
-                                        ),
-                                ),
-                                child: tabImage == null
-                                    ? const Icon(
-                                        Icons.image_outlined,
-                                        size: 18,
-                                        color: AppPalette.neutral500,
-                                      )
-                                    : null,
-                              ),
-                              title: Text(
-                                groupName,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w300,
-                                  color: inkColor,
-                                ),
-                              ),
-                              subtitle: Text(
-                                l10n.planetStickerGroupCount(contentCount),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppPalette.neutral500,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                size: 18,
-                                color: AppPalette.neutral500,
-                              ),
-                              onTap: () => Navigator.of(ctx).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => StickerGroupDetailPage(
-                                    groupName: groupName,
-                                    stickers: groupStickers,
+                              final contentCount = groupStickers
+                                  .where((s) => s.name != '__tab__')
+                                  .length;
+                              ImageProvider? tabImage;
+                              try {
+                                tabImage = MemoryImage(
+                                  base64Decode(tabSticker.contentBase64),
+                                );
+                              } catch (_) {}
+                              return GestureDetector(
+                                onTap: () => Navigator.of(ctx).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => StickerGroupDetailPage(
+                                      groupName: groupName,
+                                      stickers: groupStickers,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                                child: SizedBox(
+                                  width: 90,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 90,
+                                        height: 90,
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: ruleColor,
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(15.2),
+                                          child: tabImage == null
+                                              ? Center(
+                                                  child: Icon(
+                                                    Icons.image_outlined,
+                                                    size: 28,
+                                                    color:
+                                                        AppPalette.neutral500,
+                                                  ),
+                                                )
+                                              : Image(
+                                                  image: tabImage,
+                                                  fit: BoxFit.cover,
+                                                  width: 90,
+                                                  height: 90,
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        '$groupName($contentCount)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w400,
+                                          color: inkColor,
+                                          letterSpacing: 0.1,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         );
                       },
                     ),
@@ -596,7 +605,6 @@ class _StickerGroupDetailPageState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     final localStickers =
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
@@ -620,14 +628,6 @@ class _StickerGroupDetailPageState
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text(
-          widget.groupName,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
-          ),
-        ),
         backgroundColor: bgColor,
         surfaceTintColor: AppPalette.transparent,
         iconTheme: IconThemeData(color: inkColor),
@@ -650,6 +650,28 @@ class _StickerGroupDetailPageState
                   ),
                 ),
               ),
+            const SizedBox(height: 12),
+            Text(
+              widget.groupName,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: inkColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlineActionButton(
+              label: _isDownloading
+                  ? l10n.planetStickerDownloading
+                  : allDownloaded
+                      ? l10n.planetStickerDownloaded
+                      : l10n.planetStickerDownload,
+              borderColor: inkColor,
+              textColor: inkColor,
+              disabled: allDownloaded || _isDownloading,
+              onTap: () => _downloadGroup(pending),
+            ),
             const SizedBox(height: 28),
             if (contentStickers.isNotEmpty)
               GridView.builder(
@@ -658,15 +680,14 @@ class _StickerGroupDetailPageState
                 padding: EdgeInsets.zero,
                 gridDelegate:
                     const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
                   childAspectRatio: 0.85,
                 ),
                 itemCount: contentStickers.length,
                 itemBuilder: (_, i) {
                   final sticker = contentStickers[i];
-                  final isLocal = localIds.contains(sticker.id);
                   ImageProvider? img;
                   try {
                     img = MemoryImage(
@@ -677,54 +698,18 @@ class _StickerGroupDetailPageState
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(color: ruleColor),
-                                borderRadius: BorderRadius.circular(8),
-                                color: isDark
-                                    ? AppPalette.neutral800
-                                    : AppPalette.neutral100,
-                                image: img == null
-                                    ? null
-                                    : DecorationImage(
-                                        image: img,
-                                        fit: BoxFit.contain,
-                                      ),
-                              ),
-                              child: img == null
-                                  ? const Center(
-                                      child: Icon(
-                                        Icons.image_outlined,
-                                        size: 24,
-                                        color: AppPalette.neutral500,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            if (isLocal)
-                              Positioned(
-                                right: 4,
-                                top: 4,
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppPalette.neutral700
-                                        : AppPalette.neutral300,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.check,
-                                    size: 10,
-                                    color: AppPalette.neutral500,
-                                  ),
+                        child: img == null
+                            ? const Center(
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 24,
+                                  color: AppPalette.neutral500,
                                 ),
+                              )
+                            : Image(
+                                image: img,
+                                fit: BoxFit.contain,
                               ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -741,39 +726,6 @@ class _StickerGroupDetailPageState
                   );
                 },
               ),
-            const SizedBox(height: 28),
-            GestureDetector(
-              onTap: allDownloaded || _isDownloading
-                  ? null
-                  : () => _downloadGroup(pending),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: allDownloaded
-                        ? ruleColor
-                        : inkColor,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  _isDownloading
-                      ? l10n.planetStickerDownloading
-                      : allDownloaded
-                          ? l10n.planetStickerDownloaded
-                          : l10n.planetStickerDownload,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 0.3,
-                    color: allDownloaded
-                        ? AppPalette.neutral500
-                        : inkColor,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

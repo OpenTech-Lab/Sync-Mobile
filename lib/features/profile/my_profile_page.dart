@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/atoms/app_toast.dart';
@@ -351,7 +352,7 @@ class MyProfileScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           onPressed: saveUsername,
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit01, color: AppPalette.neutral500, size: 16),
                           iconSize: 16,
                           color: AppPalette.neutral500,
                           tooltip: l10n.actionEdit,
@@ -385,7 +386,7 @@ class MyProfileScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           onPressed: saveDescription,
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit01, color: AppPalette.neutral500, size: 16),
                           iconSize: 16,
                           color: AppPalette.neutral500,
                           tooltip: l10n.actionEdit,
@@ -504,8 +505,8 @@ class MyProfileScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.qr_code_scanner_rounded,
+                    const HugeIcon(
+                      icon: HugeIcons.strokeRoundedQrCode,
                       size: 20,
                       color: AppPalette.neutral500,
                     ),
@@ -536,8 +537,8 @@ class MyProfileScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right,
+                    const HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowRight01,
                       size: 18,
                       color: AppPalette.neutral500,
                     ),
@@ -619,8 +620,8 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              _isCopied ? Icons.check : Icons.copy_rounded,
+            HugeIcon(
+              icon: _isCopied ? HugeIcons.strokeRoundedTick01 : HugeIcons.strokeRoundedCopy01,
               size: 14,
               color: foregroundColor,
             ),

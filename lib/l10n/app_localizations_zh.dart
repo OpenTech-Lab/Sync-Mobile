@@ -248,6 +248,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String planetStickerGroupCount(int count) {
+    return '$count 個貼圖';
+  }
+
+  @override
+  String planetStickerGroupDownloadedToast(String group) {
+    return '已下載 $group 貼圖包。';
+  }
+
+  @override
   String get settingsMyPlanet => '我的 Planet';
 
   @override
@@ -487,6 +497,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSignOutConfirm => '登 出';
 
   @override
+  String get settingsDeleteAccount => '刪除帳號';
+
+  @override
+  String get settingsDeleteAccountMessage => '你的帳號將被永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
+
+  @override
+  String get settingsDeleteAccountConfirm => '刪 除 帳 號';
+
+  @override
+  String get settingsDangerousActions => '危険操作';
+
+  @override
   String get settingsPlanetUnknownName => '未知 Planet';
 
   @override
@@ -695,16 +717,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get actionNext => '下 一 步';
-
-  @override
-  String planetStickerGroupCount(int count) {
-    return '$count 個貼圖';
-  }
-
-  @override
-  String planetStickerGroupDownloadedToast(String group) {
-    return '已下載 $group 貼圖包。';
-  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -951,6 +963,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
+  String planetStickerGroupCount(int count) {
+    return '$count 個貼圖';
+  }
+
+  @override
+  String planetStickerGroupDownloadedToast(String group) {
+    return '已下載 $group 貼圖包。';
+  }
+
+  @override
   String get settingsMyPlanet => '我的 Planet';
 
   @override
@@ -1188,6 +1210,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsSignOutConfirm => '登 出';
+
+  @override
+  String get settingsDeleteAccount => '刪除帳號';
+
+  @override
+  String get settingsDeleteAccountMessage => '你的帳號將被永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
+
+  @override
+  String get settingsDeleteAccountConfirm => '刪 除 帳 號';
+
+  @override
+  String get settingsDangerousActions => '危険操作';
 
   @override
   String get settingsPlanetUnknownName => '未知 Planet';

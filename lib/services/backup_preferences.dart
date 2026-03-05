@@ -59,4 +59,18 @@ class BackupPreferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_autoBackupMessageThresholdKey, value.clamp(1, 1000));
   }
+
+  static const _chatClearedAtKey = 'chat_cleared_at';
+
+  Future<DateTime?> readChatClearedAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_chatClearedAtKey);
+    if (raw == null || raw.trim().isEmpty) return null;
+    return DateTime.tryParse(raw)?.toUtc();
+  }
+
+  Future<void> writeChatClearedAt(DateTime clearedAt) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_chatClearedAtKey, clearedAt.toUtc().toIso8601String());
+  }
 }

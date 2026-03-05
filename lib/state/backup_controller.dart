@@ -257,8 +257,10 @@ class BackupController extends AsyncNotifier<BackupState> {
     try {
       await ref.read(chatRepositoryProvider).replaceAllMessages(const []);
       ref.invalidate(conversationSummariesProvider);
+      final clearedAt = DateTime.now().toUtc();
+      await _backupPreferences.writeChatClearedAt(clearedAt);
       await _backupPreferences.writeLastBackupMetadata(
-        backedAt: DateTime.now().toUtc(),
+        backedAt: clearedAt,
         messageCount: 0,
       );
       state = AsyncData(
@@ -296,6 +298,9 @@ class BackupController extends AsyncNotifier<BackupState> {
       // Clear all SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+
+      // Record cleared-at timestamp AFTER prefs.clear() so it survives the wipe
+      await _backupPreferences.writeChatClearedAt(DateTime.now().toUtc());
 
       state = AsyncData(
         current.copyWith(
