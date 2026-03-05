@@ -32,14 +32,21 @@ class NotificationService {
 
   Future<String?> getOrCreateDeviceToken() async {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      try {
-        final apnsToken = await _channel.invokeMethod<String>('getPushToken');
-        if (apnsToken != null && apnsToken.trim().isNotEmpty) {
-          final trimmed = apnsToken.trim();
-          await _storage.write(key: _deviceTokenKey, value: trimmed);
-          return trimmed;
-        }
-      } catch (_) {}
+      // APNs token registration is asynchronous: registerForRemoteNotifications()
+      // fires in Swift but the callback may arrive seconds later. Poll briefly
+      // so the token is available on the very first launch before we sync it
+      // to the server. Subsequent launches hit UserDefaults immediately.
+      for (var attempt = 0; attempt < 6; attempt++) {
+        try {
+          final apnsToken = await _channel.invokeMethod<String>('getPushToken');
+          if (apnsToken != null && apnsToken.trim().isNotEmpty) {
+            final trimmed = apnsToken.trim();
+            await _storage.write(key: _deviceTokenKey, value: trimmed);
+            return trimmed;
+          }
+        } catch (_) {}
+        if (attempt < 5) await Future.delayed(const Duration(seconds: 1));
+      }
     }
 
     final existing = await _storage.read(key: _deviceTokenKey);
