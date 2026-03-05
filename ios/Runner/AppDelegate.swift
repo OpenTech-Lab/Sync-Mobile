@@ -178,11 +178,18 @@ import UserNotifications
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    // Show the notification while the app is in the foreground.
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .list, .sound, .badge])
+    // Suppress the remote APNs banner while the app is foregrounded — the
+    // WebSocket connection already delivers the message and triggers a local
+    // notification, so showing both would produce a duplicate banner.
+    let isRemote = notification.request.trigger is UNPushNotificationTrigger
+    if isRemote {
+      completionHandler([])
     } else {
-      completionHandler([.alert, .sound, .badge])
+      if #available(iOS 14.0, *) {
+        completionHandler([.banner, .list, .sound, .badge])
+      } else {
+        completionHandler([.alert, .sound, .badge])
+      }
     }
   }
 
