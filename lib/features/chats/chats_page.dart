@@ -1110,6 +1110,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                 onPartnerAvatarTap:
                                                     _openActivePartnerProfile,
                                                 stickers: stickers,
+                                                serverUrl: widget.serverUrl,
+                                                accessToken: widget.accessToken,
                                                 deliveryState: draft?.state,
                                                 onRetryTap: draft == null
                                                     ? null
@@ -1321,6 +1323,7 @@ class _ConversationStarter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1958,7 +1961,7 @@ class _StickerPickerState extends State<_StickerPicker> {
 // Message bubble
 // —————————————————————————————————————————————————————
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends ConsumerWidget {
   const _MessageBubble({
     super.key,
     required this.message,
@@ -1968,6 +1971,8 @@ class _MessageBubble extends StatelessWidget {
     required this.partnerAvatarBase64,
     required this.onPartnerAvatarTap,
     required this.stickers,
+    required this.serverUrl,
+    required this.accessToken,
     this.deliveryState,
     this.onRetryTap,
     this.typingStyleModeEnabled = false,
@@ -1982,6 +1987,8 @@ class _MessageBubble extends StatelessWidget {
   final String? partnerAvatarBase64;
   final VoidCallback onPartnerAvatarTap;
   final List<Sticker> stickers;
+  final String serverUrl;
+  final String accessToken;
   final _OutgoingDeliveryState? deliveryState;
   final VoidCallback? onRetryTap;
   final bool typingStyleModeEnabled;
@@ -2005,7 +2012,7 @@ class _MessageBubble extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -2062,6 +2069,17 @@ class _MessageBubble extends StatelessWidget {
           found = s;
           break;
         }
+      }
+      // If not in local cache, try fetching on-demand from server
+      if (found == null) {
+        final remote = ref.watch(
+          stickerByIdProvider((
+            id: stickerId,
+            baseUrl: serverUrl,
+            accessToken: accessToken,
+          )),
+        );
+        found = remote.valueOrNull;
       }
       if (found != null) {
         Uint8List? stickerBytes;

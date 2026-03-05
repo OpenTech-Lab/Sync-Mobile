@@ -11,6 +11,20 @@ class StickerService {
 
   final http.Client _httpClient;
 
+  Future<Sticker?> fetchById({
+    required String baseUrl,
+    required String accessToken,
+    required String id,
+  }) async {
+    final uri = Uri.parse('${_normalizeBaseUrl(baseUrl)}/api/stickers/$id');
+    final response = await _httpClient
+        .get(uri, headers: _headers(accessToken))
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) return null;
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return Sticker.fromDetailJson(json);
+  }
+
   Future<List<Sticker>> syncAll({
     required String baseUrl,
     required String accessToken,

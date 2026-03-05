@@ -4,6 +4,22 @@ import '../models/sticker.dart';
 import '../services/sticker_cache_service.dart';
 import '../services/sticker_service.dart';
 
+typedef _StickerByIdArg = ({
+  String id,
+  String baseUrl,
+  String accessToken,
+});
+
+final stickerByIdProvider =
+    FutureProvider.family<Sticker?, _StickerByIdArg>((ref, arg) async {
+  final service = ref.read(stickerServiceProvider);
+  return service.fetchById(
+    baseUrl: arg.baseUrl,
+    accessToken: arg.accessToken,
+    id: arg.id,
+  );
+});
+
 final stickerServiceProvider = Provider<StickerService>((ref) {
   return StickerService();
 });
