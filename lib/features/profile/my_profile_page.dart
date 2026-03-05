@@ -349,19 +349,15 @@ class MyProfileScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: saveUsername,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
-                            child: Text(
-                              l10n.actionEdit,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppPalette.neutral500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
+                        IconButton(
+                          onPressed: saveUsername,
+                          icon: const Icon(Icons.edit_outlined),
+                          iconSize: 16,
+                          color: AppPalette.neutral500,
+                          tooltip: l10n.actionEdit,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),
@@ -387,19 +383,15 @@ class MyProfileScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: saveDescription,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 2, 0, 2),
-                            child: Text(
-                              l10n.actionEdit,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppPalette.neutral500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
+                        IconButton(
+                          onPressed: saveDescription,
+                          icon: const Icon(Icons.edit_outlined),
+                          iconSize: 16,
+                          color: AppPalette.neutral500,
+                          tooltip: l10n.actionEdit,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),

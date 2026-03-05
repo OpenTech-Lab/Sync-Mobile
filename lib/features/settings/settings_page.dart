@@ -494,14 +494,12 @@ class SettingsTab extends ConsumerWidget {
             const SizedBox(height: 18),
             const SizedBox(height: 14),
             _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _BackupTextButton(
-                label: l10n.settingsDeleteAllLocalChats,
-                busy: backupState?.isBusy == true,
-                inkColor: AppPalette.danger700,
-                mutedColor: AppPalette.neutral500,
-                onPressed: () async {
+            _DangerActionButton(
+              label: l10n.settingsDeleteAllLocalChats,
+              icon: Icons.delete_sweep_outlined,
+              busy: backupState?.isBusy == true,
+              isDark: isDark,
+              onPressed: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => _ConfirmDialog(
@@ -523,16 +521,14 @@ class SettingsTab extends ConsumerWidget {
                     );
                   }
                 },
-              ),
             ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _BackupTextButton(
-                label: l10n.settingsDeleteAllAppData,
-                busy: backupState?.isBusy == true,
-                inkColor: AppPalette.danger700,
-                mutedColor: AppPalette.neutral500,
-                onPressed: () async {
+            const SizedBox(height: 10),
+            _DangerActionButton(
+              label: l10n.settingsDeleteAllAppData,
+              icon: Icons.delete_forever_outlined,
+              busy: backupState?.isBusy == true,
+              isDark: isDark,
+              onPressed: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => _ConfirmDialog(
@@ -560,42 +556,27 @@ class SettingsTab extends ConsumerWidget {
                     );
                   }
                 },
-              ),
             ),
 
-            const SizedBox(height: 48),
-            Divider(height: 1, thickness: 1, color: ruleColor),
-            const SizedBox(height: 20),
-
-            // ── Sign out ──────────────────────────────────────────────────
-            Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => _ConfirmDialog(
-                      title: l10n.settingsSignOut,
-                      message: l10n.settingsSignOutMessage,
-                      confirmLabel: l10n.settingsSignOutConfirm,
-                      isDark: isDark,
-                    ),
-                  );
-                  if (confirmed == true) await onSignOut();
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    l10n.settingsSignOut,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppPalette.danger700,
-                      letterSpacing: 0.3,
-                      fontWeight: FontWeight.w300,
-                    ),
+            const SizedBox(height: 32),
+            _SectionHeader(label: l10n.settingsSignOut, ruleColor: ruleColor),
+            _DangerActionButton(
+              label: l10n.settingsSignOut,
+              icon: Icons.logout_rounded,
+              busy: false,
+              isDark: isDark,
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsSignOut,
+                    message: l10n.settingsSignOutMessage,
+                    confirmLabel: l10n.settingsSignOutConfirm,
+                    isDark: isDark,
                   ),
-                ),
-              ),
+                );
+                if (confirmed == true) await onSignOut();
+              },
             ),
           ],
         ),
@@ -663,6 +644,107 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// A full-width, bordered danger action button used for destructive or
+/// high-impact actions such as deleting data or signing out.
+class _DangerActionButton extends StatelessWidget {
+  const _DangerActionButton({
+    required this.label,
+    required this.icon,
+    required this.busy,
+    required this.isDark,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool busy;
+  final bool isDark;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDisabled = busy;
+    final borderColor = isDisabled
+        ? AppPalette.neutral500.withValues(alpha: 0.25)
+        : AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45);
+    final bgColor = isDisabled
+        ? AppPalette.neutral500.withValues(alpha: 0.05)
+        : AppPalette.danger700.withValues(alpha: isDark ? 0.10 : 0.06);
+    final textColor = isDisabled
+        ? AppPalette.neutral500.withValues(alpha: 0.45)
+        : AppPalette.danger700;
+
+    return Semantics(
+      button: true,
+      enabled: !isDisabled,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border.all(color: borderColor, width: 1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: InkWell(
+            onTap: isDisabled ? null : onPressed,
+            borderRadius: BorderRadius.circular(10),
+            splashColor: AppPalette.danger700.withValues(alpha: 0.12),
+            highlightColor: AppPalette.danger700.withValues(alpha: 0.07),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 18,
+                        color: textColor,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: textColor,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (busy)
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppPalette.neutral500.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact inline text-button used inside the backup section (Create Backup,
+/// Restore, Delete Backup Data). For high-impact destructive actions on the
+/// settings page, use [_DangerActionButton] instead.
 class _BackupTextButton extends StatelessWidget {
   const _BackupTextButton({
     required this.label,
