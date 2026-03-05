@@ -307,6 +307,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDeleteAllLocalChats => '刪除本機所有聊天資料';
 
   @override
+  String get settingsDeleteAllAppData => '刪除所有應用程式資料';
+
+  @override
   String get settingsSignOut => '登出';
 
   @override
@@ -467,6 +470,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsDeleteLocalChatsConfirm => '刪 除 本 機 聊 天';
+
+  @override
+  String get settingsDeleteAllAppDataTitle => '刪除所有應用程式資料';
+
+  @override
+  String get settingsDeleteAllAppDataMessage => '這將永久刪除包括聊天紀錄、偏好設定及快取資料在內的所有本機資料。\n不會影響伺服器端資料。';
+
+  @override
+  String get settingsDeleteAllAppDataConfirm => '刪 除 所 有 資 料';
 
   @override
   String get settingsSignOutMessage => '你將從此帳號登出。\n本機訊息會保留在裝置上。';
@@ -988,6 +1000,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteAllLocalChats => '刪除本機所有聊天資料';
 
   @override
+  String get settingsDeleteAllAppData => '刪除所有應用程式資料';
+
+  @override
   String get settingsSignOut => '登出';
 
   @override
@@ -1148,6 +1163,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsDeleteLocalChatsConfirm => '刪 除 本 機 聊 天';
+
+  @override
+  String get settingsDeleteAllAppDataTitle => '刪除所有應用程式資料';
+
+  @override
+  String get settingsDeleteAllAppDataMessage => '這將永久刪除包括聊天紀錄、偏好設定及快取資料在內的所有本機資料。\n不會影響伺服器端資料。';
+
+  @override
+  String get settingsDeleteAllAppDataConfirm => '刪 除 所 有 資 料';
 
   @override
   String get settingsSignOutMessage => '你將從此帳號登出。\n本機訊息會保留在裝置上。';

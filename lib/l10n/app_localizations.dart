@@ -672,6 +672,12 @@ abstract class AppLocalizations {
   /// **'Delete all local chat data'**
   String get settingsDeleteAllLocalChats;
 
+  /// No description provided for @settingsDeleteAllAppData.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all app data'**
+  String get settingsDeleteAllAppData;
+
   /// No description provided for @settingsSignOut.
   ///
   /// In en, this message translates to:
@@ -983,6 +989,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'D E L E T E   L O C A L   C H A T S'**
   String get settingsDeleteLocalChatsConfirm;
+
+  /// No description provided for @settingsDeleteAllAppDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all app data'**
+  String get settingsDeleteAllAppDataTitle;
+
+  /// No description provided for @settingsDeleteAllAppDataMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes all local data including chat history, preferences, and cached data.\nServer-side data is not changed.'**
+  String get settingsDeleteAllAppDataMessage;
+
+  /// No description provided for @settingsDeleteAllAppDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'D E L E T E   A L L   D A T A'**
+  String get settingsDeleteAllAppDataConfirm;
 
   /// No description provided for @settingsSignOutMessage.
   ///

@@ -16,6 +16,7 @@ import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
+import '../../state/user_profile_controller.dart';
 import '../../ui/components/molecules/language_picker.dart';
 
 class SettingsTab extends ConsumerWidget {
@@ -521,6 +522,43 @@ class SettingsTab extends ConsumerWidget {
                   await ref
                       .read(backupControllerProvider.notifier)
                       .deleteLocalChatData();
+                  if (activePartnerId != null) {
+                    ref.invalidate(
+                      conversationMessagesProvider(activePartnerId!),
+                    );
+                  }
+                },
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _BackupTextButton(
+                label: l10n.settingsDeleteAllAppData,
+                busy: backupState?.isBusy == true,
+                inkColor: AppPalette.danger700,
+                mutedColor: AppPalette.neutral500,
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => _ConfirmDialog(
+                      title: l10n.settingsDeleteAllAppDataTitle,
+                      message: l10n.settingsDeleteAllAppDataMessage,
+                      confirmLabel: l10n.settingsDeleteAllAppDataConfirm,
+                      isDark: isDark,
+                    ),
+                  );
+                  if (confirmed != true) {
+                    return;
+                  }
+                  await ref
+                      .read(backupControllerProvider.notifier)
+                      .deleteAllLocalData();
+                  ref.invalidate(conversationSummariesProvider);
+                  ref.invalidate(friendIdsProvider);
+                  ref.invalidate(userAvatarBase64Provider);
+                  ref.invalidate(userDisplayNameProvider);
+                  ref.invalidate(userDescriptionProvider);
+                  ref.invalidate(friendAddedAtProvider);
                   if (activePartnerId != null) {
                     ref.invalidate(
                       conversationMessagesProvider(activePartnerId!),

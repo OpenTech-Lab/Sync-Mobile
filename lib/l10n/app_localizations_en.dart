@@ -307,6 +307,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteAllLocalChats => 'Delete all local chat data';
 
   @override
+  String get settingsDeleteAllAppData => 'Delete all app data';
+
+  @override
   String get settingsSignOut => 'Sign out';
 
   @override
@@ -467,6 +470,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteLocalChatsConfirm => 'D E L E T E   L O C A L   C H A T S';
+
+  @override
+  String get settingsDeleteAllAppDataTitle => 'Delete all app data';
+
+  @override
+  String get settingsDeleteAllAppDataMessage => 'This permanently deletes all local data including chat history, preferences, and cached data.\nServer-side data is not changed.';
+
+  @override
+  String get settingsDeleteAllAppDataConfirm => 'D E L E T E   A L L   D A T A';
 
   @override
   String get settingsSignOutMessage => 'You will be signed out of this account.\nLocal messages remain on device.';

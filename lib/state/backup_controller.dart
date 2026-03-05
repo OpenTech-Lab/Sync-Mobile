@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/backup_preferences.dart';
 import '../services/encrypted_backup_service.dart';
@@ -271,6 +272,42 @@ class BackupController extends AsyncNotifier<BackupState> {
         current.copyWith(
           isBusy: false,
           statusMessage: 'Delete local chat data failed: $error',
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteAllLocalData() async {
+    final current = state.value;
+    if (current == null) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(isBusy: true, statusMessage: null));
+
+    try {
+      // Clear all local chat messages
+      await ref.read(chatRepositoryProvider).replaceAllMessages(const []);
+      ref.invalidate(conversationSummariesProvider);
+
+      // Delete local encrypted backup file
+      await _localCryptoService.deleteBackup();
+
+      // Clear all SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'All local app data deleted on this device.',
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          isBusy: false,
+          statusMessage: 'Delete all local data failed: $error',
         ),
       );
     }
