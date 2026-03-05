@@ -148,7 +148,12 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
         title: Text(l10n.chatHomeTitle),
         actions: [
           IconButton(
-            onPressed: widget.onSignOut,
+            onPressed: () async {
+              await widget.onSignOut();
+              if (context.mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            },
             tooltip: l10n.settingsSignOut,
             icon: const Icon(Icons.logout),
           ),

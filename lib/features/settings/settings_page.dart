@@ -645,7 +645,12 @@ class _DangerousActionsPage extends ConsumerWidget {
                     isDark: isDark,
                   ),
                 );
-                if (confirmed == true) await onSignOut();
+                if (confirmed == true) {
+                  await onSignOut();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                }
               },
             ),
             const SizedBox(height: 12),
