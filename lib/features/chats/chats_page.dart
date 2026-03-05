@@ -388,7 +388,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         );
       },
     );
-    targetController.dispose();
+    // Dispose on the next frame to avoid a race with dialog-route transition
+    // rebuilds that can still touch the controller right after pop.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      targetController.dispose();
+    });
     return result;
   }
 
