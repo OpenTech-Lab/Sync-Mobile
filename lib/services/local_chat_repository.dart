@@ -48,8 +48,15 @@ class InMemoryChatRepository implements ChatRepository {
     required String conversationId,
     int limit = 100,
   }) async {
-    final msgs = (_store[conversationId] ?? []).reversed.take(limit).toList();
-    return msgs;
+    final sorted = [...(_store[conversationId] ?? const <LocalChatMessage>[])]
+      ..sort((a, b) {
+        final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+        if (byCreatedAt != 0) {
+          return byCreatedAt;
+        }
+        return b.id.compareTo(a.id);
+      });
+    return sorted.take(limit).toList(growable: false);
   }
 
   @override
