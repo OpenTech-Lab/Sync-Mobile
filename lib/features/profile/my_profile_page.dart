@@ -315,6 +315,16 @@ class MyProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // planet label
+                    Text(
+                      planetLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     // username row
                     Row(
                       children: [
@@ -345,16 +355,6 @@ class MyProfileScreen extends ConsumerWidget {
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 3),
-                    // planet label
-                    Text(
-                      planetLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppPalette.neutral500,
-                        fontWeight: FontWeight.w300,
-                      ),
                     ),
                     const SizedBox(height: 10),
                     // description row
@@ -972,9 +972,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
               ),
               onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
             ),
-            const SizedBox(height: 28),
-            Divider(height: 1, thickness: 1, color: ruleColor),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
