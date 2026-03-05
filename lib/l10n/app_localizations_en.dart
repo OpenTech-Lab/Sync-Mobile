@@ -567,7 +567,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileUsernameValidationError => 'Username must be 3-32 chars: a-zA-Z0-9._-';
+  String get profileUsernameValidationError => 'Username must be 3-32 chars: a-zA-Z0-9._- and spaces';
 
   @override
   String get profileUsernameUpdated => 'Username updated';
@@ -594,7 +594,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileUsernameDialogTitle => 'USERNAME';
 
   @override
-  String get profileUsernameHint => '3–32 chars, a-zA-Z0-9._-';
+  String get profileUsernameHint => '3–32 chars, a-zA-Z0-9._- and spaces';
 
   @override
   String homeUnreadSummary(int count) {

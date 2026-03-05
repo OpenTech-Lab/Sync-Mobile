@@ -67,7 +67,7 @@ class MyProfileScreen extends ConsumerWidget {
         return;
       }
 
-      final usernamePattern = RegExp(r'^[a-zA-Z0-9._-]{3,32}$');
+      final usernamePattern = RegExp(r'^[a-zA-Z0-9._ -]{3,32}$');
       if (!usernamePattern.hasMatch(result)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
