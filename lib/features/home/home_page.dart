@@ -124,13 +124,11 @@ class HomeTab extends ConsumerWidget {
                 ),
               )
             else
-              ListView.separated(
+              ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 itemCount: friendIds.length,
-                separatorBuilder: (_, _) =>
-                    Divider(height: 1, color: ruleColor),
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
                   final displayName = _displayNameOrFallback(

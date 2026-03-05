@@ -319,16 +319,15 @@ class SettingsTab extends ConsumerWidget {
             ),
             if (backupState?.enabled == true) ...[
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 24,
-                runSpacing: 10,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _BackupTextButton(
+                  OutlineActionButton(
                     label: l10n.settingsCreateBackup,
-                    busy: backupState?.isBusy == true,
-                    inkColor: inkColor,
-                    mutedColor: AppPalette.neutral500,
-                    onPressed: () async {
+                    borderColor: inkColor,
+                    textColor: inkColor,
+                    disabled: backupState?.isBusy == true,
+                    onTap: () async {
                       final token = await resolveAccessToken();
                       if (token == null) {
                         if (!context.mounted) return;
@@ -344,12 +343,13 @@ class SettingsTab extends ConsumerWidget {
                           .createBackup(baseUrl: serverUrl, accessToken: token);
                     },
                   ),
-                  _BackupTextButton(
+                  const SizedBox(height: 10),
+                  OutlineActionButton(
                     label: l10n.settingsRestore,
-                    busy: backupState?.isBusy == true,
-                    inkColor: inkColor,
-                    mutedColor: AppPalette.neutral500,
-                    onPressed: () async {
+                    borderColor: inkColor,
+                    textColor: inkColor,
+                    disabled: backupState?.isBusy == true,
+                    onTap: () async {
                       final token = await resolveAccessToken();
                       if (token == null) {
                         if (!context.mounted) return;
@@ -373,12 +373,14 @@ class SettingsTab extends ConsumerWidget {
                       }
                     },
                   ),
-                  _BackupTextButton(
+                  const SizedBox(height: 10),
+                  OutlineActionButton(
                     label: l10n.settingsDeleteBackupData,
-                    busy: backupState?.isBusy == true,
-                    inkColor: AppPalette.danger700,
-                    mutedColor: AppPalette.neutral500,
-                    onPressed: () async {
+                    borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+                    textColor: AppPalette.danger700,
+                    variant: OutlineActionVariant.danger,
+                    disabled: backupState?.isBusy == true,
+                    onTap: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => _ConfirmDialog(
@@ -901,55 +903,6 @@ class _DangerActionButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Compact inline text-button used inside the backup section (Create Backup,
-/// Restore, Delete Backup Data). For high-impact destructive actions on the
-/// settings page, use [_DangerActionButton] instead.
-class _BackupTextButton extends StatelessWidget {
-  const _BackupTextButton({
-    required this.label,
-    required this.busy,
-    required this.inkColor,
-    required this.mutedColor,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool busy;
-  final Color inkColor;
-  final Color mutedColor;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: busy ? null : onPressed,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w300,
-              color: busy ? mutedColor.withValues(alpha: 0.4) : inkColor,
-              letterSpacing: 0.2,
-            ),
-          ),
-          if (busy)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: SizedBox(
-                width: 60,
-                height: 1,
-                child: LinearProgressIndicator(minHeight: 1),
-              ),
-            ),
-        ],
       ),
     );
   }

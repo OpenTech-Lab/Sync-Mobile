@@ -411,15 +411,26 @@ class MyProfileScreen extends ConsumerWidget {
                           duration: const Duration(milliseconds: 900),
                         );
                       },
-                      child: Text(
-                        l10n.profileCopyFriendLink,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppPalette.neutral500,
-                          letterSpacing: 0.3,
-                          decoration: TextDecoration.underline,
-                          decorationColor: ruleColor,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.link,
+                            size: 13,
+                            color: AppPalette.neutral500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            l10n.profileCopyFriendLink,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppPalette.neutral500,
+                              letterSpacing: 0.3,
+                              decoration: TextDecoration.underline,
+                              decorationColor: ruleColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -448,14 +459,14 @@ class MyProfileScreen extends ConsumerWidget {
               data: myQrPayload,
               version: QrVersions.auto,
               size: 200,
-              backgroundColor: AppPalette.white,
-              eyeStyle: const QrEyeStyle(
+              backgroundColor: Colors.transparent,
+              eyeStyle: QrEyeStyle(
                 eyeShape: QrEyeShape.square,
-                color: AppPalette.black,
+                color: inkColor,
               ),
-              dataModuleStyle: const QrDataModuleStyle(
+              dataModuleStyle: QrDataModuleStyle(
                 dataModuleShape: QrDataModuleShape.square,
-                color: AppPalette.black,
+                color: inkColor,
               ),
             ),
           ),
