@@ -188,10 +188,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         userId: normalized,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
+      final oldAvatar = await prefs.readAvatarBase64(normalized);
       await prefs.writeDisplayName(normalized, profile.username);
       await prefs.writeAvatarBase64(normalized, profile.avatarBase64);
       ref.invalidate(userDisplayNameProvider(normalized));
-      ref.invalidate(userAvatarBase64Provider(normalized));
+      // Only invalidate the avatar provider when the image actually changed.
+      // An unconditional invalidate causes a loading→data cycle that makes
+      // every _MessageAvatar flash back to initials and then re-render.
+      if (profile.avatarBase64 != oldAvatar) {
+        ref.invalidate(userAvatarBase64Provider(normalized));
+      }
       _profileSyncedOnce.add(normalized);
     } catch (_) {
       // keep retry possible on later attempts
@@ -855,12 +861,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final currentUserAvatarBase64 = ref
-        .watch(userAvatarBase64Provider(widget.currentUserId))
-        .value;
-    final partnerAvatarBase64 = _activePartnerId == null
-        ? null
-        : ref.watch(userAvatarBase64Provider(_activePartnerId!)).value;
     final conversationSummaries =
         ref.watch(conversationSummariesProvider).value ??
         const <ConversationSummary>[];
@@ -1109,10 +1109,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                     widget.currentUserId,
                                                 currentUserId:
                                                     widget.currentUserId,
-                                                currentUserAvatarBase64:
-                                                    currentUserAvatarBase64,
-                                                partnerAvatarBase64:
-                                                    partnerAvatarBase64,
+                                                partnerId: _activePartnerId!,
                                                 onPartnerAvatarTap:
                                                     _openActivePartnerProfile,
                                                 stickers: stickers,
@@ -1974,8 +1971,7 @@ class _MessageBubble extends ConsumerWidget {
     required this.message,
     required this.isMine,
     required this.currentUserId,
-    required this.currentUserAvatarBase64,
-    required this.partnerAvatarBase64,
+    required this.partnerId,
     required this.onPartnerAvatarTap,
     required this.stickers,
     required this.serverUrl,
@@ -1990,8 +1986,7 @@ class _MessageBubble extends ConsumerWidget {
   final LocalChatMessage message;
   final bool isMine;
   final String currentUserId;
-  final String? currentUserAvatarBase64;
-  final String? partnerAvatarBase64;
+  final String partnerId;
   final VoidCallback onPartnerAvatarTap;
   final List<Sticker> stickers;
   final String serverUrl;
@@ -2069,6 +2064,12 @@ class _MessageBubble extends ConsumerWidget {
     final isTruncated = overflowProbe.didExceedMaxLines;
 
     final avatarId = isMine ? currentUserId : message.senderId;
+    // Watch avatar providers locally so only individual bubbles rebuild on
+    // avatar changes — the parent page is not involved in avatar reloads.
+    final currentUserAvatarBase64 =
+        ref.watch(userAvatarBase64Provider(currentUserId)).value;
+    final partnerAvatarBase64 =
+        ref.watch(userAvatarBase64Provider(partnerId)).value;
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
 
     const palette = [
@@ -2624,7 +2625,7 @@ class _MessageDetailScreen extends StatelessWidget {
   }
 }
 
-class _MessageAvatar extends StatelessWidget {
+class _MessageAvatar extends StatefulWidget {
   const _MessageAvatar({
     required this.userId,
     required this.avatarBase64,
@@ -2636,17 +2637,48 @@ class _MessageAvatar extends StatelessWidget {
   final Color avatarBg;
 
   @override
+  State<_MessageAvatar> createState() => _MessageAvatarState();
+}
+
+class _MessageAvatarState extends State<_MessageAvatar> {
+  /// Last successfully decoded avatar bytes. Retained across rebuilds even
+  /// when the provider temporarily returns null (e.g. during invalidation),
+  /// so the avatar never flickers back to initials while reloading.
+  String? _cachedBase64;
+  Uint8List? _cachedBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryUpdateCache(widget.avatarBase64);
+  }
+
+  @override
+  void didUpdateWidget(_MessageAvatar old) {
+    super.didUpdateWidget(old);
+    _tryUpdateCache(widget.avatarBase64);
+  }
+
+  void _tryUpdateCache(String? base64) {
+    if (base64 != null && base64 != _cachedBase64) {
+      _cachedBase64 = base64;
+      _cachedBytes = base64Decode(base64);
+    }
+    // When base64 is null (provider in loading state after invalidation),
+    // keep _cachedBytes so the image remains visible — no flash to initials.
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final initials = userId.length >= 2
-        ? userId.substring(0, 2).toUpperCase()
+    final bytes = _cachedBytes;
+    final initials = widget.userId.length >= 2
+        ? widget.userId.substring(0, 2).toUpperCase()
         : '?';
 
     return CircleAvatar(
       radius: 12,
-      backgroundColor: avatarBase64 != null
-          ? Colors.transparent
-          : avatarBg,
-      child: avatarBase64 == null
+      backgroundColor: bytes != null ? Colors.transparent : widget.avatarBg,
+      child: bytes == null
           ? Text(
               initials,
               style: const TextStyle(
@@ -2658,7 +2690,7 @@ class _MessageAvatar extends StatelessWidget {
           : ClipOval(
               child: SizedBox.expand(
                 child: Image.memory(
-                  base64Decode(avatarBase64!),
+                  bytes,
                   fit: BoxFit.cover,
                 ),
               ),
