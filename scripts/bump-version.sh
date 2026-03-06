@@ -125,13 +125,13 @@ VERSION_FILE="${VERSION_DIR}/${VERSION_NAME}.md"
 
 LAST_TAG="$(git -C "${PROJECT_ROOT}" describe --tags --abbrev=0 2>/dev/null || true)"
 if [ -n "${LAST_TAG}" ]; then
-  CHANGELOG_ENTRIES="$(git -C "${PROJECT_ROOT}" log "${LAST_TAG}"..HEAD --pretty=format:'- %s' || true)"
+  CHANGELOG_ENTRIES="$(git -C "${PROJECT_ROOT}" log "${LAST_TAG}"..HEAD --pretty=format:'    %h %s' || true)"
 else
-  CHANGELOG_ENTRIES="$(git -C "${PROJECT_ROOT}" log --max-count=20 --pretty=format:'- %s' || true)"
+  CHANGELOG_ENTRIES="$(git -C "${PROJECT_ROOT}" log --max-count=20 --pretty=format:'    %h %s' || true)"
 fi
 
 if [ -z "${CHANGELOG_ENTRIES}" ]; then
-  CHANGELOG_ENTRIES="- Version bump and release metadata update"
+  CHANGELOG_ENTRIES="    (no changes)"
 fi
 
 cat > "${VERSION_FILE}" <<EOF
@@ -140,7 +140,7 @@ cat > "${VERSION_FILE}" <<EOF
 - Date: $(date +%F)
 - Build: ${BUILD_NUMBER}
 
-## What changed
+## What's Changed
 
 ${CHANGELOG_ENTRIES}
 
