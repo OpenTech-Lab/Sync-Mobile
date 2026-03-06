@@ -15,7 +15,10 @@ http.Client createClient() {
         h == '::1' ||
         h == '10.0.2.2' ||
         h == '10.0.3.2' ||
-        h.endsWith('.localhost');
+        h.endsWith('.localhost') ||
+        RegExp(r'^192\.168\.').hasMatch(h) ||
+        RegExp(r'^10\.').hasMatch(h) ||
+        RegExp(r'^172\.(1[6-9]|2[0-9]|3[01])\.').hasMatch(h);
   };
   return IOClient(io);
 }
