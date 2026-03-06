@@ -95,7 +95,7 @@ class SyncMobileApp extends ConsumerWidget {
                 currentUsername: state.currentUsername,
                 planetInfo: state.planetInfo,
                 onSignOut: ref.read(appControllerProvider.notifier).logout,
-                onDeleteAccount: ref.read(appControllerProvider.notifier).logout,
+                onDeleteAccount: ref.read(appControllerProvider.notifier).deleteAccount,
               );
           }
         },

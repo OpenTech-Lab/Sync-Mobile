@@ -91,6 +91,22 @@ class RemoteUserProfileService {
     return UserProfile.fromJson(json);
   }
 
+  Future<void> deleteMyAccount({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/profile/me');
+
+    final response = await _httpClient
+        .delete(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 204) {
+      throw StateError('Failed to delete account (${response.statusCode}).');
+    }
+  }
+
   Map<String, String> _authHeaders(String accessToken) {
     return {
       'Authorization': 'Bearer $accessToken',

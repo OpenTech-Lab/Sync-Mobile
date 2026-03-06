@@ -407,6 +407,39 @@ class AppController extends AsyncNotifier<AppState> {
     );
   }
 
+  Future<void> deleteAccount() async {
+    final current = state.value;
+    if (current == null ||
+        current.serverUrl == null ||
+        current.accessToken == null) {
+      return;
+    }
+
+    try {
+      final freshToken = await ensureFreshAccessToken() ?? current.accessToken!;
+      await _remoteUserProfileService.deleteMyAccount(
+        baseUrl: current.serverUrl!,
+        accessToken: freshToken,
+      );
+    } catch (_) {
+      // Best-effort: clear locally even if server call fails.
+    }
+
+    await _sessionStorage.clearTokens();
+    await _serverPreferences.writeServerUrl('');
+    state = AsyncData(
+      current.copyWith(
+        serverUrl: '',
+        accessToken: '',
+        currentUserId: null,
+        currentUsername: null,
+        connectionStatus: ConnectionStatus.idle,
+        clearConnectionError: true,
+        clearAuthError: true,
+      ),
+    );
+  }
+
   String _normalizeBaseUrl(String raw) {
     final trimmed = raw.trim();
     if (trimmed.endsWith('/')) {
