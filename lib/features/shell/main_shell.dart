@@ -108,6 +108,9 @@ class _MainShellState extends ConsumerState<MainShell>
           return;
         }
         await ref
+            .read(notificationControllerProvider.notifier)
+            .initialize(baseUrl: widget.serverUrl, accessToken: token);
+        await ref
             .read(backupControllerProvider.notifier)
             .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: token);
       });

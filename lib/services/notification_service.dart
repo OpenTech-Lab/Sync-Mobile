@@ -74,10 +74,13 @@ class NotificationService {
   Future<void> syncTokenWithServer({
     required String baseUrl,
     required String accessToken,
+    String? token,
   }) async {
-    await initialize();
-    final token = await getOrCreateDeviceToken();
-    if (token == null || token.isEmpty) {
+    final resolvedToken = token?.trim();
+    final effectiveToken = resolvedToken != null && resolvedToken.isNotEmpty
+        ? resolvedToken
+        : await getOrCreateDeviceToken();
+    if (effectiveToken == null || effectiveToken.isEmpty) {
       return;
     }
 
@@ -90,7 +93,10 @@ class NotificationService {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-          body: jsonEncode({'token': token, 'platform': _platformName()}),
+          body: jsonEncode({
+            'token': effectiveToken,
+            'platform': _platformName(),
+          }),
         )
         .timeout(const Duration(seconds: 8));
 
@@ -99,9 +105,7 @@ class NotificationService {
     }
   }
 
-  Future<void> showIncomingMessageNotification({
-    String? avatarBase64,
-  }) async {
+  Future<void> showIncomingMessageNotification({String? avatarBase64}) async {
     if (kIsWeb) {
       return;
     }
@@ -112,10 +116,9 @@ class NotificationService {
       await _channel.invokeMethod<void>('showLocalNotification', {
         'title': 'Sync',
         'body': 'New message',
-        'avatarBase64':
-            normalizedAvatar == null || normalizedAvatar.isEmpty
-                ? null
-                : normalizedAvatar,
+        'avatarBase64': normalizedAvatar == null || normalizedAvatar.isEmpty
+            ? null
+            : normalizedAvatar,
       });
     } catch (_) {}
   }
