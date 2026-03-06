@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/sticker.dart';
 import 'package:mobile/services/sticker_cache_service.dart';
 import 'package:mobile/services/sticker_service.dart';
+import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/sticker_controller.dart';
 
 class _FakeStickerService extends StickerService {
@@ -24,18 +25,21 @@ class _FakeStickerService extends StickerService {
 }
 
 class _InMemoryStickerCacheService extends StickerCacheService {
-  List<Sticker> _cache = const [];
+  final Map<String, List<Sticker>> _cacheByServer = {};
 
   @override
-  Future<List<Sticker>> read() async => _cache;
+  Future<List<Sticker>> read(String serverUrl) async =>
+      _cacheByServer[serverUrl] ?? const [];
 
   @override
-  Future<void> write(List<Sticker> stickers) async {
-    _cache = List<Sticker>.from(stickers);
+  Future<void> write(String serverUrl, List<Sticker> stickers) async {
+    _cacheByServer[serverUrl] = List<Sticker>.from(stickers);
   }
 }
 
 void main() {
+  const serverUrl = 'http://localhost:8080';
+
   Sticker sticker(String id) => Sticker(
         id: id,
         groupName: 'General',
@@ -52,6 +56,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        activeServerUrlProvider.overrideWithValue(serverUrl),
         stickerCacheServiceProvider.overrideWithValue(cache),
         stickerServiceProvider.overrideWithValue(remote),
       ],
@@ -66,17 +71,18 @@ void main() {
 
     final state = container.read(stickerControllerProvider).value!;
     expect(state, hasLength(2));
-    final cached = await cache.read();
+    final cached = await cache.read(serverUrl);
     expect(cached, hasLength(2));
   });
 
   test('sync falls back to cached stickers on remote failure', () async {
     final cache = _InMemoryStickerCacheService();
-    await cache.write([sticker('cached')]);
+    await cache.write(serverUrl, [sticker('cached')]);
     final remote = _FakeStickerService(const [], shouldThrow: true);
 
     final container = ProviderContainer(
       overrides: [
+        activeServerUrlProvider.overrideWithValue(serverUrl),
         stickerCacheServiceProvider.overrideWithValue(cache),
         stickerServiceProvider.overrideWithValue(remote),
       ],

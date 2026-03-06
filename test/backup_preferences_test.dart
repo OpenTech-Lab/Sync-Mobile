@@ -6,13 +6,17 @@ void main() {
   test('backup enabled preference roundtrip', () async {
     SharedPreferences.setMockInitialValues({});
     final preferences = BackupPreferences();
+    const serverUrl = 'https://planet.example';
+    const otherServerUrl = 'https://other.example';
 
-    expect(await preferences.readEnabled(), isFalse);
+    expect(await preferences.readEnabled(serverUrl), isFalse);
+    expect(await preferences.readEnabled(otherServerUrl), isFalse);
 
-    await preferences.writeEnabled(true);
-    expect(await preferences.readEnabled(), isTrue);
+    await preferences.writeEnabled(serverUrl, true);
+    expect(await preferences.readEnabled(serverUrl), isTrue);
+    expect(await preferences.readEnabled(otherServerUrl), isFalse);
 
-    await preferences.writeEnabled(false);
-    expect(await preferences.readEnabled(), isFalse);
+    await preferences.writeEnabled(serverUrl, false);
+    expect(await preferences.readEnabled(serverUrl), isFalse);
   });
 }

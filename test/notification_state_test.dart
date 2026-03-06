@@ -7,6 +7,7 @@ void main() {
       initialized: true,
       deviceToken: null,
       status: 'Push permission granted, token pending.',
+      syncedServerDomain: null,
     );
 
     expect(state.hasSyncedDeviceToken, isFalse);
@@ -17,6 +18,7 @@ void main() {
       initialized: true,
       deviceToken: 'abc123',
       status: 'Push token synced.',
+      syncedServerDomain: 'planet.example',
     );
 
     expect(state.hasSyncedDeviceToken, isTrue);
@@ -27,12 +29,14 @@ void main() {
       initialized: true,
       deviceToken: 'abc123',
       status: 'Push token synced.',
+      syncedServerDomain: 'planet.example',
     );
 
     final updated = initial.copyWith(
       initialized: false,
       deviceToken: null,
       status: 'Push permission granted, token pending.',
+      syncedServerDomain: null,
     );
 
     expect(updated.initialized, isFalse);
@@ -46,9 +50,13 @@ void main() {
       initialized: true,
       deviceToken: 'abc123',
       status: 'Push token synced.',
+      syncedServerDomain: 'planet.example',
     );
 
-    expect(state.shouldSyncDeviceToken('abc123'), isFalse);
+    expect(
+      state.shouldSyncDeviceToken('abc123', 'https://planet.example'),
+      isFalse,
+    );
   });
 
   test('shouldSyncDeviceToken is true when APNs rotates the token', () {
@@ -56,8 +64,26 @@ void main() {
       initialized: true,
       deviceToken: 'abc123',
       status: 'Push token synced.',
+      syncedServerDomain: 'planet.example',
     );
 
-    expect(state.shouldSyncDeviceToken('def456'), isTrue);
+    expect(
+      state.shouldSyncDeviceToken('def456', 'https://planet.example'),
+      isTrue,
+    );
+  });
+
+  test('shouldSyncDeviceToken is true when the server domain changes', () {
+    const state = NotificationState(
+      initialized: true,
+      deviceToken: 'abc123',
+      status: 'Push token synced.',
+      syncedServerDomain: 'planet-a.example',
+    );
+
+    expect(
+      state.shouldSyncDeviceToken('abc123', 'https://planet-b.example'),
+      isTrue,
+    );
   });
 }
