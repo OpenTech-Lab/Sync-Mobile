@@ -299,6 +299,39 @@ class AuthService {
     return baseUrl;
   }
 
+  /// Fetches an ALTCHA challenge from the server.
+  ///
+  /// Returns the raw challenge JSON map when ALTCHA is enabled, or `null` when
+  /// ALTCHA is disabled on the server (HTTP 404) or the request fails (network
+  /// error, unexpected status). Callers should proceed without a payload when
+  /// this returns `null`.
+  Future<Map<String, dynamic>?> fetchAltchaChallenge(String baseUrl) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final candidates = _candidateAuthBaseUrls(normalized);
+
+    for (final candidate in candidates) {
+      try {
+        final uri = Uri.parse('$candidate/auth/altcha');
+        final response = await _httpClient
+            .get(uri, headers: const {'Accept': 'application/json'})
+            .timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 404) {
+          // ALTCHA is not configured on this server.
+          return null;
+        }
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body) as Map<String, dynamic>;
+        }
+        // Unexpected status – try next candidate.
+      } catch (_) {
+        // Network error – try next candidate.
+      }
+    }
+    // All candidates failed – treat as disabled to avoid hard-blocking login.
+    return null;
+  }
+
   Future<void> forgotPassword({
     required String baseUrl,
     required String email,

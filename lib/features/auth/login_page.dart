@@ -11,6 +11,7 @@ class LoginScreen extends StatefulWidget {
     this.savedUserId,
     required this.isSubmitting,
     required this.errorMessage,
+    required this.altchaFetcher,
     required this.onAutoLogin,
     required this.onBackToUrl,
   });
@@ -19,6 +20,8 @@ class LoginScreen extends StatefulWidget {
   final String? savedUserId;
   final bool isSubmitting;
   final String? errorMessage;
+  /// Fetches + solves the ALTCHA challenge via the dev-aware HTTP client.
+  final Future<String?> Function() altchaFetcher;
   final Future<void> Function({String? altchaPayload}) onAutoLogin;
   final VoidCallback onBackToUrl;
 
@@ -28,6 +31,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _started = false;
+  bool _altchaResolved = false;
   String? _altchaPayload;
 
   @override
@@ -37,11 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     _started = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.savedUserId != null) {
-        widget.onAutoLogin();
-      }
-    });
+    // No immediate auto-login here — we always wait for ALTCHA first.
   }
 
   @override
@@ -129,33 +129,36 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 1.5,
                   ),
                 ),
-              if (isNewUser) ...[
-                const SizedBox(height: 20),
-                Center(
-                  child: SizedBox(
-                    width: 280,
-                    child: AltchaWidget(
-                      apiUrl: '${widget.serverUrl}/auth/altcha',
-                      onResponse: (payload) {
-                        setState(() {
-                          _altchaPayload = payload;
-                        });
-                      },
-                    ),
+              const SizedBox(height: 20),
+              Center(
+                child: SizedBox(
+                  width: 280,
+                  child: AltchaWidget(
+                    solver: widget.altchaFetcher,
+                    onResponse: (payload) {
+                      setState(() {
+                        _altchaResolved = true;
+                        _altchaPayload = payload;
+                      });
+                      // Returning users auto-login once ALTCHA resolves.
+                      if (widget.savedUserId != null) {
+                        widget.onAutoLogin(altchaPayload: payload);
+                      }
+                    },
                   ),
                 ),
-              ],
+              ),
               const SizedBox(height: 20),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: (widget.isSubmitting || (isNewUser && _altchaPayload == null))
+                  onTap: (widget.isSubmitting || !_altchaResolved)
                       ? null
                       : () => widget.onAutoLogin(altchaPayload: _altchaPayload),
                   child: Opacity(
-                    opacity: (isNewUser && _altchaPayload == null) ? 0.5 : 1.0,
+                    opacity: !_altchaResolved ? 0.5 : 1.0,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

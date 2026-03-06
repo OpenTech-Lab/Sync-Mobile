@@ -356,6 +356,11 @@ class AppController extends AsyncNotifier<AppState> {
     }
   }
 
+  /// Fetches an ALTCHA challenge from the server using the dev-aware HTTP
+  /// client.  Returns `null` when ALTCHA is disabled on this server instance.
+  Future<Map<String, dynamic>?> fetchAltchaChallenge(String serverUrl) =>
+      _authService.fetchAltchaChallenge(serverUrl);
+
   Future<void> resetServerUrl() async {
     final current = state.value;
     if (current == null) {

@@ -8,6 +8,7 @@ import 'ui/theme/light_theme.dart';
 import 'features/auth/login_page.dart';
 import 'features/onboarding/onboarding_page.dart';
 import 'features/shell/main_shell.dart';
+import 'services/altcha_service.dart';
 import 'state/app_controller.dart';
 import 'state/app_locale_controller.dart';
 import 'state/theme_mode_controller.dart';
@@ -74,6 +75,12 @@ class SyncMobileApp extends ConsumerWidget {
                 savedUserId: state.savedUserId,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
+                altchaFetcher: () async {
+                  final challenge = await ref
+                      .read(appControllerProvider.notifier)
+                      .fetchAltchaChallenge(state.serverUrl!);
+                  return solveAltchaChallenge(challenge);
+                },
                 onAutoLogin: ({altchaPayload}) => ref
                     .read(appControllerProvider.notifier)
                     .loginWithDeviceIdentity(altchaPayload: altchaPayload),

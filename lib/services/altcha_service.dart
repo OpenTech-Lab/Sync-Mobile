@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
 
 /// ALTCHA proof-of-work challenge from the server.
 class AltchaChallenge {
@@ -62,53 +61,32 @@ int _solveInIsolate(_SolveParams p) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/// Fetches an ALTCHA challenge from [challengeUrl] and solves the
-/// proof-of-work puzzle in a background isolate.
+/// Solves an ALTCHA proof-of-work [challengeJson] that was already fetched
+/// from the server (via [AuthService.fetchAltchaChallenge]).
 ///
 /// Returns:
 /// - A base64-encoded JSON payload string on success — pass this to the
 ///   corresponding auth endpoints as `altcha_payload`.
-/// - `null` when ALTCHA is **disabled** on the server (HTTP 404) or the
-///   network request fails — the caller should proceed without a payload.
+/// - `null` when [challengeJson] is `null`, meaning ALTCHA is disabled on
+///   the server — the caller should proceed without a payload.
 ///
-/// Throws if a challenge was received but solving failed (e.g. maxNumber too
-/// small or algorithm mismatch).
-Future<String?> fetchAndSolveAltcha(String challengeUrl) async {
-  // ── 1. Fetch challenge ────────────────────────────────────────────────────
-  http.Response response;
-  try {
-    response = await http.get(Uri.parse(challengeUrl));
-  } catch (_) {
-    // Network unreachable — proceed without ALTCHA.
-    return null;
-  }
+/// Throws [UnsupportedError] for non-SHA-256 algorithms and [StateError] if
+/// no solution exists within `maxNumber`.
+Future<String?> solveAltchaChallenge(
+  Map<String, dynamic>? challengeJson,
+) async {
+  // null → ALTCHA is disabled on this server instance.
+  if (challengeJson == null) return null;
 
-  if (response.statusCode == 404) {
-    // ALTCHA is not configured on this server instance.
-    return null;
-  }
-  if (response.statusCode != 200) {
-    // Unexpected error — proceed without ALTCHA so login is not hard-blocked.
-    return null;
-  }
-
-  final Map<String, dynamic> json;
-  try {
-    json = jsonDecode(response.body) as Map<String, dynamic>;
-  } catch (_) {
-    return null;
-  }
-
-  final challenge = AltchaChallenge.fromJson(json);
+  final challenge = AltchaChallenge.fromJson(challengeJson);
 
   if (challenge.algorithm.toUpperCase() != 'SHA-256') {
-    // Only SHA-256 is supported.
     throw UnsupportedError(
       'ALTCHA: unsupported algorithm "${challenge.algorithm}"',
     );
   }
 
-  // ── 2. Solve in background isolate ───────────────────────────────────────
+  // ── Solve in background isolate ───────────────────────────────────────────
   final started = DateTime.now();
 
   final number = await Isolate.run(
@@ -127,7 +105,7 @@ Future<String?> fetchAndSolveAltcha(String challengeUrl) async {
 
   final took = DateTime.now().difference(started).inMilliseconds;
 
-  // ── 3. Build and encode payload ───────────────────────────────────────────
+  // ── Build and encode payload ──────────────────────────────────────────────
   final payload = {
     'algorithm': challenge.algorithm,
     'challenge': challenge.challenge,

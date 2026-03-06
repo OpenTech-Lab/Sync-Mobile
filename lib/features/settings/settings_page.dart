@@ -737,6 +737,9 @@ class _DangerousActionsPage extends ConsumerWidget {
                     .read(backupControllerProvider.notifier)
                     .deleteAllLocalData();
                 await onDeleteAccount();
+                if (context.mounted) {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
               },
             ),
           ],

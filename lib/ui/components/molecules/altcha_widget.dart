@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/services/altcha_service.dart';
 import '../../tokens/colors/app_palette.dart';
 
 /// A self-contained ALTCHA proof-of-work widget.
 ///
-/// On construction the widget immediately fetches a challenge from [apiUrl]
-/// and solves the PoW in a background isolate.  Visual states:
+/// On construction the widget immediately invokes [solver], which should
+/// fetch a challenge from the server (using the dev-aware HTTP client) and
+/// solve the proof-of-work puzzle in a background isolate.  Visual states:
 ///
 /// * **solving** — shows a compact indeterminate progress bar
 /// * **verified** — shows a checkmark row (similar to the JS widget)
@@ -17,11 +17,14 @@ import '../../tokens/colors/app_palette.dart';
 class AltchaWidget extends StatefulWidget {
   const AltchaWidget({
     super.key,
-    required this.apiUrl,
+    required this.solver,
     required this.onResponse,
   });
 
-  final String apiUrl;
+  /// Fetches and solves the ALTCHA challenge.  Use [AuthService] +
+  /// [solveAltchaChallenge] so the HTTP call goes through the dev-aware
+  /// client (TLS bypass, emulator IP fallbacks).
+  final Future<String?> Function() solver;
   final void Function(String? payload) onResponse;
 
   @override
@@ -40,7 +43,7 @@ class _AltchaWidgetState extends State<AltchaWidget> {
   Future<void> _solve() async {
     setState(() => _status = _Status.solving);
     try {
-      final payload = await fetchAndSolveAltcha(widget.apiUrl);
+      final payload = await widget.solver();
       if (!mounted) return;
       if (payload == null) {
         // ALTCHA disabled on this server — call back immediately so the form
