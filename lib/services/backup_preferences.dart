@@ -1,76 +1,185 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'server_scope.dart';
+
 class BackupPreferences {
-  static const _enabledKey = 'backup_enabled';
-  static const _lastBackupAtKey = 'backup_last_backup_at';
-  static const _lastBackedMessageCountKey = 'backup_last_message_count';
-  static const _autoBackupMessageThresholdKey = 'backup_auto_threshold';
+  static const _enabledPrefix = 'backup_enabled';
+  static const _lastBackupAtPrefix = 'backup_last_backup_at';
+  static const _lastBackedMessageCountPrefix = 'backup_last_message_count';
+  static const _autoBackupMessageThresholdPrefix = 'backup_auto_threshold';
+  static const _chatClearedAtPrefix = 'chat_cleared_at';
   static const int defaultAutoBackupMessageThreshold = 20;
 
-  Future<bool> readEnabled() async {
+  String _enabledKey(String serverUrl) =>
+      scopedStorageKey(_enabledPrefix, serverUrl);
+
+  String _lastBackupAtKey(String serverUrl) =>
+      scopedStorageKey(_lastBackupAtPrefix, serverUrl);
+
+  String _lastBackedMessageCountKey(String serverUrl) =>
+      scopedStorageKey(_lastBackedMessageCountPrefix, serverUrl);
+
+  String _autoBackupMessageThresholdKey(String serverUrl) =>
+      scopedStorageKey(_autoBackupMessageThresholdPrefix, serverUrl);
+
+  String _chatClearedAtKey(String serverUrl) =>
+      scopedStorageKey(_chatClearedAtPrefix, serverUrl);
+
+  Future<bool> readEnabled(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_enabledKey) ?? false;
+    return await _readBool(
+          prefs: prefs,
+          scopedKey: _enabledKey(serverUrl),
+          legacyKey: _enabledPrefix,
+        ) ??
+        false;
   }
 
-  Future<void> writeEnabled(bool enabled) async {
+  Future<void> writeEnabled(String serverUrl, bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_enabledKey, enabled);
+    await prefs.setBool(_enabledKey(serverUrl), enabled);
+    await prefs.remove(_enabledPrefix);
   }
 
-  Future<DateTime?> readLastBackupAt() async {
+  Future<DateTime?> readLastBackupAt(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_lastBackupAtKey);
+    final raw = await _readString(
+      prefs: prefs,
+      scopedKey: _lastBackupAtKey(serverUrl),
+      legacyKey: _lastBackupAtPrefix,
+    );
     if (raw == null || raw.trim().isEmpty) {
       return null;
     }
     return DateTime.tryParse(raw)?.toUtc();
   }
 
-  Future<int> readLastBackedMessageCount() async {
+  Future<int> readLastBackedMessageCount(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_lastBackedMessageCountKey) ?? 0;
+    return await _readInt(
+          prefs: prefs,
+          scopedKey: _lastBackedMessageCountKey(serverUrl),
+          legacyKey: _lastBackedMessageCountPrefix,
+        ) ??
+        0;
   }
 
   Future<void> writeLastBackupMetadata({
+    required String serverUrl,
     required DateTime backedAt,
     required int messageCount,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastBackupAtKey, backedAt.toUtc().toIso8601String());
-    await prefs.setInt(_lastBackedMessageCountKey, messageCount);
+    await prefs.setString(
+      _lastBackupAtKey(serverUrl),
+      backedAt.toUtc().toIso8601String(),
+    );
+    await prefs.setInt(_lastBackedMessageCountKey(serverUrl), messageCount);
+    await prefs.remove(_lastBackupAtPrefix);
+    await prefs.remove(_lastBackedMessageCountPrefix);
   }
 
-  Future<void> clearLastBackupMetadata() async {
+  Future<void> clearLastBackupMetadata(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_lastBackupAtKey);
-    await prefs.remove(_lastBackedMessageCountKey);
+    await prefs.remove(_lastBackupAtKey(serverUrl));
+    await prefs.remove(_lastBackedMessageCountKey(serverUrl));
+    await prefs.remove(_lastBackupAtPrefix);
+    await prefs.remove(_lastBackedMessageCountPrefix);
   }
 
-  Future<int> readAutoBackupMessageThreshold() async {
+  Future<int> readAutoBackupMessageThreshold(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getInt(_autoBackupMessageThresholdKey);
+    final value = await _readInt(
+      prefs: prefs,
+      scopedKey: _autoBackupMessageThresholdKey(serverUrl),
+      legacyKey: _autoBackupMessageThresholdPrefix,
+    );
     if (value == null) {
       return defaultAutoBackupMessageThreshold;
     }
     return value.clamp(1, 1000);
   }
 
-  Future<void> writeAutoBackupMessageThreshold(int value) async {
+  Future<void> writeAutoBackupMessageThreshold(String serverUrl, int value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_autoBackupMessageThresholdKey, value.clamp(1, 1000));
+    await prefs.setInt(
+      _autoBackupMessageThresholdKey(serverUrl),
+      value.clamp(1, 1000),
+    );
+    await prefs.remove(_autoBackupMessageThresholdPrefix);
   }
 
-  static const _chatClearedAtKey = 'chat_cleared_at';
-
-  Future<DateTime?> readChatClearedAt() async {
+  Future<DateTime?> readChatClearedAt(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_chatClearedAtKey);
+    final raw = await _readString(
+      prefs: prefs,
+      scopedKey: _chatClearedAtKey(serverUrl),
+      legacyKey: _chatClearedAtPrefix,
+    );
     if (raw == null || raw.trim().isEmpty) return null;
     return DateTime.tryParse(raw)?.toUtc();
   }
 
-  Future<void> writeChatClearedAt(DateTime clearedAt) async {
+  Future<void> writeChatClearedAt(String serverUrl, DateTime clearedAt) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_chatClearedAtKey, clearedAt.toUtc().toIso8601String());
+    await prefs.setString(
+      _chatClearedAtKey(serverUrl),
+      clearedAt.toUtc().toIso8601String(),
+    );
+    await prefs.remove(_chatClearedAtPrefix);
+  }
+
+  Future<String?> _readString({
+    required SharedPreferences prefs,
+    required String scopedKey,
+    required String legacyKey,
+  }) async {
+    final scoped = prefs.getString(scopedKey);
+    if (scoped != null && scoped.isNotEmpty) {
+      return scoped;
+    }
+    final legacy = prefs.getString(legacyKey);
+    if (legacy == null || legacy.isEmpty) {
+      return null;
+    }
+    await prefs.setString(scopedKey, legacy);
+    await prefs.remove(legacyKey);
+    return legacy;
+  }
+
+  Future<int?> _readInt({
+    required SharedPreferences prefs,
+    required String scopedKey,
+    required String legacyKey,
+  }) async {
+    final scoped = prefs.getInt(scopedKey);
+    if (scoped != null) {
+      return scoped;
+    }
+    final legacy = prefs.getInt(legacyKey);
+    if (legacy == null) {
+      return null;
+    }
+    await prefs.setInt(scopedKey, legacy);
+    await prefs.remove(legacyKey);
+    return legacy;
+  }
+
+  Future<bool?> _readBool({
+    required SharedPreferences prefs,
+    required String scopedKey,
+    required String legacyKey,
+  }) async {
+    final scoped = prefs.getBool(scopedKey);
+    if (scoped != null) {
+      return scoped;
+    }
+    final legacy = prefs.getBool(legacyKey);
+    if (legacy == null) {
+      return null;
+    }
+    await prefs.setBool(scopedKey, legacy);
+    await prefs.remove(legacyKey);
+    return legacy;
   }
 }

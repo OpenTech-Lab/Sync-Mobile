@@ -129,8 +129,11 @@ class InMemoryChatRepository implements ChatRepository {
 }
 
 class LocalChatRepository implements ChatRepository {
-  LocalChatRepository([EncryptedDatabase? encryptedDatabase])
-    : _encryptedDatabase = encryptedDatabase ?? EncryptedDatabase();
+  LocalChatRepository({
+    required String serverUrl,
+    EncryptedDatabase? encryptedDatabase,
+  }) : _encryptedDatabase =
+           encryptedDatabase ?? EncryptedDatabase(serverUrl: serverUrl);
 
   final EncryptedDatabase _encryptedDatabase;
 

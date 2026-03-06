@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/sticker.dart';
 import '../services/sticker_cache_service.dart';
 import '../services/sticker_service.dart';
+import 'app_controller.dart';
 
 typedef _StickerByIdArg = ({
   String id,
@@ -39,7 +40,11 @@ class StickerController extends AsyncNotifier<List<Sticker>> {
 
   @override
   Future<List<Sticker>> build() {
-    return _cache.read();
+    final serverUrl = ref.watch(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return Future.value(const <Sticker>[]);
+    }
+    return _cache.read(serverUrl);
   }
 
   Future<void> sync({
@@ -51,22 +56,26 @@ class StickerController extends AsyncNotifier<List<Sticker>> {
         baseUrl: baseUrl,
         accessToken: accessToken,
       );
-      await _cache.write(stickers);
+      await _cache.write(baseUrl, stickers);
       state = AsyncData(stickers);
     } catch (_) {
-      final cached = await _cache.read();
+      final cached = await _cache.read(baseUrl);
       state = AsyncData(cached);
     }
   }
 
   Future<void> downloadToLocal(Sticker sticker) async {
-    final current = await _cache.read();
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return;
+    }
+    final current = await _cache.read(serverUrl);
     final next = <Sticker>[
       for (final item in current)
         if (item.id != sticker.id) item,
       sticker,
     ];
-    await _cache.write(next);
+    await _cache.write(serverUrl, next);
     state = AsyncData(next);
   }
 }

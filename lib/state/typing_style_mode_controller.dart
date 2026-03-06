@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_controller.dart';
 import '../services/chat_ui_preferences.dart';
 
 final typingStyleModeControllerProvider =
@@ -16,11 +17,19 @@ class TypingStyleModeController extends AsyncNotifier<bool> {
 
   @override
   Future<bool> build() {
-    return _preferences.readTypingStyleModeEnabled();
+    final serverUrl = ref.watch(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return Future.value(false);
+    }
+    return _preferences.readTypingStyleModeEnabled(serverUrl);
   }
 
   Future<void> setEnabled(bool enabled) async {
-    await _preferences.writeTypingStyleModeEnabled(enabled);
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return;
+    }
+    await _preferences.writeTypingStyleModeEnabled(serverUrl, enabled);
     state = AsyncData(enabled);
   }
 }
@@ -30,12 +39,20 @@ class TypingStyleSpeedController extends AsyncNotifier<int> {
 
   @override
   Future<int> build() {
-    return _preferences.readTypingStyleSpeedMs();
+    final serverUrl = ref.watch(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return Future.value(ChatUiPreferences.defaultTypingStyleSpeedMs);
+    }
+    return _preferences.readTypingStyleSpeedMs(serverUrl);
   }
 
   Future<void> setSpeedMs(int milliseconds) async {
-    await _preferences.writeTypingStyleSpeedMs(milliseconds);
-    final next = await _preferences.readTypingStyleSpeedMs();
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return;
+    }
+    await _preferences.writeTypingStyleSpeedMs(serverUrl, milliseconds);
+    final next = await _preferences.readTypingStyleSpeedMs(serverUrl);
     state = AsyncData(next);
   }
 }

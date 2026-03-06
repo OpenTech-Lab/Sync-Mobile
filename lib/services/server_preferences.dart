@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'server_scope.dart';
 import 'server_health_service.dart';
 
 class CachedPlanetInfo {
@@ -48,7 +49,7 @@ class ServerPreferences {
 
   Future<void> writeServerUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_serverUrlKey, _normalizeBaseUrl(url));
+    await prefs.setString(_serverUrlKey, normalizeServerUrl(url));
   }
 
   Future<void> clearServerUrl() async {
@@ -57,7 +58,7 @@ class ServerPreferences {
   }
 
   String _userIdKey(String serverUrl) =>
-      '$_savedUserIdPrefix${Uri.tryParse(serverUrl)?.host ?? serverUrl}';
+      scopedStorageKey(_savedUserIdPrefix, serverUrl);
 
   Future<String?> readSavedUserId(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
@@ -70,11 +71,23 @@ class ServerPreferences {
   }
 
   String _planetInfoKey(String serverUrl) =>
-      '$_planetInfoPrefix${_normalizeBaseUrl(serverUrl).toLowerCase()}';
+      scopedStorageKey(_planetInfoPrefix, serverUrl);
+
+  String _legacyPlanetInfoKey(String serverUrl) =>
+      '$_planetInfoPrefix${normalizeServerUrl(serverUrl).toLowerCase()}';
 
   Future<CachedPlanetInfo?> readPlanetInfo(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_planetInfoKey(serverUrl));
+    var raw = prefs.getString(_planetInfoKey(serverUrl));
+    if ((raw == null || raw.trim().isEmpty)) {
+      final legacyKey = _legacyPlanetInfoKey(serverUrl);
+      final legacyRaw = prefs.getString(legacyKey);
+      if (legacyRaw != null && legacyRaw.trim().isNotEmpty) {
+        raw = legacyRaw;
+        await prefs.setString(_planetInfoKey(serverUrl), legacyRaw);
+        await prefs.remove(legacyKey);
+      }
+    }
     if (raw == null || raw.trim().isEmpty) {
       return null;
     }
@@ -145,13 +158,6 @@ class ServerPreferences {
   Future<void> clearPlanetInfo(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_planetInfoKey(serverUrl));
-  }
-
-  String _normalizeBaseUrl(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.endsWith('/')) {
-      return trimmed.substring(0, trimmed.length - 1);
-    }
-    return trimmed;
+    await prefs.remove(_legacyPlanetInfoKey(serverUrl));
   }
 }

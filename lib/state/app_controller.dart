@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/jwt_service.dart';
 import '../services/message_e2ee_service.dart';
 import '../services/remote_user_profile_service.dart';
+import '../services/server_scope.dart';
 import '../services/server_health_service.dart';
 import '../services/server_preferences.dart';
 import '../services/session_storage.dart';
@@ -86,6 +87,20 @@ final appControllerProvider = AsyncNotifierProvider<AppController, AppState>(
   AppController.new,
 );
 
+final activeServerUrlProvider = Provider<String?>((ref) {
+  final appState = ref.watch(appControllerProvider);
+  return appState.maybeWhen(
+    data: (state) {
+      final serverUrl = state.serverUrl?.trim();
+      if (serverUrl == null || serverUrl.isEmpty) {
+        return null;
+      }
+      return serverUrl;
+    },
+    orElse: () => null,
+  );
+});
+
 class AppController extends AsyncNotifier<AppState> {
   static const _genericConnectError =
       'Connection failed. Please try again later or ask planet manager.';
@@ -107,14 +122,16 @@ class AppController extends AsyncNotifier<AppState> {
   @override
   Future<AppState> build() async {
     final serverUrl = await _serverPreferences.readServerUrl();
-    final normalizedServerUrl = (serverUrl ?? '').trim();
+    final normalizedServerUrl = normalizeServerUrl(serverUrl ?? '');
     final savedUserId = serverUrl != null && serverUrl.isNotEmpty
         ? await _serverPreferences.readSavedUserId(serverUrl)
         : null;
     final cachedPlanet = serverUrl != null && serverUrl.isNotEmpty
         ? await _serverPreferences.readPlanetInfo(serverUrl)
         : null;
-    var accessToken = await _sessionStorage.readAccessToken();
+    var accessToken = serverUrl == null || serverUrl.isEmpty
+        ? null
+        : await _sessionStorage.readAccessToken(serverUrl);
 
     if (accessToken != null &&
         accessToken.isNotEmpty &&
@@ -122,13 +139,14 @@ class AppController extends AsyncNotifier<AppState> {
         serverUrl.isNotEmpty &&
         _jwtService.isExpiredOrExpiringSoon(accessToken)) {
       try {
-        final storedRefresh = await _sessionStorage.readRefreshToken();
+        final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
         if (storedRefresh != null && storedRefresh.isNotEmpty) {
           final tokens = await _authService.refresh(
             baseUrl: serverUrl,
             refreshToken: storedRefresh,
           );
           await _sessionStorage.writeTokens(
+            serverUrl: serverUrl,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
           );
@@ -145,11 +163,15 @@ class AppController extends AsyncNotifier<AppState> {
         : _jwtService.tryReadDisplayName(accessToken);
     final storedDisplayName = currentUserId == null
         ? null
-        : await _userProfilePreferences.readDisplayName(currentUserId);
+        : await _userProfilePreferences.readDisplayName(
+            serverUrl ?? '',
+            currentUserId,
+          );
     var currentUsername = tokenDisplayName ?? storedDisplayName;
 
     if (currentUserId != null && tokenDisplayName != null) {
       await _userProfilePreferences.writeDisplayName(
+        serverUrl ?? '',
         currentUserId,
         tokenDisplayName,
       );
@@ -168,10 +190,12 @@ class AppController extends AsyncNotifier<AppState> {
             ? currentUsername
             : profile.username.trim();
         await _userProfilePreferences.writeDisplayName(
+          serverUrl,
           currentUserId,
           currentUsername,
         );
         await _userProfilePreferences.writeAvatarBase64(
+          serverUrl,
           currentUserId,
           profile.avatarBase64,
         );
@@ -182,7 +206,7 @@ class AppController extends AsyncNotifier<AppState> {
         );
       } catch (error) {
         if (_isAuthIdentityInvalidError(error)) {
-          await _sessionStorage.clearTokens();
+          await _sessionStorage.clearTokens(serverUrl);
           accessToken = null;
           currentUserId = null;
           currentUsername = null;
@@ -277,10 +301,30 @@ class AppController extends AsyncNotifier<AppState> {
         ? candidateFromHealth
         : normalized;
     await _serverPreferences.writeServerUrl(resolvedServerUrl);
+    final accessToken = await _sessionStorage.readAccessToken(resolvedServerUrl);
+    final savedUserId = await _serverPreferences.readSavedUserId(
+      resolvedServerUrl,
+    );
+    final currentUserId = accessToken == null || accessToken.isEmpty
+        ? null
+        : _jwtService.tryReadUserId(accessToken);
+    final tokenDisplayName = accessToken == null || accessToken.isEmpty
+        ? null
+        : _jwtService.tryReadDisplayName(accessToken);
+    final storedDisplayName = currentUserId == null
+        ? null
+        : await _userProfilePreferences.readDisplayName(
+            resolvedServerUrl,
+            currentUserId,
+          );
 
     state = AsyncData(
       current.copyWith(
         serverUrl: resolvedServerUrl,
+        accessToken: accessToken ?? '',
+        currentUserId: currentUserId,
+        currentUsername: tokenDisplayName ?? storedDisplayName,
+        savedUserId: savedUserId,
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
@@ -307,6 +351,7 @@ class AppController extends AsyncNotifier<AppState> {
         altchaPayload: altchaPayload,
       );
       await _sessionStorage.writeTokens(
+        serverUrl: current.serverUrl!,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       );
@@ -324,6 +369,7 @@ class AppController extends AsyncNotifier<AppState> {
               ? username
               : profile.username.trim();
           await _userProfilePreferences.writeAvatarBase64(
+            current.serverUrl!,
             userId,
             profile.avatarBase64,
           );
@@ -347,7 +393,11 @@ class AppController extends AsyncNotifier<AppState> {
       );
 
       if (userId != null && username != null) {
-        await _userProfilePreferences.writeDisplayName(userId, username);
+        await _userProfilePreferences.writeDisplayName(
+          current.serverUrl!,
+          userId,
+          username,
+        );
       }
     } catch (error, stackTrace) {
       debugPrint('loginWithDeviceIdentity failed: $error');
@@ -372,7 +422,10 @@ class AppController extends AsyncNotifier<AppState> {
       return;
     }
 
-    await _sessionStorage.clearTokens();
+    final currentServerUrl = current.serverUrl;
+    if (currentServerUrl != null && currentServerUrl.isNotEmpty) {
+      await _sessionStorage.clearTokens(currentServerUrl);
+    }
     await _serverPreferences.writeServerUrl('');
 
     state = AsyncData(
@@ -394,7 +447,10 @@ class AppController extends AsyncNotifier<AppState> {
       return;
     }
 
-    await _sessionStorage.clearTokens();
+    final currentServerUrl = current.serverUrl;
+    if (currentServerUrl != null && currentServerUrl.isNotEmpty) {
+      await _sessionStorage.clearTokens(currentServerUrl);
+    }
     await _serverPreferences.writeServerUrl('');
     state = AsyncData(
       current.copyWith(
@@ -427,7 +483,10 @@ class AppController extends AsyncNotifier<AppState> {
       // Best-effort: clear locally even if server call fails.
     }
 
-    await _sessionStorage.clearTokens();
+    final currentServerUrl = current.serverUrl;
+    if (currentServerUrl != null && currentServerUrl.isNotEmpty) {
+      await _sessionStorage.clearTokens(currentServerUrl);
+    }
     await _serverPreferences.writeServerUrl('');
     state = AsyncData(
       current.copyWith(
@@ -443,11 +502,7 @@ class AppController extends AsyncNotifier<AppState> {
   }
 
   String _normalizeBaseUrl(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.endsWith('/')) {
-      return trimmed.substring(0, trimmed.length - 1);
-    }
-    return trimmed;
+    return normalizeServerUrl(raw);
   }
 
   Future<String?> ensureFreshAccessToken() async {
@@ -461,7 +516,7 @@ class AppController extends AsyncNotifier<AppState> {
     if (serverUrl == null || serverUrl.isEmpty) return token;
 
     try {
-      final storedRefresh = await _sessionStorage.readRefreshToken();
+      final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
       if (storedRefresh == null || storedRefresh.isEmpty) return token;
 
       final tokens = await _authService.refresh(
@@ -470,6 +525,7 @@ class AppController extends AsyncNotifier<AppState> {
       );
 
       await _sessionStorage.writeTokens(
+        serverUrl: serverUrl,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       );

@@ -210,7 +210,10 @@ class HomeTab extends ConsumerWidget {
                       final sentMessageCount = messages
                           .where((message) => message.senderId == currentUserId)
                           .length;
-                      final friendAddedAt = await prefs.readFriendAddedAt(id);
+                      final friendAddedAt = await prefs.readFriendAddedAt(
+                        serverUrl,
+                        id,
+                      );
                       if (!context.mounted) {
                         return;
                       }
@@ -238,7 +241,7 @@ class HomeTab extends ConsumerWidget {
                       if (action != ChatTargetProfileAction.cancelFriend) {
                         return;
                       }
-                      await prefs.removeFriendId(id);
+                      await prefs.removeFriendId(serverUrl, id);
                       ref.invalidate(friendIdsProvider);
                       if (!context.mounted) {
                         return;

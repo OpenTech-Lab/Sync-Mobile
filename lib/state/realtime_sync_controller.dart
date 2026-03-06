@@ -156,7 +156,7 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
             message.senderId != currentUserId) {
           final avatarBase64 = await ref
               .read(userProfilePreferencesProvider)
-              .readAvatarBase64(partnerId);
+              .readAvatarBase64(baseUrl, partnerId);
           await ref
               .read(realtimeNotificationServiceProvider)
               .showIncomingMessageNotification(

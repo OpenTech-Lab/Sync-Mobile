@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backup_preferences.dart';
 import '../services/encrypted_backup_service.dart';
 import '../services/remote_backup_service.dart';
+import 'app_controller.dart';
 import 'conversation_messages_controller.dart';
 
 class BackupState {
@@ -47,8 +48,13 @@ class BackupController extends AsyncNotifier<BackupState> {
 
   @override
   Future<BackupState> build() async {
-    final enabled = await _backupPreferences.readEnabled();
-    final threshold = await _backupPreferences.readAutoBackupMessageThreshold();
+    final serverUrl = ref.watch(activeServerUrlProvider);
+    final enabled = serverUrl == null
+        ? false
+        : await _backupPreferences.readEnabled(serverUrl);
+    final threshold = serverUrl == null
+        ? BackupPreferences.defaultAutoBackupMessageThreshold
+        : await _backupPreferences.readAutoBackupMessageThreshold(serverUrl);
     return BackupState(
       enabled: enabled,
       isBusy: false,
@@ -59,21 +65,26 @@ class BackupController extends AsyncNotifier<BackupState> {
 
   Future<void> setEnabled(bool enabled) async {
     final current = state.value;
-    if (current == null) {
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (current == null || serverUrl == null) {
       return;
     }
 
-    await _backupPreferences.writeEnabled(enabled);
+    await _backupPreferences.writeEnabled(serverUrl, enabled);
     state = AsyncData(current.copyWith(enabled: enabled, statusMessage: null));
   }
 
   Future<void> setAutoBackupMessageThreshold(int value) async {
     final current = state.value;
-    if (current == null) {
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (current == null || serverUrl == null) {
       return;
     }
     final normalized = value.clamp(1, 1000);
-    await _backupPreferences.writeAutoBackupMessageThreshold(normalized);
+    await _backupPreferences.writeAutoBackupMessageThreshold(
+      serverUrl,
+      normalized,
+    );
     state = AsyncData(
       current.copyWith(
         autoBackupMessageThreshold: normalized,
@@ -109,6 +120,7 @@ class BackupController extends AsyncNotifier<BackupState> {
         ),
       );
       await _backupPreferences.writeLastBackupMetadata(
+        serverUrl: baseUrl,
         backedAt: DateTime.now().toUtc(),
         messageCount: messages.length,
       );
@@ -130,8 +142,14 @@ class BackupController extends AsyncNotifier<BackupState> {
 
     final messages = await ref.read(chatRepositoryProvider).listAllMessages();
     final currentCount = messages.length;
-    final lastCount = await _backupPreferences.readLastBackedMessageCount();
-    final lastBackupAt = await _backupPreferences.readLastBackupAt();
+    final serverUrl = ref.read(activeServerUrlProvider);
+    if (serverUrl == null) {
+      return;
+    }
+    final lastCount = await _backupPreferences.readLastBackedMessageCount(
+      serverUrl,
+    );
+    final lastBackupAt = await _backupPreferences.readLastBackupAt(serverUrl);
     final unbackedCount = (currentCount - lastCount).clamp(0, currentCount);
 
     final dueByCount = unbackedCount >= current.autoBackupMessageThreshold;
@@ -154,6 +172,7 @@ class BackupController extends AsyncNotifier<BackupState> {
         keyBytes: keyBytes,
       );
       await _backupPreferences.writeLastBackupMetadata(
+        serverUrl: baseUrl,
         backedAt: DateTime.now().toUtc(),
         messageCount: currentCount,
       );
@@ -193,6 +212,7 @@ class BackupController extends AsyncNotifier<BackupState> {
       );
       await ref.read(chatRepositoryProvider).replaceAllMessages(messages);
       await _backupPreferences.writeLastBackupMetadata(
+        serverUrl: baseUrl,
         backedAt: DateTime.now().toUtc(),
         messageCount: messages.length,
       );
@@ -229,7 +249,7 @@ class BackupController extends AsyncNotifier<BackupState> {
         baseUrl: baseUrl,
         accessToken: accessToken,
       );
-      await _backupPreferences.clearLastBackupMetadata();
+      await _backupPreferences.clearLastBackupMetadata(baseUrl);
       state = AsyncData(
         current.copyWith(
           isBusy: false,
@@ -258,8 +278,13 @@ class BackupController extends AsyncNotifier<BackupState> {
       await ref.read(chatRepositoryProvider).replaceAllMessages(const []);
       ref.invalidate(conversationSummariesProvider);
       final clearedAt = DateTime.now().toUtc();
-      await _backupPreferences.writeChatClearedAt(clearedAt);
+      final serverUrl = ref.read(activeServerUrlProvider);
+      if (serverUrl == null) {
+        return;
+      }
+      await _backupPreferences.writeChatClearedAt(serverUrl, clearedAt);
       await _backupPreferences.writeLastBackupMetadata(
+        serverUrl: serverUrl,
         backedAt: clearedAt,
         messageCount: 0,
       );
@@ -300,7 +325,13 @@ class BackupController extends AsyncNotifier<BackupState> {
       await prefs.clear();
 
       // Record cleared-at timestamp AFTER prefs.clear() so it survives the wipe
-      await _backupPreferences.writeChatClearedAt(DateTime.now().toUtc());
+      final serverUrl = ref.read(activeServerUrlProvider);
+      if (serverUrl != null) {
+        await _backupPreferences.writeChatClearedAt(
+          serverUrl,
+          DateTime.now().toUtc(),
+        );
+      }
 
       state = AsyncData(
         current.copyWith(

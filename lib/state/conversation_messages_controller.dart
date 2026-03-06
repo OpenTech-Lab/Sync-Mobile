@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_controller.dart';
 import '../models/local_chat_message.dart';
 import '../services/backup_preferences.dart';
 import '../services/local_chat_repository.dart';
@@ -11,6 +12,7 @@ import '../services/remote_user_profile_service.dart';
 import 'user_profile_controller.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
+  final serverUrl = ref.watch(activeServerUrlProvider);
   final supportsEncryptedLocalDb =
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -18,8 +20,8 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
           defaultTargetPlatform == TargetPlatform.macOS);
 
   // sqflite_sqlcipher is not available on web/linux/windows.
-  return supportsEncryptedLocalDb
-      ? LocalChatRepository()
+  return supportsEncryptedLocalDb && serverUrl != null
+      ? LocalChatRepository(serverUrl: serverUrl)
       : InMemoryChatRepository();
 });
 
@@ -76,7 +78,7 @@ class ConversationMessagesController
     );
 
     // Don't restore messages that pre-date a local-data deletion.
-    final clearedAt = await BackupPreferences().readChatClearedAt();
+    final clearedAt = await BackupPreferences().readChatClearedAt(baseUrl);
     final toUpsert = clearedAt == null
         ? latest
         : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();

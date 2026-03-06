@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,16 +6,28 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'server_scope.dart';
+
 class EncryptedDatabase {
-  EncryptedDatabase([FlutterSecureStorage? secureStorage])
-    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  EncryptedDatabase({
+    required String serverUrl,
+    FlutterSecureStorage? secureStorage,
+  }) : _serverUrl = serverUrl,
+       _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
-  static const _databaseName = 'sync_local_chat.db';
+  static const _legacyDatabaseName = 'sync_local_chat.db';
   static const _databaseVersion = 1;
-  static const _databaseKeyStorageKey = 'local_chat_db_key';
+  static const _legacyDatabaseKeyStorageKey = 'local_chat_db_key';
 
+  final String _serverUrl;
   final FlutterSecureStorage _secureStorage;
   Database? _database;
+
+  String get _databaseName =>
+      'sync_local_chat_${serverDatabaseSlug(_serverUrl)}.db';
+
+  String get _databaseKeyStorageKey =>
+      scopedStorageKey(_legacyDatabaseKeyStorageKey, _serverUrl);
 
   Future<Database> open() async {
     if (_database != null && _database!.isOpen) {
@@ -23,6 +36,10 @@ class EncryptedDatabase {
 
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final databasePath = path.join(documentsDirectory.path, _databaseName);
+    await _migrateLegacyDatabaseIfNeeded(
+      documentsDirectory: documentsDirectory.path,
+      databasePath: databasePath,
+    );
     final encryptionKey = await _readOrCreateEncryptionKey();
 
     _database = await openDatabase(
@@ -71,5 +88,38 @@ class EncryptedDatabase {
 
     await _secureStorage.write(key: _databaseKeyStorageKey, value: generated);
     return generated;
+  }
+
+  Future<void> _migrateLegacyDatabaseIfNeeded({
+    required String documentsDirectory,
+    required String databasePath,
+  }) async {
+    final scopedFile = File(databasePath);
+    if (await scopedFile.exists()) {
+      return;
+    }
+
+    final legacyPath = path.join(documentsDirectory, _legacyDatabaseName);
+    final legacyFile = File(legacyPath);
+    if (!await legacyFile.exists()) {
+      return;
+    }
+
+    await legacyFile.rename(databasePath);
+
+    final scopedKey = await _secureStorage.read(key: _databaseKeyStorageKey);
+    if (scopedKey != null && scopedKey.isNotEmpty) {
+      return;
+    }
+
+    final legacyKey = await _secureStorage.read(
+      key: _legacyDatabaseKeyStorageKey,
+    );
+    if (legacyKey == null || legacyKey.isEmpty) {
+      return;
+    }
+
+    await _secureStorage.write(key: _databaseKeyStorageKey, value: legacyKey);
+    await _secureStorage.delete(key: _legacyDatabaseKeyStorageKey);
   }
 }

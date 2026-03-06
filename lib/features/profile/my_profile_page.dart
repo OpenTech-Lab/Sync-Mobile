@@ -96,7 +96,7 @@ class MyProfileScreen extends ConsumerWidget {
         );
         await ref
             .read(userProfilePreferencesProvider)
-            .writeDisplayName(currentUserId, profile.username);
+            .writeDisplayName(serverUrl, currentUserId, profile.username);
         ref.invalidate(userDisplayNameProvider(currentUserId));
         ref
             .read(appControllerProvider.notifier)
@@ -140,6 +140,7 @@ class MyProfileScreen extends ConsumerWidget {
       await ref
           .read(userProfilePreferencesProvider)
           .writeDescription(
+            serverUrl,
             currentUserId,
             normalized.isEmpty ? null : normalized,
           );
@@ -186,10 +187,10 @@ class MyProfileScreen extends ConsumerWidget {
         );
         await ref
             .read(userProfilePreferencesProvider)
-            .writeAvatarBase64(currentUserId, profile.avatarBase64);
+            .writeAvatarBase64(serverUrl, currentUserId, profile.avatarBase64);
         await ref
             .read(userProfilePreferencesProvider)
-            .writeDisplayName(currentUserId, profile.username);
+            .writeDisplayName(serverUrl, currentUserId, profile.username);
         ref.invalidate(userAvatarBase64Provider(currentUserId));
         ref.invalidate(userDisplayNameProvider(currentUserId));
         ref

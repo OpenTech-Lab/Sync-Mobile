@@ -3,13 +3,24 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/sticker.dart';
+import 'server_scope.dart';
 
 class StickerCacheService {
-  static const _cacheKey = 'sticker_cache_v1';
+  static const _cachePrefix = 'sticker_cache_v1';
 
-  Future<List<Sticker>> read() async {
+  String _cacheKey(String serverUrl) => scopedStorageKey(_cachePrefix, serverUrl);
+
+  Future<List<Sticker>> read(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_cacheKey);
+    var raw = prefs.getString(_cacheKey(serverUrl));
+    if ((raw == null || raw.isEmpty)) {
+      final legacy = prefs.getString(_cachePrefix);
+      if (legacy != null && legacy.isNotEmpty) {
+        raw = legacy;
+        await prefs.setString(_cacheKey(serverUrl), legacy);
+        await prefs.remove(_cachePrefix);
+      }
+    }
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -20,11 +31,12 @@ class StickerCacheService {
         .toList(growable: false);
   }
 
-  Future<void> write(List<Sticker> stickers) async {
+  Future<void> write(String serverUrl, List<Sticker> stickers) async {
     final prefs = await SharedPreferences.getInstance();
     final payload = jsonEncode(
       stickers.map((sticker) => sticker.toMap()).toList(),
     );
-    await prefs.setString(_cacheKey, payload);
+    await prefs.setString(_cacheKey(serverUrl), payload);
+    await prefs.remove(_cachePrefix);
   }
 }

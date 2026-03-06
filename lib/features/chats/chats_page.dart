@@ -188,9 +188,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         userId: normalized,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
-      final oldAvatar = await prefs.readAvatarBase64(normalized);
-      await prefs.writeDisplayName(normalized, profile.username);
-      await prefs.writeAvatarBase64(normalized, profile.avatarBase64);
+      final oldAvatar = await prefs.readAvatarBase64(widget.serverUrl, normalized);
+      await prefs.writeDisplayName(widget.serverUrl, normalized, profile.username);
+      await prefs.writeAvatarBase64(
+        widget.serverUrl,
+        normalized,
+        profile.avatarBase64,
+      );
       ref.invalidate(userDisplayNameProvider(normalized));
       // Only invalidate the avatar provider when the image actually changed.
       // An unconditional invalidate causes a loading→data cycle that makes
@@ -476,9 +480,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     } catch (_) {
       // fallback to resolved handle only
     }
-    description = await ref
-        .read(userProfilePreferencesProvider)
-        .readDescription(resolved.partnerId);
+      description = await ref
+          .read(userProfilePreferencesProvider)
+          .readDescription(widget.serverUrl, resolved.partnerId);
 
     return _ResolvedTargetProfile(
       partnerId: resolved.partnerId,
@@ -500,11 +504,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         resolved.partnerId,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
-      final isFriend = (await prefs.readFriendIds()).contains(
+      final isFriend = (await prefs.readFriendIds(widget.serverUrl)).contains(
         resolved.partnerId,
       );
       final friendAddedAt = isFriend
-          ? await prefs.readFriendAddedAt(resolved.partnerId)
+          ? await prefs.readFriendAddedAt(widget.serverUrl, resolved.partnerId)
           : null;
       if (!mounted) {
         return;
@@ -528,7 +532,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       }
 
       if (action == ChatTargetProfileAction.cancelFriend) {
-        await prefs.removeFriendId(resolved.partnerId);
+        await prefs.removeFriendId(widget.serverUrl, resolved.partnerId);
         ref.invalidate(friendIdsProvider);
         if (!mounted) {
           return;
@@ -537,7 +541,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         return;
       }
       if (action == ChatTargetProfileAction.addFriend && mounted) {
-        await prefs.addFriendId(resolved.partnerId);
+        await prefs.addFriendId(widget.serverUrl, resolved.partnerId);
         ref.invalidate(friendIdsProvider);
         if (!mounted) {
           return;
@@ -748,9 +752,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final description = ref.read(userDescriptionProvider(partnerId)).value;
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final prefs = ref.read(userProfilePreferencesProvider);
-    final isFriend = (await prefs.readFriendIds()).contains(partnerId);
+    final isFriend = (await prefs.readFriendIds(widget.serverUrl)).contains(
+      partnerId,
+    );
     final friendAddedAt = isFriend
-        ? await prefs.readFriendAddedAt(partnerId)
+        ? await prefs.readFriendAddedAt(widget.serverUrl, partnerId)
         : null;
     if (!mounted) {
       return;
@@ -772,7 +778,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       return;
     }
     if (action == ChatTargetProfileAction.addFriend) {
-      await ref.read(userProfilePreferencesProvider).addFriendId(partnerId);
+      await ref
+          .read(userProfilePreferencesProvider)
+          .addFriendId(widget.serverUrl, partnerId);
       ref.invalidate(friendIdsProvider);
       if (!mounted) {
         return;
@@ -785,7 +793,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       return;
     }
     if (action == ChatTargetProfileAction.cancelFriend) {
-      await ref.read(userProfilePreferencesProvider).removeFriendId(partnerId);
+      await ref
+          .read(userProfilePreferencesProvider)
+          .removeFriendId(widget.serverUrl, partnerId);
       ref.invalidate(friendIdsProvider);
       if (!mounted) {
         return;
