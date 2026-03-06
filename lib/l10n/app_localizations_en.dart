@@ -332,6 +332,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatChatsHeader => 'CHATS';
 
   @override
+  String get chatRowDelete => 'delete';
+
+  @override
+  String get chatRowHide => 'hide';
+
+  @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => 'approval required';
+
+  @override
   String get chatNoChatsYet => 'No chats yet.';
 
   @override

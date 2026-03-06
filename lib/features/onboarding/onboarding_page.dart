@@ -383,6 +383,15 @@ class _PlanetInfoCard extends StatelessWidget {
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),
+            if (info.registrationRequiresApproval) ...[
+              const SizedBox(width: 28),
+              _Stat(
+                label: l10n.planetRegistrationLabel,
+                value: l10n.planetRegistrationApprovalRequired,
+                inkColor: inkColor,
+                mutedColor: mutedColor,
+              ),
+            ],
           ],
         ),
       ],

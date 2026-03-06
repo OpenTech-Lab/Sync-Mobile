@@ -332,6 +332,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatChatsHeader => '聊天';
 
   @override
+  String get chatRowDelete => '刪除';
+
+  @override
+  String get chatRowHide => '隱藏';
+
+  @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => '需審核';
+
+  @override
   String get chatNoChatsYet => '還沒有聊天紀錄。';
 
   @override
@@ -1048,6 +1060,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatChatsHeader => '聊天';
+
+  @override
+  String get chatRowDelete => '刪除';
+
+  @override
+  String get chatRowHide => '隱藏';
+
+  @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => '需審核';
 
   @override
   String get chatNoChatsYet => '還沒有聊天紀錄。';

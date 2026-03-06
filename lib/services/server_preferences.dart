@@ -18,6 +18,7 @@ class CachedPlanetInfo {
     required this.healthStatus,
     required this.latencyMs,
     required this.checkedAt,
+    required this.registrationRequiresApproval,
   });
 
   final String? instanceName;
@@ -32,6 +33,7 @@ class CachedPlanetInfo {
   final String healthStatus;
   final int latencyMs;
   final DateTime checkedAt;
+  final bool registrationRequiresApproval;
 }
 
 class ServerPreferences {
@@ -108,6 +110,8 @@ class ServerPreferences {
         checkedAt: checkedAtMs is int
             ? DateTime.fromMillisecondsSinceEpoch(checkedAtMs)
             : DateTime.fromMillisecondsSinceEpoch(0),
+        registrationRequiresApproval:
+            (decoded['registration_requires_approval'] as bool?) ?? false,
       );
     } catch (_) {
       return null;
@@ -132,6 +136,8 @@ class ServerPreferences {
       'health_status': planetInfo.healthStatus,
       'latency_ms': planetInfo.latencyMs,
       'checked_at_ms': planetInfo.checkedAt.millisecondsSinceEpoch,
+      'registration_requires_approval':
+          planetInfo.registrationRequiresApproval,
     };
     await prefs.setString(_planetInfoKey(serverUrl), jsonEncode(payload));
   }

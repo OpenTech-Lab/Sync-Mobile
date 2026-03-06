@@ -216,6 +216,8 @@ class AppController extends AsyncNotifier<AppState> {
               healthStatus: cachedPlanet.healthStatus,
               latencyMs: cachedPlanet.latencyMs,
               checkedAt: cachedPlanet.checkedAt,
+              registrationRequiresApproval:
+                  cachedPlanet.registrationRequiresApproval,
             ),
       isSubmitting: false,
       authError: null,

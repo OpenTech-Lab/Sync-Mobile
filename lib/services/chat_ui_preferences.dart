@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ChatUiPreferences {
   static const _typingStyleModeEnabledKey = 'chat_typing_style_mode_enabled';
   static const _typingStyleSpeedMsKey = 'chat_typing_style_speed_ms';
+  static const _hiddenConversationIdsKey = 'chat_hidden_conversation_ids';
   static const defaultTypingStyleSpeedMs = 18;
   static const minTypingStyleSpeedMs = 8;
   static const maxTypingStyleSpeedMs = 60;
@@ -31,5 +32,20 @@ class ChatUiPreferences {
       maxTypingStyleSpeedMs,
     );
     await prefs.setInt(_typingStyleSpeedMsKey, clamped);
+  }
+
+  Future<Set<String>> readHiddenConversationIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_hiddenConversationIdsKey) ?? [];
+    return list.toSet();
+  }
+
+  Future<void> addHiddenConversationId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_hiddenConversationIdsKey) ?? [];
+    if (!list.contains(id)) {
+      list.add(id);
+      await prefs.setStringList(_hiddenConversationIdsKey, list);
+    }
   }
 }

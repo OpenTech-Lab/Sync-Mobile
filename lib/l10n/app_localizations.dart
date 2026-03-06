@@ -714,6 +714,30 @@ abstract class AppLocalizations {
   /// **'CHATS'**
   String get chatChatsHeader;
 
+  /// No description provided for @chatRowDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'delete'**
+  String get chatRowDelete;
+
+  /// No description provided for @chatRowHide.
+  ///
+  /// In en, this message translates to:
+  /// **'hide'**
+  String get chatRowHide;
+
+  /// No description provided for @planetRegistrationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'REGISTRATION'**
+  String get planetRegistrationLabel;
+
+  /// No description provided for @planetRegistrationApprovalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'approval required'**
+  String get planetRegistrationApprovalRequired;
+
   /// No description provided for @chatNoChatsYet.
   ///
   /// In en, this message translates to:

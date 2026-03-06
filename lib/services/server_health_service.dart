@@ -22,6 +22,7 @@ class PlanetInfo {
     required this.healthStatus,
     required this.latencyMs,
     required this.checkedAt,
+    required this.registrationRequiresApproval,
   });
 
   final String baseUrl;
@@ -39,6 +40,7 @@ class PlanetInfo {
   final String healthStatus;
   final int latencyMs;
   final DateTime checkedAt;
+  final bool registrationRequiresApproval;
 }
 
 class ServerHealthService {
@@ -89,6 +91,7 @@ class ServerHealthService {
         String? countryCode;
         String? countryName;
         DateTime? serverCreatedAt;
+        var registrationRequiresApproval = false;
         try {
           final decoded = jsonDecode(response.body);
           if (decoded is Map<String, dynamic>) {
@@ -143,6 +146,11 @@ class ServerHealthService {
                 rawServerCreatedAt.trim(),
               )?.toUtc();
             }
+            final rawRequiresApproval =
+                decoded['registration_requires_approval'];
+            if (rawRequiresApproval is bool) {
+              registrationRequiresApproval = rawRequiresApproval;
+            }
           }
         } catch (_) {
           // Keep default "ok" if body is not parseable JSON.
@@ -164,6 +172,7 @@ class ServerHealthService {
           healthStatus: healthStatus,
           latencyMs: latencyMs,
           checkedAt: DateTime.now(),
+          registrationRequiresApproval: registrationRequiresApproval,
         );
       } catch (error) {
         lastError = error;
