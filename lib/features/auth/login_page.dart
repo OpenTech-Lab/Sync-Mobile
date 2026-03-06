@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
-import 'package:altcha_widget/altcha_widget.dart';
+import '../../ui/components/molecules/altcha_widget.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
 
@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: SizedBox(
                     width: 280,
                     child: AltchaWidget(
-                      apiUrl: '${widget.serverUrl}/altcha',
+                      apiUrl: '${widget.serverUrl}/auth/altcha',
                       onResponse: (payload) {
                         setState(() {
                           _altchaPayload = payload;
