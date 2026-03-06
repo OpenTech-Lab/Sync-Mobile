@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+import 'package:altcha_widget/altcha_widget.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
 
@@ -18,7 +19,7 @@ class LoginScreen extends StatefulWidget {
   final String? savedUserId;
   final bool isSubmitting;
   final String? errorMessage;
-  final Future<void> Function() onAutoLogin;
+  final Future<void> Function({String? altchaPayload}) onAutoLogin;
   final VoidCallback onBackToUrl;
 
   @override
@@ -27,6 +28,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _started = false;
+  String? _altchaPayload;
 
   @override
   void didChangeDependencies() {
@@ -36,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     _started = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.onAutoLogin();
+      if (widget.savedUserId != null) {
+        widget.onAutoLogin();
+      }
     });
   }
 
@@ -49,6 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final mutedColor = AppPalette.neutral500;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    final isNewUser = widget.savedUserId == null;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -123,38 +129,59 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 1.5,
                   ),
                 ),
+              if (isNewUser) ...[
+                const SizedBox(height: 20),
+                Center(
+                  child: SizedBox(
+                    width: 280,
+                    child: AltchaWidget(
+                      apiUrl: '${widget.serverUrl}/altcha',
+                      onResponse: (payload) {
+                        setState(() {
+                          _altchaPayload = payload;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: widget.isSubmitting ? null : widget.onAutoLogin,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.isSubmitting)
-                        SizedBox(
-                          width: 13,
-                          height: 13,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
+                  onTap: (widget.isSubmitting || (isNewUser && _altchaPayload == null))
+                      ? null
+                      : () => widget.onAutoLogin(altchaPayload: _altchaPayload),
+                  child: Opacity(
+                    opacity: (isNewUser && _altchaPayload == null) ? 0.5 : 1.0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.isSubmitting)
+                          SizedBox(
+                            width: 13,
+                            height: 13,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: inkColor,
+                            ),
+                          ),
+                        if (widget.isSubmitting) const SizedBox(width: 10),
+                        Text(
+                          widget.isSubmitting
+                              ? (isNewUser ? l10n.creatingAccountProgress : l10n.signingInProgress)
+                              : (isNewUser ? l10n.createAccountAction : l10n.signInAction),
+                          style: TextStyle(
+                            fontSize: widget.isSubmitting ? 13 : 10,
+                            letterSpacing: widget.isSubmitting ? 0.2 : 2.2,
+                            fontWeight: FontWeight.w500,
                             color: inkColor,
                           ),
                         ),
-                      if (widget.isSubmitting) const SizedBox(width: 10),
-                      Text(
-                        widget.isSubmitting
-                            ? l10n.signingInProgress
-                            : l10n.signInAction,
-                        style: TextStyle(
-                          fontSize: widget.isSubmitting ? 13 : 10,
-                          letterSpacing: widget.isSubmitting ? 0.2 : 2.2,
-                          fontWeight: FontWeight.w500,
-                          color: inkColor,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

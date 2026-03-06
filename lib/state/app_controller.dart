@@ -286,7 +286,7 @@ class AppController extends AsyncNotifier<AppState> {
     );
   }
 
-  Future<void> loginWithDeviceIdentity() async {
+  Future<void> loginWithDeviceIdentity({String? altchaPayload}) async {
     final current = state.value;
     if (current == null || current.serverUrl == null || current.isSubmitting) {
       return;
@@ -302,6 +302,7 @@ class AppController extends AsyncNotifier<AppState> {
       final tokens = await _authService.deviceLogin(
         baseUrl: current.serverUrl!,
         deviceAuthPublicKey: deviceAuthPublicKey,
+        altchaPayload: altchaPayload,
       );
       await _sessionStorage.writeTokens(
         accessToken: tokens.accessToken,

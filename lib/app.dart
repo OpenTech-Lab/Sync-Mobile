@@ -74,9 +74,9 @@ class SyncMobileApp extends ConsumerWidget {
                 savedUserId: state.savedUserId,
                 isSubmitting: state.isSubmitting,
                 errorMessage: state.authError,
-                onAutoLogin: () => ref
+                onAutoLogin: ({altchaPayload}) => ref
                     .read(appControllerProvider.notifier)
-                    .loginWithDeviceIdentity(),
+                    .loginWithDeviceIdentity(altchaPayload: altchaPayload),
                 onBackToUrl: () =>
                     ref.read(appControllerProvider.notifier).resetServerUrl(),
               );

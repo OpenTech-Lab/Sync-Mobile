@@ -51,6 +51,7 @@ dependencies:
   mobile_scanner: ^7.1.3
   flutter_markdown_plus: ^1.0.7
   hugeicons: ^1.1.5
+  altcha_widget: ^1.2.0
 
 dev_dependencies:
   flutter_test:

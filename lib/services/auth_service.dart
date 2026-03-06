@@ -48,11 +48,19 @@ class AuthService {
   Future<AuthTokens> deviceLogin({
     required String baseUrl,
     required String deviceAuthPublicKey,
+    String? altchaPayload,
   }) async {
+    final body = <String, String>{
+      'device_auth_pubkey': deviceAuthPublicKey,
+    };
+    if (altchaPayload != null) {
+      body['altcha_payload'] = altchaPayload;
+    }
+
     final response = await _postAuth(
       baseUrl: baseUrl,
       path: 'device-login',
-      body: {'device_auth_pubkey': deviceAuthPublicKey},
+      body: body,
     );
 
     if (response.statusCode != 200) {
@@ -75,11 +83,21 @@ class AuthService {
     required String username,
     required String email,
     required String password,
+    String? altchaPayload,
   }) async {
+    final body = <String, String>{
+      'username': username,
+      'email': email,
+      'password': password,
+    };
+    if (altchaPayload != null) {
+      body['altcha_payload'] = altchaPayload;
+    }
+
     final response = await _postAuth(
       baseUrl: baseUrl,
       path: 'register',
-      body: {'username': username, 'email': email, 'password': password},
+      body: body,
     );
 
     if (response.statusCode != 201) {
@@ -91,11 +109,20 @@ class AuthService {
     required String baseUrl,
     required String email,
     required String password,
+    String? altchaPayload,
   }) async {
+    final body = <String, String>{
+      'email': email,
+      'password': password,
+    };
+    if (altchaPayload != null) {
+      body['altcha_payload'] = altchaPayload;
+    }
+
     final response = await _postAuth(
       baseUrl: baseUrl,
       path: 'login',
-      body: {'email': email, 'password': password},
+      body: body,
     );
 
     if (response.statusCode != 200) {
