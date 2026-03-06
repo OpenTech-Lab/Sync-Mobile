@@ -63,7 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       backgroundColor: bgColor,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(28, 48, 28, 40),
+          padding: const EdgeInsets.fromLTRB(28, 16, 28, 40),
           children: [
             Align(
               alignment: Alignment.centerRight,
@@ -358,8 +358,6 @@ class _PlanetInfoCard extends StatelessWidget {
         ],
 
         const SizedBox(height: 14),
-        Divider(height: 1, color: ruleColor),
-        const SizedBox(height: 12),
 
         // ── stats row ──
         Row(
