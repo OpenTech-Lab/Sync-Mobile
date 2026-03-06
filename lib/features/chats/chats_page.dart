@@ -542,7 +542,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         if (!mounted) {
           return;
         }
-        showAppToast(context, _l10n.friendAdded, duration: const Duration(milliseconds: 900));
+        showAppToast(
+          context,
+          _l10n.friendAdded,
+          duration: const Duration(milliseconds: 900),
+        );
       }
       if (action == ChatTargetProfileAction.startChat ||
           action == ChatTargetProfileAction.addFriend) {
@@ -1861,6 +1865,9 @@ class _StickerPickerState extends State<_StickerPicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final tabBackgroundColor = colorScheme.surfaceContainerLow;
+    final tabSelectedBackgroundColor = colorScheme.surfaceContainerHighest;
     if (widget.stickers.isEmpty) {
       return SizedBox(
         height: 140,
@@ -1890,6 +1897,19 @@ class _StickerPickerState extends State<_StickerPicker> {
         .where((s) => s.name != '__tab__')
         .toList(growable: false);
 
+    final tabImages = <String, Uint8List?>{};
+    for (final groupName in groups) {
+      final groupStickers = grouped[groupName] ?? const <Sticker>[];
+      final tabSticker =
+          groupStickers.where((s) => s.name == '__tab__').firstOrNull ??
+          groupStickers.firstOrNull;
+      if (tabSticker != null) {
+        try {
+          tabImages[groupName] = base64Decode(tabSticker.contentBase64);
+        } catch (_) {}
+      }
+    }
+
     return SizedBox(
       height: 320,
       child: Column(
@@ -1911,23 +1931,64 @@ class _StickerPickerState extends State<_StickerPicker> {
           ),
           const Divider(height: 1, color: AppPalette.neutral300),
           SizedBox(
-            height: 52,
+            height: 60,
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
               scrollDirection: Axis.horizontal,
               itemBuilder: (_, i) {
                 final groupName = groups[i];
-                return ChoiceChip(
-                  label: Text(groupName),
-                  selected: groupName == selectedGroup,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedGroup = groupName;
-                    });
-                  },
+                final tabImage = tabImages[groupName];
+                final isSelected = groupName == selectedGroup;
+                return Tooltip(
+                  message: groupName,
+                  child: Material(
+                    color: AppPalette.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        setState(() {
+                          _selectedGroup = groupName;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        curve: Curves.easeOut,
+                        width: 40,
+                        height: 40,
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? tabSelectedBackgroundColor
+                              : tabBackgroundColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: tabImage != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.memory(
+                                  tabImage,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.medium,
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  groupName,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
                 );
               },
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
               itemCount: groups.length,
             ),
           ),
@@ -2000,16 +2061,16 @@ class _MessageBubble extends ConsumerWidget {
   static const double _kMaxBubbleHeight = 180;
 
   static String? _parseStickerId(String body) {
-    final match =
-        RegExp(r'^\[sticker:([^:\]]+):[^\]]*\]$').firstMatch(body.trim());
+    final match = RegExp(
+      r'^\[sticker:([^:\]]+):[^\]]*\]$',
+    ).firstMatch(body.trim());
     return match?.group(1);
   }
 
   /// Returns the decoded image bytes and remaining text from a body that
   /// contains a [media-data:base64] token. Returns null if none found.
   static ({Uint8List bytes, String text})? _parseMediaData(String body) {
-    final match =
-        RegExp(r'\[media-data:([A-Za-z0-9+/=]+)\]').firstMatch(body);
+    final match = RegExp(r'\[media-data:([A-Za-z0-9+/=]+)\]').firstMatch(body);
     if (match == null) return null;
     try {
       final bytes = base64Decode(match.group(1)!);
@@ -2066,10 +2127,12 @@ class _MessageBubble extends ConsumerWidget {
     final avatarId = isMine ? currentUserId : message.senderId;
     // Watch avatar providers locally so only individual bubbles rebuild on
     // avatar changes — the parent page is not involved in avatar reloads.
-    final currentUserAvatarBase64 =
-        ref.watch(userAvatarBase64Provider(currentUserId)).value;
-    final partnerAvatarBase64 =
-        ref.watch(userAvatarBase64Provider(partnerId)).value;
+    final currentUserAvatarBase64 = ref
+        .watch(userAvatarBase64Provider(currentUserId))
+        .value;
+    final partnerAvatarBase64 = ref
+        .watch(userAvatarBase64Provider(partnerId))
+        .value;
     final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
 
     const palette = [
@@ -2092,8 +2155,7 @@ class _MessageBubble extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!isMine) ...
-            [
+            if (!isMine) ...[
               GestureDetector(
                 onTap: onPartnerAvatarTap,
                 child: _MessageAvatar(
@@ -2144,8 +2206,7 @@ class _MessageBubble extends ConsumerWidget {
                 ),
               ],
             ),
-            if (isMine) ...
-            [
+            if (isMine) ...[
               const SizedBox(width: 6),
               _MessageAvatar(
                 userId: avatarId,
@@ -2187,14 +2248,12 @@ class _MessageBubble extends ConsumerWidget {
         } catch (_) {}
         if (stickerBytes != null) {
           return Align(
-            alignment:
-                isMine ? Alignment.centerRight : Alignment.centerLeft,
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (!isMine) ...
-                [
+                if (!isMine) ...[
                   GestureDetector(
                     onTap: onPartnerAvatarTap,
                     child: _MessageAvatar(
@@ -2230,8 +2289,7 @@ class _MessageBubble extends ConsumerWidget {
                     ),
                   ],
                 ),
-                if (isMine) ...
-                [
+                if (isMine) ...[
                   const SizedBox(width: 6),
                   _MessageAvatar(
                     userId: avatarId,
@@ -2689,10 +2747,7 @@ class _MessageAvatarState extends State<_MessageAvatar> {
             )
           : ClipOval(
               child: SizedBox.expand(
-                child: Image.memory(
-                  bytes,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.memory(bytes, fit: BoxFit.cover),
               ),
             ),
     );
