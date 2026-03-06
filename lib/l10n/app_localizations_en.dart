@@ -264,7 +264,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAppearance => 'Appearance';
 
   @override
-  String get settingsTheme => 'THEME';
+  String get settingsTheme => 'Theme';
 
   @override
   String get settingsTypingStyleMode => 'Typing style mode';
@@ -507,6 +507,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDangerousActions => 'Dangerous actions';
+
+  @override
+  String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
 
   @override
   String get settingsPlanetUnknownName => 'Unknown planet';

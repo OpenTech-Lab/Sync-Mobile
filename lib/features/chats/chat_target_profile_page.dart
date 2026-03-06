@@ -82,7 +82,9 @@ class ChatTargetProfileScreen extends StatelessWidget {
           Center(
             child: CircleAvatar(
               radius: 36,
-              backgroundColor: avatarBg,
+              backgroundColor: avatarBase64 != null
+                  ? Colors.transparent
+                  : avatarBg,
               child: avatarBase64 == null
                   ? Text(
                       initials,

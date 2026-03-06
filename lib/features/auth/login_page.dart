@@ -112,18 +112,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              if (widget.savedUserId != null && widget.savedUserId!.isNotEmpty)
-                Text(
-                  'ID: ${widget.savedUserId}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: mutedColor,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              if (widget.savedUserId != null && widget.savedUserId!.isNotEmpty)
-                const SizedBox(height: 18),
               if (widget.errorMessage != null)
                 Text(
                   widget.errorMessage!,

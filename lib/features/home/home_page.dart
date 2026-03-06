@@ -144,7 +144,9 @@ class HomeTab extends ConsumerWidget {
                     contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     leading: CircleAvatar(
                       radius: 18,
-                      backgroundColor: _avatarToneColor(id),
+                      backgroundColor: avatarBase64 != null
+                          ? Colors.transparent
+                          : _avatarToneColor(id),
                       child: avatarBase64 == null
                           ? Text(
                               initials(id),
@@ -379,7 +381,9 @@ class _ProfileCard extends ConsumerWidget {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: avatarColor,
+            backgroundColor: avatarBase64 != null
+                ? Colors.transparent
+                : avatarColor,
             child: avatarBase64 == null
                 ? Text(
                     currentUserId.length >= 2

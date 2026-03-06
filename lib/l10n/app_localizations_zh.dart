@@ -509,6 +509,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDangerousActions => '危険操作';
 
   @override
+  String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
+
+  @override
   String get settingsPlanetUnknownName => '未知 Planet';
 
   @override

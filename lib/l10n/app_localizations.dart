@@ -585,7 +585,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTheme.
   ///
   /// In en, this message translates to:
-  /// **'THEME'**
+  /// **'Theme'**
   String get settingsTheme;
 
   /// No description provided for @settingsTypingStyleMode.
@@ -1055,6 +1055,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dangerous actions'**
   String get settingsDangerousActions;
+
+  /// No description provided for @settingsDangerousActionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'delete local chats, clear app data, or sign out'**
+  String get settingsDangerousActionsHint;
 
   /// No description provided for @settingsPlanetUnknownName.
   ///

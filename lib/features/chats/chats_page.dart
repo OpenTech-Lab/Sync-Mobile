@@ -1531,7 +1531,9 @@ class _ConversationStarter extends ConsumerWidget {
                 // avatar
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: avatarColor,
+                  backgroundColor: avatarBase64Async.value != null
+                      ? Colors.transparent
+                      : avatarColor,
                   child: avatarBase64Async.value == null
                       ? Text(
                           userId.length >= 2
@@ -2641,7 +2643,9 @@ class _MessageAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: 12,
-      backgroundColor: avatarBg,
+      backgroundColor: avatarBase64 != null
+          ? Colors.transparent
+          : avatarBg,
       child: avatarBase64 == null
           ? Text(
               initials,

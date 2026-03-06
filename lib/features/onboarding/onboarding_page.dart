@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/molecules/language_picker.dart';
 
 import '../../constants/planet_presets.dart';
@@ -182,36 +183,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 20),
 
             // ── validate action ──
-            GestureDetector(
-              onTap: isValidating
-                  ? null
-                  : () => widget.onValidate(_serverUrlController.text),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (isValidating)
-                    const SizedBox(
-                      width: 13,
-                      height: 13,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: AppPalette.neutral500,
-                      ),
-                    ),
-                  if (isValidating) const SizedBox(width: 10),
-                  Text(
-                    isValidating
-                        ? l10n.checkingConnection
-                        : l10n.checkConnectionAction,
-                    style: TextStyle(
-                      fontSize: isValidating ? 13 : 10,
-                      letterSpacing: isValidating ? 0.2 : 2.2,
-                      fontWeight: FontWeight.w500,
-                      color: isValidating ? AppPalette.neutral500 : inkColor,
-                    ),
-                  ),
-                ],
-              ),
+            OutlineActionButton(
+              label: isValidating ? l10n.checkingConnection : l10n.checkConnectionAction,
+              borderColor: ruleColor,
+              textColor: isValidating ? AppPalette.neutral500 : inkColor,
+              disabled: isValidating,
+              onTap: () => widget.onValidate(_serverUrlController.text),
             ),
 
             // ── status feedback ──
@@ -228,20 +205,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Divider(height: 1, color: ruleColor),
               const SizedBox(height: 20),
               // continue
-              GestureDetector(
+              OutlineActionButton(
+                label: l10n.continueAction,
+                borderColor: ruleColor,
+                textColor: inkColor,
                 onTap: () => widget.onContinue(_serverUrlController.text),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    l10n.continueAction,
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 2.5,
-                      fontWeight: FontWeight.w500,
-                      color: inkColor,
-                    ),
-                  ),
-                ),
               ),
             ],
 

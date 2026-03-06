@@ -119,83 +119,118 @@ class SettingsTab extends ConsumerWidget {
               ruleColor: ruleColor,
             ),
             const SizedBox(height: 4),
-            Text(
-              l10n.settingsTheme,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.4,
-                color: AppPalette.neutral500,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 12),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                for (final (mode, label) in themeModes) ...[
-                  GestureDetector(
-                    onTap: () =>
-                        ref.read(themeModeProvider.notifier).setMode(mode),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 24),
-                      child: Column(
-                        children: [
-                          Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: themeMode == mode
-                                  ? FontWeight.w500
-                                  : FontWeight.w300,
-                              color: themeMode == mode
-                                  ? inkColor
-                                  : AppPalette.neutral500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            height: 1,
-                            width: 24,
-                            color: themeMode == mode
-                                ? inkColor
-                                : AppPalette.transparent,
-                          ),
-                        ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HugeIcon(
+                      icon: HugeIcons.strokeRoundedPaintBoard,
+                      size: 16,
+                      color: inkColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.settingsTheme,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                Wrap(
+                  spacing: 20,
+                  children: [
+                    for (final (mode, label) in themeModes)
+                      GestureDetector(
+                        onTap: () =>
+                            ref.read(themeModeProvider.notifier).setMode(mode),
+                        child: Column(
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: themeMode == mode
+                                    ? FontWeight.w500
+                                    : FontWeight.w300,
+                                color: themeMode == mode
+                                    ? inkColor
+                                    : AppPalette.neutral500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              height: 1,
+                              width: 24,
+                              color: themeMode == mode
+                                  ? inkColor
+                                  : AppPalette.transparent,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            Text(
-              l10n.languageLabel,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.4,
-                color: AppPalette.neutral500,
-                fontWeight: FontWeight.w400,
-              ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HugeIcon(
+                      icon: HugeIcons.strokeRoundedTranslate,
+                      size: 16,
+                      color: inkColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.languageLabel,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const LanguagePicker(),
+              ],
             ),
-            const SizedBox(height: 10),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: LanguagePicker(),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n.settingsTypingStyleMode,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w300,
-                        color: inkColor,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedKeyboard,
+                          size: 16,
+                          color: inkColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.settingsTypingStyleMode,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -288,13 +323,24 @@ class SettingsTab extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n.settingsEnableBackups,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w300,
-                        color: inkColor,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedCloud,
+                          size: 16,
+                          color: inkColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.settingsEnableBackups,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -498,9 +544,15 @@ class SettingsTab extends ConsumerWidget {
             ],
 
             const SizedBox(height: 32),
+            _SectionHeader(
+              label: l10n.settingsDangerousActions,
+              ruleColor: ruleColor,
+            ),
             _DangerNavRow(
               label: l10n.settingsDangerousActions,
+              subtitle: l10n.settingsDangerousActionsHint,
               isDark: isDark,
+              inkColor: inkColor,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => _DangerousActionsPage(
@@ -574,13 +626,13 @@ class _DangerousActionsPage extends ConsumerWidget {
           children: [
             // ── Local Data ──────────────────────────────────────────────
             _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
-            OutlineActionButton(
+            _DangerActionButton(
               label: l10n.settingsDeleteAllLocalChats,
-              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
-              textColor: AppPalette.danger700,
-              variant: OutlineActionVariant.danger,
-              disabled: backupState?.isBusy == true,
-              onTap: () async {
+              subtitle: l10n.settingsDeleteLocalChatsMessage,
+              icon: HugeIcons.strokeRoundedDelete01,
+              busy: backupState?.isBusy == true,
+              isDark: isDark,
+              onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
@@ -598,13 +650,13 @@ class _DangerousActionsPage extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 10),
-            OutlineActionButton(
+            _DangerActionButton(
               label: l10n.settingsDeleteAllAppData,
-              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
-              textColor: AppPalette.danger700,
-              variant: OutlineActionVariant.danger,
-              disabled: backupState?.isBusy == true,
-              onTap: () async {
+              subtitle: l10n.settingsDeleteAllAppDataMessage,
+              icon: HugeIcons.strokeRoundedDelete02,
+              busy: backupState?.isBusy == true,
+              isDark: isDark,
+              onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
@@ -630,12 +682,13 @@ class _DangerousActionsPage extends ConsumerWidget {
             // ── Sign Out ────────────────────────────────────────────────
             const SizedBox(height: 32),
             _SectionHeader(label: l10n.settingsSignOut, ruleColor: ruleColor),
-            OutlineActionButton(
+            _DangerActionButton(
               label: l10n.settingsSignOut,
-              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
-              textColor: AppPalette.danger700,
-              variant: OutlineActionVariant.danger,
-              onTap: () async {
+              subtitle: l10n.settingsSignOutMessage,
+              icon: HugeIcons.strokeRoundedLogout02,
+              busy: false,
+              isDark: isDark,
+              onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
@@ -653,13 +706,14 @@ class _DangerousActionsPage extends ConsumerWidget {
                 }
               },
             ),
-            const SizedBox(height: 12),
-            OutlineActionButton(
+            const SizedBox(height: 10),
+            _DangerActionButton(
               label: l10n.settingsDeleteAccount,
-              borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
-              textColor: AppPalette.danger700,
-              variant: OutlineActionVariant.danger,
-              onTap: () async {
+              subtitle: l10n.settingsDeleteAccountMessage,
+              icon: HugeIcons.strokeRoundedUserRemove02,
+              busy: false,
+              isDark: isDark,
+              onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
@@ -697,18 +751,24 @@ class _DangerousActionsPage extends ConsumerWidget {
 class _DangerNavRow extends StatelessWidget {
   const _DangerNavRow({
     required this.label,
+    required this.subtitle,
     required this.isDark,
+    required this.inkColor,
     required this.onTap,
   });
 
   final String label;
+  final String subtitle;
   final bool isDark;
+  final Color inkColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final borderColor =
-        AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45);
+    final borderColor = isDark
+        ? AppPalette.neutral700
+        : AppPalette.neutral300;
+    
     return Material(
       color: Colors.transparent,
       child: Ink(
@@ -719,33 +779,48 @@ class _DangerNavRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          splashColor: AppPalette.danger700.withValues(alpha: 0.10),
-          highlightColor: AppPalette.danger700.withValues(alpha: 0.06),
+          splashColor: inkColor.withValues(alpha: 0.12),
+          highlightColor: inkColor.withValues(alpha: 0.06),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             child: Row(
               children: [
                 HugeIcon(
                   icon: HugeIcons.strokeRoundedAlert02,
-                  color: AppPalette.danger700,
-                  size: 18,
+                  color: inkColor,
+                  size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 1.5,
-                      color: AppPalette.danger700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.5,
+                          color: inkColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w300,
+                          color: AppPalette.neutral500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 HugeIcon(
                   icon: HugeIcons.strokeRoundedArrowRight01,
-                  color: AppPalette.danger700,
-                  size: 16,
+                  color: inkColor,
+                  size: 18,
                 ),
               ],
             ),
@@ -824,9 +899,11 @@ class _DangerActionButton extends StatelessWidget {
     required this.busy,
     required this.isDark,
     required this.onPressed,
+    this.subtitle,
   });
 
   final String label;
+  final String? subtitle;
   final List<List<dynamic>> icon;
   final bool busy;
   final bool isDark;
@@ -835,13 +912,22 @@ class _DangerActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = busy;
-    final borderColor = isDisabled
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final borderColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    
+    final effectiveBorder = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.25)
-        : AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45);
+        : borderColor;
+        
     final bgColor = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.05)
-        : AppPalette.danger700.withValues(alpha: isDark ? 0.10 : 0.06);
+        : Colors.transparent;
+        
     final textColor = isDisabled
+        ? AppPalette.neutral500.withValues(alpha: 0.45)
+        : inkColor;
+        
+    final iconColor = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.45)
         : AppPalette.danger700;
 
@@ -854,38 +940,56 @@ class _DangerActionButton extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             color: bgColor,
-            border: Border.all(color: borderColor, width: 1),
+            border: Border.all(color: effectiveBorder, width: 1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: InkWell(
             onTap: isDisabled ? null : onPressed,
             borderRadius: BorderRadius.circular(10),
-            splashColor: AppPalette.danger700.withValues(alpha: 0.12),
-            highlightColor: AppPalette.danger700.withValues(alpha: 0.07),
+            splashColor: inkColor.withValues(alpha: 0.12),
+            highlightColor: inkColor.withValues(alpha: 0.06),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      HugeIcon(
-                        icon: icon,
-                        size: 18,
-                        color: textColor,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: textColor,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                    ],
+                  HugeIcon(
+                    icon: icon,
+                    size: 20,
+                    color: iconColor,
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: textColor,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w300,
+                              color: textColor.withValues(alpha: 0.65),
+                              letterSpacing: 0.2,
+                              height: 1.4,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   if (busy)
                     SizedBox(
                       width: 14,
@@ -1000,16 +1104,39 @@ class _PlanetCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          planetName,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
-            letterSpacing: -0.3,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                planetName,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w300,
+                  color: inkColor,
+                  letterSpacing: -0.3,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 16),
+            _InlineStatus(
+              active: isConnected,
+              label: isConnected ? l10n.settingsOnline : l10n.settingsOffline,
+              mutedColor: mutedColor,
+            ),
+            const SizedBox(width: 12),
+            _InlineStatus(
+              active: notifActive,
+              label: notifActive
+                  ? l10n.settingsNotificationsOn
+                  : l10n.settingsNotificationsOff,
+              mutedColor: mutedColor,
+            ),
+          ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           planetDescription,
           style: TextStyle(
@@ -1020,24 +1147,6 @@ class _PlanetCard extends StatelessWidget {
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _InlineStatus(
-              active: isConnected,
-              label: isConnected ? l10n.settingsOnline : l10n.settingsOffline,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 20),
-            _InlineStatus(
-              active: notifActive,
-              label: notifActive
-                  ? l10n.settingsNotificationsOn
-                  : l10n.settingsNotificationsOff,
-              mutedColor: mutedColor,
-            ),
-          ],
         ),
         const SizedBox(height: 20),
         Row(

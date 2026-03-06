@@ -296,7 +296,9 @@ class MyProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: avatarToneColor,
+                      backgroundColor: avatarBase64 != null
+                          ? Colors.transparent
+                          : avatarToneColor,
                       child: avatarBase64 == null
                           ? Text(
                               currentUserId.length >= 2
