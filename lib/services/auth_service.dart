@@ -39,6 +39,13 @@ class QrLoginStatus {
   bool get isExpired => status == 'expired';
 }
 
+class AccountPendingApprovalException implements Exception {
+  const AccountPendingApprovalException([this.message]);
+  final String? message;
+  @override
+  String toString() => message ?? 'Account pending admin approval';
+}
+
 class AuthService {
   AuthService([http.Client? httpClient])
     : _httpClient = createDevHttpClient(httpClient);
@@ -63,6 +70,19 @@ class AuthService {
       body: body,
     );
 
+    if (response.statusCode == 202) {
+      // Account created but pending admin approval.
+      throw const AccountPendingApprovalException(
+        'Your account has been created and is awaiting admin approval. '
+        'You\'ll be able to log in once an admin reviews your request.',
+      );
+    }
+    if (response.statusCode == 403) {
+      throw const AccountPendingApprovalException(
+        'Your account is pending admin approval. '
+        'Please wait for an admin to review your request.',
+      );
+    }
     if (response.statusCode != 200) {
       throw StateError('Device login failed (${response.statusCode}).');
     }

@@ -350,8 +350,11 @@ class AppController extends AsyncNotifier<AppState> {
     } catch (error, stackTrace) {
       debugPrint('loginWithDeviceIdentity failed: $error');
       debugPrintStack(stackTrace: stackTrace);
+      final errorMessage = error is AccountPendingApprovalException
+          ? (error.message ?? 'Your account is pending admin approval.')
+          : _genericConnectError;
       state = AsyncData(
-        current.copyWith(isSubmitting: false, authError: _genericConnectError),
+        current.copyWith(isSubmitting: false, authError: errorMessage),
       );
     }
   }
