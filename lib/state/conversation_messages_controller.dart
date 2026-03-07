@@ -35,7 +35,10 @@ final messageE2eeServiceProvider = Provider<MessageE2eeService>((ref) {
 
 final conversationSummariesProvider = FutureProvider<List<ConversationSummary>>(
   (ref) {
-    return ref.read(chatRepositoryProvider).listConversations();
+    // Use ref.watch so this provider rebuilds whenever the active server
+    // (and therefore the chat repository) changes.
+    final repository = ref.watch(chatRepositoryProvider);
+    return repository.listConversations();
   },
 );
 
@@ -61,6 +64,9 @@ class ConversationMessagesController
 
   @override
   Future<List<LocalChatMessage>> build(String partnerId) {
+    // Watch chatRepositoryProvider so this notifier rebuilds (and clears its
+    // cached messages) whenever the active server URL changes.
+    ref.watch(chatRepositoryProvider);
     return _repository.listMessages(conversationId: partnerId, limit: 200);
   }
 
