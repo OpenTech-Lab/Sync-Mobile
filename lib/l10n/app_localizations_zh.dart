@@ -98,6 +98,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planetCardLatency => '延遲';
 
   @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => '需審核';
+
+  @override
   String get authTagline => '你的私人通訊工具';
 
   @override
@@ -311,7 +317,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDeleteBackupData => '刪除備份資料';
 
   @override
-  String get settingsLocalData => '本機資料';
+  String get settingsLocalData => '刪除';
+
+  @override
+  String get settingsDeleteAllPlanetData => '刪除此星球的所有資料';
+
+  @override
+  String get settingsDeleteAllPlanetDataMessage => '這將永久刪除所有本機資料（聊天、好友、偏好設定）以及伺服器上的加密備份。此操作無法復原。';
+
+  @override
+  String get settingsDeleteAllPlanetDataConfirm => '刪 除 所 有 資 料';
 
   @override
   String get settingsDeleteAllLocalChats => '刪除本機所有聊天資料';
@@ -336,12 +351,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatRowHide => '隱藏';
-
-  @override
-  String get planetRegistrationLabel => 'REGISTRATION';
-
-  @override
-  String get planetRegistrationApprovalRequired => '需審核';
 
   @override
   String get chatNoChatsYet => '還沒有聊天紀錄。';
@@ -509,10 +518,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSignOutConfirm => '登 出';
 
   @override
-  String get settingsDeleteAccount => '刪除帳號';
+  String get settingsDeleteAccount => '從此星球刪除此帳號';
 
   @override
-  String get settingsDeleteAccountMessage => '你的帳號將被永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
+  String get settingsDeleteAccountMessage => '你的帳號將從此星球永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
 
   @override
   String get settingsDeleteAccountConfirm => '刪 除 帳 號';
@@ -828,6 +837,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get planetCardLatency => '延遲';
 
   @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => '需審核';
+
+  @override
   String get authTagline => '你的私人通訊工具';
 
   @override
@@ -1041,7 +1056,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteBackupData => '刪除備份資料';
 
   @override
-  String get settingsLocalData => '本機資料';
+  String get settingsLocalData => '刪除';
+
+  @override
+  String get settingsDeleteAllPlanetData => '刪除此星球的所有資料';
+
+  @override
+  String get settingsDeleteAllPlanetDataMessage => '這將永久刪除所有本機資料（聊天、好友、偏好設定）以及伺服器上的加密備份。此操作無法復原。';
+
+  @override
+  String get settingsDeleteAllPlanetDataConfirm => '刪 除 所 有 資 料';
 
   @override
   String get settingsDeleteAllLocalChats => '刪除本機所有聊天資料';
@@ -1066,12 +1090,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatRowHide => '隱藏';
-
-  @override
-  String get planetRegistrationLabel => 'REGISTRATION';
-
-  @override
-  String get planetRegistrationApprovalRequired => '需審核';
 
   @override
   String get chatNoChatsYet => '還沒有聊天紀錄。';
@@ -1239,10 +1257,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsSignOutConfirm => '登 出';
 
   @override
-  String get settingsDeleteAccount => '刪除帳號';
+  String get settingsDeleteAccount => '從此星球刪除此帳號';
 
   @override
-  String get settingsDeleteAccountMessage => '你的帳號將被永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
+  String get settingsDeleteAccountMessage => '你的帳號將從此星球永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
 
   @override
   String get settingsDeleteAccountConfirm => '刪 除 帳 號';

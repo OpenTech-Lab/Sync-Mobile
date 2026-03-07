@@ -98,6 +98,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planetCardLatency => 'Latency';
 
   @override
+  String get planetRegistrationLabel => 'REGISTRATION';
+
+  @override
+  String get planetRegistrationApprovalRequired => 'approval required';
+
+  @override
   String get authTagline => 'Your private messenger';
 
   @override
@@ -311,7 +317,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteBackupData => 'Delete backup data';
 
   @override
-  String get settingsLocalData => 'Local Data';
+  String get settingsLocalData => 'Delete';
+
+  @override
+  String get settingsDeleteAllPlanetData => 'Delete all data from this planet';
+
+  @override
+  String get settingsDeleteAllPlanetDataMessage => 'This permanently deletes all local data (chats, friends, preferences) and any encrypted backup on the server. This cannot be undone.';
+
+  @override
+  String get settingsDeleteAllPlanetDataConfirm => 'D E L E T E   A L L   D A T A';
 
   @override
   String get settingsDeleteAllLocalChats => 'Delete all local chat data';
@@ -336,12 +351,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatRowHide => 'hide';
-
-  @override
-  String get planetRegistrationLabel => 'REGISTRATION';
-
-  @override
-  String get planetRegistrationApprovalRequired => 'approval required';
 
   @override
   String get chatNoChatsYet => 'No chats yet.';
@@ -509,10 +518,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSignOutConfirm => 'S I G N   O U T';
 
   @override
-  String get settingsDeleteAccount => 'Delete account';
+  String get settingsDeleteAccount => 'Delete this account from this planet';
 
   @override
-  String get settingsDeleteAccountMessage => 'Your account will be permanently deleted. All local data and any server backup will be removed. This cannot be undone.';
+  String get settingsDeleteAccountMessage => 'Your account will be permanently deleted from this planet. All local data and any server backup will be removed. This cannot be undone.';
 
   @override
   String get settingsDeleteAccountConfirm => 'D E L E T E   A C C O U N T';

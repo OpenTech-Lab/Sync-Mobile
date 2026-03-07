@@ -270,6 +270,18 @@ abstract class AppLocalizations {
   /// **'Latency'**
   String get planetCardLatency;
 
+  /// No description provided for @planetRegistrationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'REGISTRATION'**
+  String get planetRegistrationLabel;
+
+  /// No description provided for @planetRegistrationApprovalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'approval required'**
+  String get planetRegistrationApprovalRequired;
+
   /// No description provided for @authTagline.
   ///
   /// In en, this message translates to:
@@ -675,8 +687,26 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalData.
   ///
   /// In en, this message translates to:
-  /// **'Local Data'**
+  /// **'Delete'**
   String get settingsLocalData;
+
+  /// No description provided for @settingsDeleteAllPlanetData.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all data from this planet'**
+  String get settingsDeleteAllPlanetData;
+
+  /// No description provided for @settingsDeleteAllPlanetDataMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes all local data (chats, friends, preferences) and any encrypted backup on the server. This cannot be undone.'**
+  String get settingsDeleteAllPlanetDataMessage;
+
+  /// No description provided for @settingsDeleteAllPlanetDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'D E L E T E   A L L   D A T A'**
+  String get settingsDeleteAllPlanetDataConfirm;
 
   /// No description provided for @settingsDeleteAllLocalChats.
   ///
@@ -725,18 +755,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'hide'**
   String get chatRowHide;
-
-  /// No description provided for @planetRegistrationLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'REGISTRATION'**
-  String get planetRegistrationLabel;
-
-  /// No description provided for @planetRegistrationApprovalRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'approval required'**
-  String get planetRegistrationApprovalRequired;
 
   /// No description provided for @chatNoChatsYet.
   ///
@@ -1059,13 +1077,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccount.
   ///
   /// In en, this message translates to:
-  /// **'Delete account'**
+  /// **'Delete this account from this planet'**
   String get settingsDeleteAccount;
 
   /// No description provided for @settingsDeleteAccountMessage.
   ///
   /// In en, this message translates to:
-  /// **'Your account will be permanently deleted. All local data and any server backup will be removed. This cannot be undone.'**
+  /// **'Your account will be permanently deleted from this planet. All local data and any server backup will be removed. This cannot be undone.'**
   String get settingsDeleteAccountMessage;
 
   /// No description provided for @settingsDeleteAccountConfirm.

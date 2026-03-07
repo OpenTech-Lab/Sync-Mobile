@@ -624,35 +624,11 @@ class _DangerousActionsPage extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
           children: [
-            // ── Local Data ──────────────────────────────────────────────
+            // ── Delete ──────────────────────────────────────────────────
             _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
             _DangerActionButton(
-              label: l10n.settingsDeleteAllLocalChats,
-              subtitle: l10n.settingsDeleteLocalChatsMessage,
-              icon: HugeIcons.strokeRoundedDelete01,
-              busy: backupState?.isBusy == true,
-              isDark: isDark,
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => _ConfirmDialog(
-                    title: l10n.settingsDeleteLocalChatsTitle,
-                    message: l10n.settingsDeleteLocalChatsMessage,
-                    confirmLabel: l10n.settingsDeleteLocalChatsConfirm,
-                    isDark: isDark,
-                  ),
-                );
-                if (confirmed != true) return;
-                await ref
-                    .read(backupControllerProvider.notifier)
-                    .deleteLocalChatData();
-                ref.invalidate(conversationMessagesProvider);
-              },
-            ),
-            const SizedBox(height: 10),
-            _DangerActionButton(
-              label: l10n.settingsDeleteAllAppData,
-              subtitle: l10n.settingsDeleteAllAppDataMessage,
+              label: l10n.settingsDeleteAllPlanetData,
+              subtitle: l10n.settingsDeleteAllPlanetDataMessage,
               icon: HugeIcons.strokeRoundedDelete02,
               busy: backupState?.isBusy == true,
               isDark: isDark,
@@ -660,13 +636,22 @@ class _DangerousActionsPage extends ConsumerWidget {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => _ConfirmDialog(
-                    title: l10n.settingsDeleteAllAppDataTitle,
-                    message: l10n.settingsDeleteAllAppDataMessage,
-                    confirmLabel: l10n.settingsDeleteAllAppDataConfirm,
+                    title: l10n.settingsDeleteAllPlanetData,
+                    message: l10n.settingsDeleteAllPlanetDataMessage,
+                    confirmLabel: l10n.settingsDeleteAllPlanetDataConfirm,
                     isDark: isDark,
                   ),
                 );
                 if (confirmed != true) return;
+                final token = await resolveAccessToken();
+                if (token != null) {
+                  await ref
+                      .read(backupControllerProvider.notifier)
+                      .deleteBackupData(
+                        baseUrl: serverUrl,
+                        accessToken: token,
+                      );
+                }
                 await ref
                     .read(backupControllerProvider.notifier)
                     .deleteAllLocalData();
@@ -677,33 +662,6 @@ class _DangerousActionsPage extends ConsumerWidget {
                 ref.invalidate(userDescriptionProvider);
                 ref.invalidate(friendAddedAtProvider);
                 ref.invalidate(conversationMessagesProvider);
-              },
-            ),
-            // ── Sign Out ────────────────────────────────────────────────
-            const SizedBox(height: 32),
-            _SectionHeader(label: l10n.settingsSignOut, ruleColor: ruleColor),
-            _DangerActionButton(
-              label: l10n.settingsSignOut,
-              subtitle: l10n.settingsSignOutMessage,
-              icon: HugeIcons.strokeRoundedLogout02,
-              busy: false,
-              isDark: isDark,
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => _ConfirmDialog(
-                    title: l10n.settingsSignOut,
-                    message: l10n.settingsSignOutMessage,
-                    confirmLabel: l10n.settingsSignOutConfirm,
-                    isDark: isDark,
-                  ),
-                );
-                if (confirmed == true) {
-                  await onSignOut();
-                  if (context.mounted) {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  }
-                }
               },
             ),
             const SizedBox(height: 10),
@@ -739,6 +697,33 @@ class _DangerousActionsPage extends ConsumerWidget {
                 await onDeleteAccount();
                 if (context.mounted) {
                   Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+              },
+            ),
+            // ── Sign Out ────────────────────────────────────────────────
+            const SizedBox(height: 32),
+            _SectionHeader(label: l10n.settingsSignOut, ruleColor: ruleColor),
+            _DangerActionButton(
+              label: l10n.settingsSignOut,
+              subtitle: l10n.settingsSignOutMessage,
+              icon: HugeIcons.strokeRoundedLogout02,
+              busy: false,
+              isDark: isDark,
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsSignOut,
+                    message: l10n.settingsSignOutMessage,
+                    confirmLabel: l10n.settingsSignOutConfirm,
+                    isDark: isDark,
+                  ),
+                );
+                if (confirmed == true) {
+                  await onSignOut();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
                 }
               },
             ),
