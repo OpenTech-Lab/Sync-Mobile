@@ -165,6 +165,53 @@
   "chatAddFriendInputHint": "好友連結或使用者 ID",
   "chatMarkReadPartial": "已標記 {success}/{total} 個對話為已讀",
   "chatSelectedMediaFallback": "圖片",
+  "chatTrustRetryWindowReset": "每日重置後",
+  "chatTrustRetryWindowHours": "{hours} 小時後",
+  "@chatTrustRetryWindowHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustRetryWindowMinutes": "{minutes} 分鐘後",
+  "@chatTrustRetryWindowMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustDailyLimitToast": "已達每日訊息上限（{used}/{limit}）。你可以於{retryWindow}再次發送，或提升等級以獲得更高上限。",
+  "@chatTrustDailyLimitToast": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      },
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitToastGeneric": "已達每日訊息上限。你可以於{retryWindow}再次發送，或提升等級以獲得更高上限。",
+  "@chatTrustDailyLimitToastGeneric": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitInline": "已達上限 · {retryWindow}可再試 · 或先提升等級",
+  "@chatTrustDailyLimitInline": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
   "chatMessageDetailTitleMine": "你的訊息",
   "chatMessageDetailTitleOther": "訊息",
   "chatCopiedToClipboard": "已複製到剪貼簿",
@@ -202,6 +249,7 @@
   "settingsDeleteAccountMessage": "你的帳號將從此星球永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。",
   "settingsDeleteAccountConfirm": "刪 除 帳 號",
   "settingsDangerousActions": "危険操作",
+  "settingsDangerousActionsHint": "刪除本機聊天、清除應用程式資料或登出",
   "settingsPlanetUnknownName": "未知 Planet",
   "settingsPlanetNoDescription": "目前尚無 Planet 描述。",
   "settingsOnline": "在線",
@@ -216,6 +264,57 @@
   "profileNoDescriptionYet": "尚無描述",
   "profileFriendLinkCopied": "已複製好友連結",
   "profileCopyFriendLink": "複製好友連結",
+  "profileTrustSectionTitle": "信任",
+  "profileTrustLevel": "等級 {level}",
+  "@profileTrustLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustRank": "階級 {rank}",
+  "@profileTrustRank": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "profileTrustProgressLabel": "活躍天數 {activeDays}",
+  "@profileTrustProgressLabel": {
+    "placeholders": {
+      "activeDays": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustNextLevel": "再 {days} 天可升至等級 {level}",
+  "@profileTrustNextLevel": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustMaxLevel": "已解鎖最高等級",
+  "profileTrustMessagesLabel": "今日訊息",
+  "profileTrustAttachmentsLabel": "今日附件",
+  "profileTrustUnlimited": "無限制",
+  "profileTrustUsage": "{used} / {limit}",
+  "@profileTrustUsage": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "profileFriendQrTitle": "好友 QR",
   "profileFriendQrHint": "包含你的伺服器網址與 ID",
   "profileQrPayloadCopied": "已複製 QR 內容",

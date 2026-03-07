@@ -196,6 +196,53 @@
     }
   },
   "chatSelectedMediaFallback": "Image",
+  "chatTrustRetryWindowReset": "after the daily reset",
+  "chatTrustRetryWindowHours": "in {hours}h",
+  "@chatTrustRetryWindowHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustRetryWindowMinutes": "in {minutes}m",
+  "@chatTrustRetryWindowMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustDailyLimitToast": "Daily message cap reached ({used}/{limit}). You can send again {retryWindow}, or level up for a higher cap.",
+  "@chatTrustDailyLimitToast": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      },
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitToastGeneric": "Daily message cap reached. You can send again {retryWindow}, or level up for a higher cap.",
+  "@chatTrustDailyLimitToastGeneric": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitInline": "cap reached · retry {retryWindow} or level up",
+  "@chatTrustDailyLimitInline": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
   "chatMessageDetailTitleMine": "Your message",
   "chatMessageDetailTitleOther": "Message",
   "chatCopiedToClipboard": "Copied to clipboard",
@@ -255,6 +302,57 @@
   "profileNoDescriptionYet": "no description yet",
   "profileFriendLinkCopied": "Friend link copied",
   "profileCopyFriendLink": "copy friend link",
+  "profileTrustSectionTitle": "TRUST",
+  "profileTrustLevel": "Level {level}",
+  "@profileTrustLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustRank": "Rank {rank}",
+  "@profileTrustRank": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "profileTrustProgressLabel": "{activeDays} active days",
+  "@profileTrustProgressLabel": {
+    "placeholders": {
+      "activeDays": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustNextLevel": "{days} days to level {level}",
+  "@profileTrustNextLevel": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustMaxLevel": "Highest level unlocked",
+  "profileTrustMessagesLabel": "messages today",
+  "profileTrustAttachmentsLabel": "attachments today",
+  "profileTrustUnlimited": "Unlimited",
+  "profileTrustUsage": "{used} / {limit}",
+  "@profileTrustUsage": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "profileFriendQrTitle": "FRIEND QR",
   "profileFriendQrHint": "contains your server url and id",
   "profileQrPayloadCopied": "QR payload copied",

@@ -5,6 +5,71 @@ import 'package:http/http.dart' as http;
 import 'dev_http_client.dart';
 import 'message_e2ee_service.dart';
 import '../models/local_chat_message.dart';
+import '../models/user_profile.dart';
+
+class RemoteChatApiException implements Exception {
+  const RemoteChatApiException({
+    required this.message,
+    required this.statusCode,
+    this.code,
+    this.trust,
+    this.retryAfterSeconds,
+    this.allowedAttachmentTypes = const <String>[],
+  });
+
+  final String message;
+  final int statusCode;
+  final String? code;
+  final UserTrustSnapshot? trust;
+  final int? retryAfterSeconds;
+  final List<String> allowedAttachmentTypes;
+
+  factory RemoteChatApiException.fromResponse(
+    http.Response response, {
+    required String fallbackMessage,
+  }) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return RemoteChatApiException(
+          message:
+              (decoded['error'] as String?) ??
+              '$fallbackMessage (${response.statusCode}).',
+          statusCode: response.statusCode,
+          code: decoded['code'] as String?,
+          trust: decoded['trust'] is Map<String, dynamic>
+              ? UserTrustSnapshot.fromJson(
+                  decoded['trust'] as Map<String, dynamic>,
+                )
+              : null,
+          retryAfterSeconds: _parseOptionalInt(decoded['retry_after_seconds']),
+          allowedAttachmentTypes:
+              (decoded['allowed_mime_types'] as List<dynamic>? ?? const [])
+                  .whereType<String>()
+                  .toList(growable: false),
+        );
+      }
+    } catch (_) {}
+
+    return RemoteChatApiException(
+      message: '$fallbackMessage (${response.statusCode}).',
+      statusCode: response.statusCode,
+    );
+  }
+
+  static int? _parseOptionalInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return null;
+  }
+
+  @override
+  String toString() => message;
+}
 
 class ResolvedContact {
   const ResolvedContact({
@@ -109,7 +174,10 @@ class RemoteChatService {
         .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 201) {
-      throw StateError('Failed to send message (${response.statusCode}).');
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to send message',
+      );
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;

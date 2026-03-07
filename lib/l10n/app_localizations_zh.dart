@@ -417,6 +417,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSelectedMediaFallback => '圖片';
 
   @override
+  String get chatTrustRetryWindowReset => '每日重置後';
+
+  @override
+  String chatTrustRetryWindowHours(int hours) {
+    return '$hours 小時後';
+  }
+
+  @override
+  String chatTrustRetryWindowMinutes(int minutes) {
+    return '$minutes 分鐘後';
+  }
+
+  @override
+  String chatTrustDailyLimitToast(int used, int limit, String retryWindow) {
+    return '已達每日訊息上限（$used/$limit）。你可以於$retryWindow再次發送，或提升等級以獲得更高上限。';
+  }
+
+  @override
+  String chatTrustDailyLimitToastGeneric(String retryWindow) {
+    return '已達每日訊息上限。你可以於$retryWindow再次發送，或提升等級以獲得更高上限。';
+  }
+
+  @override
+  String chatTrustDailyLimitInline(String retryWindow) {
+    return '已達上限 · $retryWindow可再試 · 或先提升等級';
+  }
+
+  @override
   String get chatMessageDetailTitleMine => '你的訊息';
 
   @override
@@ -530,7 +558,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDangerousActions => '危険操作';
 
   @override
-  String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
+  String get settingsDangerousActionsHint => '刪除本機聊天、清除應用程式資料或登出';
 
   @override
   String get settingsPlanetUnknownName => '未知 Planet';
@@ -573,6 +601,46 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileCopyFriendLink => '複製好友連結';
+
+  @override
+  String get profileTrustSectionTitle => '信任';
+
+  @override
+  String profileTrustLevel(int level) {
+    return '等級 $level';
+  }
+
+  @override
+  String profileTrustRank(String rank) {
+    return '階級 $rank';
+  }
+
+  @override
+  String profileTrustProgressLabel(int activeDays) {
+    return '活躍天數 $activeDays';
+  }
+
+  @override
+  String profileTrustNextLevel(int days, int level) {
+    return '再 $days 天可升至等級 $level';
+  }
+
+  @override
+  String get profileTrustMaxLevel => '已解鎖最高等級';
+
+  @override
+  String get profileTrustMessagesLabel => '今日訊息';
+
+  @override
+  String get profileTrustAttachmentsLabel => '今日附件';
+
+  @override
+  String get profileTrustUnlimited => '無限制';
+
+  @override
+  String profileTrustUsage(int used, int limit) {
+    return '$used / $limit';
+  }
 
   @override
   String get profileFriendQrTitle => '好友 QR';
@@ -1156,6 +1224,34 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get chatSelectedMediaFallback => '圖片';
 
   @override
+  String get chatTrustRetryWindowReset => '每日重置後';
+
+  @override
+  String chatTrustRetryWindowHours(int hours) {
+    return '$hours 小時後';
+  }
+
+  @override
+  String chatTrustRetryWindowMinutes(int minutes) {
+    return '$minutes 分鐘後';
+  }
+
+  @override
+  String chatTrustDailyLimitToast(int used, int limit, String retryWindow) {
+    return '已達每日訊息上限（$used/$limit）。你可以於$retryWindow再次發送，或提升等級以獲得更高上限。';
+  }
+
+  @override
+  String chatTrustDailyLimitToastGeneric(String retryWindow) {
+    return '已達每日訊息上限。你可以於$retryWindow再次發送，或提升等級以獲得更高上限。';
+  }
+
+  @override
+  String chatTrustDailyLimitInline(String retryWindow) {
+    return '已達上限 · $retryWindow可再試 · 或先提升等級';
+  }
+
+  @override
   String get chatMessageDetailTitleMine => '你的訊息';
 
   @override
@@ -1269,6 +1365,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDangerousActions => '危険操作';
 
   @override
+  String get settingsDangerousActionsHint => '刪除本機聊天、清除應用程式資料或登出';
+
+  @override
   String get settingsPlanetUnknownName => '未知 Planet';
 
   @override
@@ -1309,6 +1408,46 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get profileCopyFriendLink => '複製好友連結';
+
+  @override
+  String get profileTrustSectionTitle => '信任';
+
+  @override
+  String profileTrustLevel(int level) {
+    return '等級 $level';
+  }
+
+  @override
+  String profileTrustRank(String rank) {
+    return '階級 $rank';
+  }
+
+  @override
+  String profileTrustProgressLabel(int activeDays) {
+    return '活躍天數 $activeDays';
+  }
+
+  @override
+  String profileTrustNextLevel(int days, int level) {
+    return '再 $days 天可升至等級 $level';
+  }
+
+  @override
+  String get profileTrustMaxLevel => '已解鎖最高等級';
+
+  @override
+  String get profileTrustMessagesLabel => '今日訊息';
+
+  @override
+  String get profileTrustAttachmentsLabel => '今日附件';
+
+  @override
+  String get profileTrustUnlimited => '無限制';
+
+  @override
+  String profileTrustUsage(int used, int limit) {
+    return '$used / $limit';
+  }
 
   @override
   String get profileFriendQrTitle => '好友 QR';

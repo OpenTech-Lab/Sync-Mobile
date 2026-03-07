@@ -15,6 +15,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../constants/planet_presets.dart';
 import '../../models/friend_qr_payload.dart';
 import '../../models/qr_login_payload.dart';
+import '../../models/user_profile.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/user_profile_controller.dart';
@@ -41,7 +42,8 @@ class MyProfileScreen extends ConsumerWidget {
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
     final watchedUsername =
-        ref.watch(userDisplayNameProvider(currentUserId)).value ?? currentUsername;
+        ref.watch(userDisplayNameProvider(currentUserId)).value ??
+        currentUsername;
     final displayName = (watchedUsername ?? '').trim().isEmpty
         ? (currentUserId.length >= 8
               ? currentUserId.substring(0, 8)
@@ -59,6 +61,7 @@ class MyProfileScreen extends ConsumerWidget {
         !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
+    final trust = ref.watch(myTrustSnapshotProvider).asData?.value;
 
     Future<void> saveUsername() async {
       final result = await showDialog<String>(
@@ -355,7 +358,11 @@ class MyProfileScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           onPressed: saveUsername,
-                          icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit01, color: AppPalette.neutral500, size: 16),
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedEdit01,
+                            color: AppPalette.neutral500,
+                            size: 16,
+                          ),
                           iconSize: 16,
                           color: AppPalette.neutral500,
                           tooltip: l10n.actionEdit,
@@ -389,7 +396,11 @@ class MyProfileScreen extends ConsumerWidget {
                         ),
                         IconButton(
                           onPressed: saveDescription,
-                          icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit01, color: AppPalette.neutral500, size: 16),
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedEdit01,
+                            color: AppPalette.neutral500,
+                            size: 16,
+                          ),
                           iconSize: 16,
                           color: AppPalette.neutral500,
                           tooltip: l10n.actionEdit,
@@ -441,6 +452,25 @@ class MyProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+          if (trust != null) ...[
+            const SizedBox(height: 32),
+            Text(
+              l10n.profileTrustSectionTitle,
+              style: const TextStyle(
+                fontSize: 10,
+                letterSpacing: 2.8,
+                color: AppPalette.neutral500,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _TrustSummaryCard(
+              trust: trust,
+              l10n: l10n,
+              inkColor: inkColor,
+              ruleColor: ruleColor,
+            ),
+          ],
 
           const SizedBox(height: 36),
           Divider(height: 1, color: ruleColor),
@@ -567,6 +597,198 @@ class MyProfileScreen extends ConsumerWidget {
   }
 }
 
+class _TrustSummaryCard extends StatelessWidget {
+  const _TrustSummaryCard({
+    required this.trust,
+    required this.l10n,
+    required this.inkColor,
+    required this.ruleColor,
+  });
+
+  final UserTrustSnapshot trust;
+  final AppLocalizations l10n;
+  final Color inkColor;
+  final Color ruleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextLevelActiveDays = trust.nextLevelActiveDays;
+    final daysUntilNextLevel = nextLevelActiveDays == null
+        ? null
+        : (nextLevelActiveDays - trust.activeDays).clamp(0, 9999);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppPalette.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ruleColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _TrustBadge(
+                label: l10n.profileTrustLevel(trust.level),
+                inkColor: inkColor,
+                ruleColor: ruleColor,
+              ),
+              _TrustBadge(
+                label: l10n.profileTrustRank(trust.rank),
+                inkColor: inkColor,
+                ruleColor: ruleColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.profileTrustProgressLabel(trust.activeDays),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: inkColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: (trust.levelProgressPercent.clamp(0, 100)) / 100,
+              backgroundColor: ruleColor,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppPalette.neutral500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            daysUntilNextLevel == null || daysUntilNextLevel == 0
+                ? l10n.profileTrustMaxLevel
+                : l10n.profileTrustNextLevel(
+                    daysUntilNextLevel,
+                    trust.level + 1,
+                  ),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w300,
+              color: AppPalette.neutral500,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _TrustLimitRow(
+            label: l10n.profileTrustMessagesLabel,
+            value: _formatLimit(
+              l10n,
+              enforced: trust.dailyOutboundMessagesEnforced,
+              limit: trust.dailyOutboundMessagesLimit,
+              used: trust.dailyOutboundMessagesSent,
+            ),
+            inkColor: inkColor,
+          ),
+          const SizedBox(height: 8),
+          _TrustLimitRow(
+            label: l10n.profileTrustAttachmentsLabel,
+            value: _formatLimit(
+              l10n,
+              enforced: trust.dailyAttachmentSendsEnforced,
+              limit: trust.dailyAttachmentSendLimit,
+              used: trust.dailyAttachmentSendsSent,
+            ),
+            inkColor: inkColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatLimit(
+    AppLocalizations l10n, {
+    required bool enforced,
+    required int? limit,
+    required int used,
+  }) {
+    if (!enforced || limit == null) {
+      return l10n.profileTrustUnlimited;
+    }
+    return l10n.profileTrustUsage(used, limit);
+  }
+}
+
+class _TrustBadge extends StatelessWidget {
+  const _TrustBadge({
+    required this.label,
+    required this.inkColor,
+    required this.ruleColor,
+  });
+
+  final String label;
+  final Color inkColor;
+  final Color ruleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ruleColor),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
+          color: inkColor,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _TrustLimitRow extends StatelessWidget {
+  const _TrustLimitRow({
+    required this.label,
+    required this.value,
+    required this.inkColor,
+  });
+
+  final String label;
+  final String value;
+  final Color inkColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w300,
+              color: AppPalette.neutral500,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: inkColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _UsernameEditDialog extends StatefulWidget {
   const _UsernameEditDialog({required this.initialValue});
   final String initialValue;
@@ -635,7 +857,9 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
           mainAxisSize: MainAxisSize.min,
           children: [
             HugeIcon(
-              icon: _isCopied ? HugeIcons.strokeRoundedTick01 : HugeIcons.strokeRoundedCopy01,
+              icon: _isCopied
+                  ? HugeIcons.strokeRoundedTick01
+                  : HugeIcons.strokeRoundedCopy01,
               size: 14,
               color: foregroundColor,
             ),

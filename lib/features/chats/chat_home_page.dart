@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../models/local_chat_message.dart';
 import '../../models/sticker.dart';
+import '../../ui/components/atoms/app_toast.dart';
+import 'chat_send_error_feedback.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/notification_controller.dart';
@@ -325,9 +327,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
           ),
           Expanded(
             child: messagesAsync == null
-                ? Center(
-                    child: Text(l10n.chatHomeEnterPartnerPrompt),
-                  )
+                ? Center(child: Text(l10n.chatHomeEnterPartnerPrompt))
                 : messagesAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
@@ -342,9 +342,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                     ),
                     data: (messages) {
                       if (messages.isEmpty) {
-                        return Center(
-                          child: Text(l10n.chatNoMessagesYet),
-                        );
+                        return Center(child: Text(l10n.chatNoMessagesYet));
                       }
 
                       return Column(
@@ -448,25 +446,40 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           );
 
                           if (selected != null && _activePartnerId != null) {
-                            await ref
-                                .read(
-                                  conversationMessagesProvider(
-                                    _activePartnerId!,
-                                  ).notifier,
-                                )
-                                .sendMessage(
-                                  baseUrl: widget.serverUrl,
-                                  accessToken: widget.accessToken,
-                                  currentUserId: widget.currentUserId,
-                                  body:
-                                      '[sticker:${selected.id}:${selected.name}]',
-                                );
-                            await ref
-                                .read(backupControllerProvider.notifier)
-                                .maybeAutoBackup(
-                                  baseUrl: widget.serverUrl,
-                                  accessToken: widget.accessToken,
-                                );
+                            try {
+                              await ref
+                                  .read(
+                                    conversationMessagesProvider(
+                                      _activePartnerId!,
+                                    ).notifier,
+                                  )
+                                  .sendMessage(
+                                    baseUrl: widget.serverUrl,
+                                    accessToken: widget.accessToken,
+                                    currentUserId: widget.currentUserId,
+                                    body:
+                                        '[sticker:${selected.id}:${selected.name}]',
+                                  );
+                              await ref
+                                  .read(backupControllerProvider.notifier)
+                                  .maybeAutoBackup(
+                                    baseUrl: widget.serverUrl,
+                                    accessToken: widget.accessToken,
+                                  );
+                            } catch (error) {
+                              if (!context.mounted) {
+                                return;
+                              }
+                              final feedback = buildChatSendErrorFeedback(
+                                error,
+                                l10n,
+                              );
+                              showAppToast(
+                                context,
+                                feedback?.toastMessage ?? error.toString(),
+                                variant: AppToastVariant.error,
+                              );
+                            }
                           }
                         },
                         icon: const Icon(Icons.emoji_emotions_outlined),
@@ -507,26 +520,41 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           setState(() {
                             _isTyping = false;
                           });
-                          await ref
-                              .read(
-                                conversationMessagesProvider(
-                                  _activePartnerId!,
-                                ).notifier,
-                              )
-                              .sendMessage(
-                                baseUrl: widget.serverUrl,
-                                accessToken: widget.accessToken,
-                                currentUserId: widget.currentUserId,
-                                body: content,
-                              );
-                          await ref
-                              .read(backupControllerProvider.notifier)
-                              .maybeAutoBackup(
-                                baseUrl: widget.serverUrl,
-                                accessToken: widget.accessToken,
-                              );
-                          _clearMedia();
-                          await _refreshUnreadCounts();
+                          try {
+                            await ref
+                                .read(
+                                  conversationMessagesProvider(
+                                    _activePartnerId!,
+                                  ).notifier,
+                                )
+                                .sendMessage(
+                                  baseUrl: widget.serverUrl,
+                                  accessToken: widget.accessToken,
+                                  currentUserId: widget.currentUserId,
+                                  body: content,
+                                );
+                            await ref
+                                .read(backupControllerProvider.notifier)
+                                .maybeAutoBackup(
+                                  baseUrl: widget.serverUrl,
+                                  accessToken: widget.accessToken,
+                                );
+                            _clearMedia();
+                            await _refreshUnreadCounts();
+                          } catch (error) {
+                            if (!context.mounted) {
+                              return;
+                            }
+                            final feedback = buildChatSendErrorFeedback(
+                              error,
+                              l10n,
+                            );
+                            showAppToast(
+                              context,
+                              feedback?.toastMessage ?? error.toString(),
+                              variant: AppToastVariant.error,
+                            );
+                          }
                         },
                         child: Text(l10n.actionSend),
                       ),
@@ -573,9 +601,7 @@ class _GroupedStickerPickerState extends State<_GroupedStickerPicker> {
     if (widget.stickers.isEmpty) {
       return SizedBox(
         height: 160,
-        child: Center(
-          child: Text(l10n.chatNoStickersYet),
-        ),
+        child: Center(child: Text(l10n.chatNoStickersYet)),
       );
     }
 
@@ -637,10 +663,7 @@ class _GroupedStickerPickerState extends State<_GroupedStickerPicker> {
                   onTap: () => Navigator.of(context).pop(sticker),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      bytes,
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.memory(bytes, fit: BoxFit.cover),
                   ),
                 );
               },

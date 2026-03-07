@@ -417,6 +417,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSelectedMediaFallback => 'Image';
 
   @override
+  String get chatTrustRetryWindowReset => 'after the daily reset';
+
+  @override
+  String chatTrustRetryWindowHours(int hours) {
+    return 'in ${hours}h';
+  }
+
+  @override
+  String chatTrustRetryWindowMinutes(int minutes) {
+    return 'in ${minutes}m';
+  }
+
+  @override
+  String chatTrustDailyLimitToast(int used, int limit, String retryWindow) {
+    return 'Daily message cap reached ($used/$limit). You can send again $retryWindow, or level up for a higher cap.';
+  }
+
+  @override
+  String chatTrustDailyLimitToastGeneric(String retryWindow) {
+    return 'Daily message cap reached. You can send again $retryWindow, or level up for a higher cap.';
+  }
+
+  @override
+  String chatTrustDailyLimitInline(String retryWindow) {
+    return 'cap reached · retry $retryWindow or level up';
+  }
+
+  @override
   String get chatMessageDetailTitleMine => 'Your message';
 
   @override
@@ -573,6 +601,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileCopyFriendLink => 'copy friend link';
+
+  @override
+  String get profileTrustSectionTitle => 'TRUST';
+
+  @override
+  String profileTrustLevel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String profileTrustRank(String rank) {
+    return 'Rank $rank';
+  }
+
+  @override
+  String profileTrustProgressLabel(int activeDays) {
+    return '$activeDays active days';
+  }
+
+  @override
+  String profileTrustNextLevel(int days, int level) {
+    return '$days days to level $level';
+  }
+
+  @override
+  String get profileTrustMaxLevel => 'Highest level unlocked';
+
+  @override
+  String get profileTrustMessagesLabel => 'messages today';
+
+  @override
+  String get profileTrustAttachmentsLabel => 'attachments today';
+
+  @override
+  String get profileTrustUnlimited => 'Unlimited';
+
+  @override
+  String profileTrustUsage(int used, int limit) {
+    return '$used / $limit';
+  }
 
   @override
   String get profileFriendQrTitle => 'FRIEND QR';

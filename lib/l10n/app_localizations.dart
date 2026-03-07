@@ -876,6 +876,42 @@ abstract class AppLocalizations {
   /// **'Image'**
   String get chatSelectedMediaFallback;
 
+  /// No description provided for @chatTrustRetryWindowReset.
+  ///
+  /// In en, this message translates to:
+  /// **'after the daily reset'**
+  String get chatTrustRetryWindowReset;
+
+  /// No description provided for @chatTrustRetryWindowHours.
+  ///
+  /// In en, this message translates to:
+  /// **'in {hours}h'**
+  String chatTrustRetryWindowHours(int hours);
+
+  /// No description provided for @chatTrustRetryWindowMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'in {minutes}m'**
+  String chatTrustRetryWindowMinutes(int minutes);
+
+  /// No description provided for @chatTrustDailyLimitToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily message cap reached ({used}/{limit}). You can send again {retryWindow}, or level up for a higher cap.'**
+  String chatTrustDailyLimitToast(int used, int limit, String retryWindow);
+
+  /// No description provided for @chatTrustDailyLimitToastGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily message cap reached. You can send again {retryWindow}, or level up for a higher cap.'**
+  String chatTrustDailyLimitToastGeneric(String retryWindow);
+
+  /// No description provided for @chatTrustDailyLimitInline.
+  ///
+  /// In en, this message translates to:
+  /// **'cap reached · retry {retryWindow} or level up'**
+  String chatTrustDailyLimitInline(String retryWindow);
+
   /// No description provided for @chatMessageDetailTitleMine.
   ///
   /// In en, this message translates to:
@@ -1187,6 +1223,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'copy friend link'**
   String get profileCopyFriendLink;
+
+  /// No description provided for @profileTrustSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TRUST'**
+  String get profileTrustSectionTitle;
+
+  /// No description provided for @profileTrustLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {level}'**
+  String profileTrustLevel(int level);
+
+  /// No description provided for @profileTrustRank.
+  ///
+  /// In en, this message translates to:
+  /// **'Rank {rank}'**
+  String profileTrustRank(String rank);
+
+  /// No description provided for @profileTrustProgressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{activeDays} active days'**
+  String profileTrustProgressLabel(int activeDays);
+
+  /// No description provided for @profileTrustNextLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days to level {level}'**
+  String profileTrustNextLevel(int days, int level);
+
+  /// No description provided for @profileTrustMaxLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest level unlocked'**
+  String get profileTrustMaxLevel;
+
+  /// No description provided for @profileTrustMessagesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'messages today'**
+  String get profileTrustMessagesLabel;
+
+  /// No description provided for @profileTrustAttachmentsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'attachments today'**
+  String get profileTrustAttachmentsLabel;
+
+  /// No description provided for @profileTrustUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get profileTrustUnlimited;
+
+  /// No description provided for @profileTrustUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} / {limit}'**
+  String profileTrustUsage(int used, int limit);
 
   /// No description provided for @profileFriendQrTitle.
   ///

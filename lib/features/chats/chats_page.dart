@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/local_chat_message.dart';
 import '../../models/sticker.dart';
 import '../../models/friend_qr_payload.dart';
+import 'chat_send_error_feedback.dart';
 import 'friend_qr_scanner_page.dart';
 import 'chat_target_profile_page.dart';
 import '../../services/local_chat_repository.dart';
@@ -188,8 +189,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         userId: normalized,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
-      final oldAvatar = await prefs.readAvatarBase64(widget.serverUrl, normalized);
-      await prefs.writeDisplayName(widget.serverUrl, normalized, profile.username);
+      final oldAvatar = await prefs.readAvatarBase64(
+        widget.serverUrl,
+        normalized,
+      );
+      await prefs.writeDisplayName(
+        widget.serverUrl,
+        normalized,
+        profile.username,
+      );
       await prefs.writeAvatarBase64(
         widget.serverUrl,
         normalized,
@@ -480,9 +488,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     } catch (_) {
       // fallback to resolved handle only
     }
-      description = await ref
-          .read(userProfilePreferencesProvider)
-          .readDescription(widget.serverUrl, resolved.partnerId);
+    description = await ref
+        .read(userProfilePreferencesProvider)
+        .readDescription(widget.serverUrl, resolved.partnerId);
 
     return _ResolvedTargetProfile(
       partnerId: resolved.partnerId,
@@ -504,9 +512,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         resolved.partnerId,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
-      final isFriend = (await prefs.readFriendIds(widget.serverUrl)).contains(
-        resolved.partnerId,
-      );
+      final isFriend = (await prefs.readFriendIds(
+        widget.serverUrl,
+      )).contains(resolved.partnerId);
       final friendAddedAt = isFriend
           ? await prefs.readFriendAddedAt(widget.serverUrl, resolved.partnerId)
           : null;
@@ -634,11 +642,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           .read(backupControllerProvider.notifier)
           .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
     } catch (error) {
-      _markOutgoingDraftFailed(partnerId: partnerId, draftId: draftId);
-      if (!mounted) {
-        return;
-      }
-      showAppToast(context, error.toString(), variant: AppToastVariant.error);
+      _handleOutgoingSendError(
+        error: error,
+        partnerId: partnerId,
+        draftId: draftId,
+      );
     }
   }
 
@@ -682,6 +690,32 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     required String partnerId,
     required String draftId,
   }) {
+    _updateOutgoingDraftStatus(
+      partnerId: partnerId,
+      draftId: draftId,
+      state: _OutgoingDeliveryState.failed,
+    );
+  }
+
+  void _markOutgoingDraftBlocked({
+    required String partnerId,
+    required String draftId,
+    required String statusLabel,
+  }) {
+    _updateOutgoingDraftStatus(
+      partnerId: partnerId,
+      draftId: draftId,
+      state: _OutgoingDeliveryState.blocked,
+      statusLabel: statusLabel,
+    );
+  }
+
+  void _updateOutgoingDraftStatus({
+    required String partnerId,
+    required String draftId,
+    required _OutgoingDeliveryState state,
+    String? statusLabel,
+  }) {
     if (!_outgoingDraftsByPartner.containsKey(partnerId)) {
       return;
     }
@@ -689,12 +723,41 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       final next = (_outgoingDraftsByPartner[partnerId] ?? const [])
           .map(
             (draft) => draft.id == draftId
-                ? draft.copyWith(state: _OutgoingDeliveryState.failed)
+                ? draft.copyWith(
+                    state: state,
+                    statusLabel: statusLabel,
+                    resetStatusLabel: state != _OutgoingDeliveryState.blocked,
+                  )
                 : draft,
           )
           .toList(growable: false);
       _outgoingDraftsByPartner[partnerId] = next;
     });
+  }
+
+  void _handleOutgoingSendError({
+    required Object error,
+    required String partnerId,
+    required String draftId,
+  }) {
+    final feedback = buildChatSendErrorFeedback(error, _l10n);
+    if (feedback != null && !feedback.allowsRetry) {
+      _markOutgoingDraftBlocked(
+        partnerId: partnerId,
+        draftId: draftId,
+        statusLabel: feedback.inlineMessage ?? feedback.toastMessage,
+      );
+    } else {
+      _markOutgoingDraftFailed(partnerId: partnerId, draftId: draftId);
+    }
+    if (!mounted) {
+      return;
+    }
+    showAppToast(
+      context,
+      feedback?.toastMessage ?? error.toString(),
+      variant: AppToastVariant.error,
+    );
   }
 
   Future<void> _retryOutgoingDraft(_OutgoingMessageDraft draft) async {
@@ -706,7 +769,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       _outgoingDraftsByPartner[draft.partnerId] = current
           .map(
             (item) => item.id == draft.id
-                ? item.copyWith(state: _OutgoingDeliveryState.sending)
+                ? item.copyWith(
+                    state: _OutgoingDeliveryState.sending,
+                    resetStatusLabel: true,
+                  )
                 : item,
           )
           .toList(growable: false);
@@ -730,8 +796,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       await ref
           .read(backupControllerProvider.notifier)
           .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: accessToken);
-    } catch (_) {
-      _markOutgoingDraftFailed(partnerId: draft.partnerId, draftId: draft.id);
+    } catch (error) {
+      _handleOutgoingSendError(
+        error: error,
+        partnerId: draft.partnerId,
+        draftId: draft.id,
+      );
     }
   }
 
@@ -752,9 +822,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final description = ref.read(userDescriptionProvider(partnerId)).value;
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final prefs = ref.read(userProfilePreferencesProvider);
-    final isFriend = (await prefs.readFriendIds(widget.serverUrl)).contains(
-      partnerId,
-    );
+    final isFriend = (await prefs.readFriendIds(
+      widget.serverUrl,
+    )).contains(partnerId);
     final friendAddedAt = isFriend
         ? await prefs.readFriendAddedAt(widget.serverUrl, partnerId)
         : null;
@@ -1130,6 +1200,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                 serverUrl: widget.serverUrl,
                                                 accessToken: widget.accessToken,
                                                 deliveryState: draft?.state,
+                                                statusLabel: draft?.statusLabel,
                                                 onRetryTap: draft == null
                                                     ? null
                                                     : () => _retryOutgoingDraft(
@@ -1198,7 +1269,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
 enum _ChatQuickAction { newFriendOrChat, scanFriendQr }
 
-enum _OutgoingDeliveryState { sending, failed }
+enum _OutgoingDeliveryState { sending, failed, blocked }
 
 class _OutgoingMessageDraft {
   const _OutgoingMessageDraft({
@@ -1207,6 +1278,7 @@ class _OutgoingMessageDraft {
     required this.body,
     required this.createdAt,
     required this.state,
+    this.statusLabel,
   });
 
   final String id;
@@ -1214,14 +1286,20 @@ class _OutgoingMessageDraft {
   final String body;
   final DateTime createdAt;
   final _OutgoingDeliveryState state;
+  final String? statusLabel;
 
-  _OutgoingMessageDraft copyWith({_OutgoingDeliveryState? state}) {
+  _OutgoingMessageDraft copyWith({
+    _OutgoingDeliveryState? state,
+    String? statusLabel,
+    bool resetStatusLabel = false,
+  }) {
     return _OutgoingMessageDraft(
       id: id,
       partnerId: partnerId,
       body: body,
       createdAt: createdAt,
       state: state ?? this.state,
+      statusLabel: resetStatusLabel ? null : (statusLabel ?? this.statusLabel),
     );
   }
 }
@@ -2048,6 +2126,7 @@ class _MessageBubble extends ConsumerWidget {
     required this.serverUrl,
     required this.accessToken,
     this.deliveryState,
+    this.statusLabel,
     this.onRetryTap,
     this.typingStyleModeEnabled = false,
     this.typingStyleSpeedMs = ChatUiPreferences.defaultTypingStyleSpeedMs,
@@ -2063,6 +2142,7 @@ class _MessageBubble extends ConsumerWidget {
   final String serverUrl;
   final String accessToken;
   final _OutgoingDeliveryState? deliveryState;
+  final String? statusLabel;
   final VoidCallback? onRetryTap;
   final bool typingStyleModeEnabled;
   final int typingStyleSpeedMs;
@@ -2119,6 +2199,13 @@ class _MessageBubble extends ConsumerWidget {
     final statusColor = deliveryState == _OutgoingDeliveryState.failed
         ? AppPalette.danger700
         : AppPalette.neutral500;
+    final blockedStatusLabel =
+        isMine &&
+            deliveryState == _OutgoingDeliveryState.blocked &&
+            statusLabel != null &&
+            statusLabel!.trim().isNotEmpty
+        ? statusLabel!.trim()
+        : null;
     const textMaxLines = 7;
     final messageTextStyle = TextStyle(
       color: onBubble,
@@ -2214,6 +2301,17 @@ class _MessageBubble extends ConsumerWidget {
                     color: AppPalette.neutral500,
                   ),
                 ),
+                if (blockedStatusLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    blockedStatusLabel,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppPalette.neutral500,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
               ],
             ),
             if (isMine) ...[
@@ -2297,6 +2395,17 @@ class _MessageBubble extends ConsumerWidget {
                         color: AppPalette.neutral500,
                       ),
                     ),
+                    if (blockedStatusLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        blockedStatusLabel,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 if (isMine) ...[
@@ -2385,6 +2494,12 @@ class _MessageBubble extends ConsumerWidget {
                                 color: statusColor,
                               ),
                             ),
+                          if (deliveryState == _OutgoingDeliveryState.blocked)
+                            Icon(
+                              Icons.block_rounded,
+                              size: 12,
+                              color: statusColor,
+                            ),
                           const SizedBox(width: 6),
                         ],
                         Text(
@@ -2446,7 +2561,26 @@ class _MessageBubble extends ConsumerWidget {
             ),
             const SizedBox(width: 6),
           ],
-          bubble,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: isMine
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              bubble,
+              if (blockedStatusLabel != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  blockedStatusLabel,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppPalette.neutral500,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ],
+            ],
+          ),
           if (isMine) ...[
             const SizedBox(width: 6),
             _MessageAvatar(
