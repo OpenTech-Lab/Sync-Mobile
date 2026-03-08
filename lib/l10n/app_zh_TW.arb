@@ -366,5 +366,7 @@
   "actionEdit": "編輯",
   "actionSave": "儲 存",
   "actionCancel": "取消",
-  "actionNext": "下 一 步"
+  "actionNext": "下 一 步",
+  "chatSentASticker": "傳送了一個貼圖",
+  "chatSentAnAttachment": "傳送了一個附件"
 }

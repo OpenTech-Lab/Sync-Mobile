@@ -446,5 +446,7 @@
   "actionEdit": "edit",
   "actionSave": "S A V E",
   "actionCancel": "cancel",
-  "actionNext": "N E X T"
+  "actionNext": "N E X T",
+  "chatSentASticker": "Sent a sticker",
+  "chatSentAnAttachment": "Sent an attachment"
 }

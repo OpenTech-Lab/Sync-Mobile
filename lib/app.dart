@@ -34,7 +34,7 @@ class SyncMobileApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en'), Locale('zh'), Locale('zh', 'TW')],
+      supportedLocales: const [Locale('en'), Locale('zh', 'TW')],
       localeResolutionCallback: (deviceLocale, supportedLocales) {
         if (selectedLocale != null) {
           return selectedLocale;

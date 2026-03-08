@@ -1613,6 +1613,12 @@ class _ConversationStarter extends ConsumerWidget {
     );
   }
 
+  String _formatLastBody(String body, AppLocalizations l10n) {
+    if (body.startsWith('[sticker:')) return l10n.chatSentASticker;
+    if (body.startsWith('[media-data:')) return l10n.chatSentAnAttachment;
+    return body;
+  }
+
   Widget _buildConversationRow(
     BuildContext context,
     WidgetRef ref,
@@ -1621,6 +1627,7 @@ class _ConversationStarter extends ConsumerWidget {
     Color inkColor,
     Color mutedColor,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final summary = summariesById[userId];
     final unreadCount = unreadCounts[userId] ?? 0;
     final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
@@ -1690,7 +1697,7 @@ class _ConversationStarter extends ConsumerWidget {
                       ),
                       if (summary != null)
                         Text(
-                          summary.lastBody,
+                          _formatLastBody(summary.lastBody, l10n),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
