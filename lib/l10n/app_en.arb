@@ -448,5 +448,29 @@
   "actionCancel": "cancel",
   "actionNext": "N E X T",
   "chatSentASticker": "Sent a sticker",
-  "chatSentAnAttachment": "Sent an attachment"
+  "chatSentAnAttachment": "Sent an attachment",
+  "profileTrustFriendAddsLabel": "friend adds today",
+  "profileTrustChallengeStateFrozen": "Your account is frozen. Contact support to restore access.",
+  "profileTrustChallengeStateChallenged": "Your account is under review. Some actions may be limited.",
+  "profileTrustMilestoneRankUp": "Rank up!",
+  "profileTrustMilestoneUnlockAttachmentType": "New attachment type unlocked!",
+  "profileTrustMilestoneLevelUp": "Level up!",
+  "profileTrustMilestoneRankDetail": "You reached rank {rank}.",
+  "@profileTrustMilestoneRankDetail": {
+    "placeholders": {
+      "rank": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneUnlockDetail": "You can now send {type} attachments.",
+  "@profileTrustMilestoneUnlockDetail": {
+    "placeholders": {
+      "type": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneLevelDetail": "You reached level {level}.",
+  "@profileTrustMilestoneLevelDetail": {
+    "placeholders": {
+      "level": { "type": "String" }
+    }
+  }
 }

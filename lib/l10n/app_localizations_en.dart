@@ -821,4 +821,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatSentAnAttachment => 'Sent an attachment';
+
+  @override
+  String get profileTrustFriendAddsLabel => 'friend adds today';
+
+  @override
+  String get profileTrustChallengeStateFrozen => 'Your account is frozen. Contact support to restore access.';
+
+  @override
+  String get profileTrustChallengeStateChallenged => 'Your account is under review. Some actions may be limited.';
+
+  @override
+  String get profileTrustMilestoneRankUp => 'Rank up!';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => 'New attachment type unlocked!';
+
+  @override
+  String get profileTrustMilestoneLevelUp => 'Level up!';
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return 'You reached rank $rank.';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String type) {
+    return 'You can now send $type attachments.';
+  }
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return 'You reached level $level.';
+  }
 }

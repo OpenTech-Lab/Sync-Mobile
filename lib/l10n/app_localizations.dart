@@ -1607,6 +1607,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sent an attachment'**
   String get chatSentAnAttachment;
+
+  /// No description provided for @profileTrustFriendAddsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'friend adds today'**
+  String get profileTrustFriendAddsLabel;
+
+  /// No description provided for @profileTrustChallengeStateFrozen.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is frozen. Contact support to restore access.'**
+  String get profileTrustChallengeStateFrozen;
+
+  /// No description provided for @profileTrustChallengeStateChallenged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is under review. Some actions may be limited.'**
+  String get profileTrustChallengeStateChallenged;
+
+  /// No description provided for @profileTrustMilestoneRankUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Rank up!'**
+  String get profileTrustMilestoneRankUp;
+
+  /// No description provided for @profileTrustMilestoneUnlockAttachmentType.
+  ///
+  /// In en, this message translates to:
+  /// **'New attachment type unlocked!'**
+  String get profileTrustMilestoneUnlockAttachmentType;
+
+  /// No description provided for @profileTrustMilestoneLevelUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Level up!'**
+  String get profileTrustMilestoneLevelUp;
+
+  /// No description provided for @profileTrustMilestoneRankDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You reached rank {rank}.'**
+  String profileTrustMilestoneRankDetail(String rank);
+
+  /// No description provided for @profileTrustMilestoneUnlockDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now send {type} attachments.'**
+  String profileTrustMilestoneUnlockDetail(String type);
+
+  /// No description provided for @profileTrustMilestoneLevelDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You reached level {level}.'**
+  String profileTrustMilestoneLevelDetail(String level);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -821,6 +821,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSentAnAttachment => 'Sent an attachment';
+
+  @override
+  String get profileTrustFriendAddsLabel => 'friend adds today';
+
+  @override
+  String get profileTrustChallengeStateFrozen => 'Your account is frozen. Contact support to restore access.';
+
+  @override
+  String get profileTrustChallengeStateChallenged => 'Your account is under review. Some actions may be limited.';
+
+  @override
+  String get profileTrustMilestoneRankUp => 'Rank up!';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => 'New attachment type unlocked!';
+
+  @override
+  String get profileTrustMilestoneLevelUp => 'Level up!';
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return 'You reached rank $rank.';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String type) {
+    return 'You can now send $type attachments.';
+  }
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return 'You reached level $level.';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1634,4 +1667,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatSentAnAttachment => '傳送了一個附件';
+
+  @override
+  String get profileTrustFriendAddsLabel => '今日加好友次數';
+
+  @override
+  String get profileTrustChallengeStateFrozen => '您的帳號已被凍結，請聯繫客服以恢復存取權限。';
+
+  @override
+  String get profileTrustChallengeStateChallenged => '您的帳號正在審查中，部分功能可能受限。';
+
+  @override
+  String get profileTrustMilestoneRankUp => '段位提升！';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => '已解鎖新的附件類型！';
+
+  @override
+  String get profileTrustMilestoneLevelUp => '等級提升！';
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return '您已達到 $rank 段位。';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String type) {
+    return '您現在可以傳送 $type 附件。';
+  }
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return '您已達到第 $level 級。';
+  }
 }

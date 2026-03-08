@@ -368,5 +368,29 @@
   "actionCancel": "取消",
   "actionNext": "下 一 步",
   "chatSentASticker": "傳送了一個貼圖",
-  "chatSentAnAttachment": "傳送了一個附件"
+  "chatSentAnAttachment": "傳送了一個附件",
+  "profileTrustFriendAddsLabel": "今日加好友次數",
+  "profileTrustChallengeStateFrozen": "您的帳號已被凍結，請聯繫客服以恢復存取權限。",
+  "profileTrustChallengeStateChallenged": "您的帳號正在審查中，部分功能可能受限。",
+  "profileTrustMilestoneRankUp": "段位提升！",
+  "profileTrustMilestoneUnlockAttachmentType": "已解鎖新的附件類型！",
+  "profileTrustMilestoneLevelUp": "等級提升！",
+  "profileTrustMilestoneRankDetail": "您已達到 {rank} 段位。",
+  "@profileTrustMilestoneRankDetail": {
+    "placeholders": {
+      "rank": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneUnlockDetail": "您現在可以傳送 {type} 附件。",
+  "@profileTrustMilestoneUnlockDetail": {
+    "placeholders": {
+      "type": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneLevelDetail": "您已達到第 {level} 級。",
+  "@profileTrustMilestoneLevelDetail": {
+    "placeholders": {
+      "level": { "type": "String" }
+    }
+  }
 }
