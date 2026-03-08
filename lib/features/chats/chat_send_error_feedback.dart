@@ -24,14 +24,14 @@ ChatSendErrorFeedback? buildChatSendErrorFeedback(
 
   if (error.code == 'daily_message_limit_reached') {
     final retryWindow = _formatRetryWindow(l10n, error.retryAfterSeconds);
-    final trust = error.trust;
-    final limit = trust?.dailyOutboundMessagesLimit;
+    final guild = error.guild;
+    final limit = guild?.dailyOutboundMessagesLimit;
 
     return ChatSendErrorFeedback(
       toastMessage: limit == null
           ? l10n.chatTrustDailyLimitToastGeneric(retryWindow)
           : l10n.chatTrustDailyLimitToast(
-              trust!.dailyOutboundMessagesSent,
+              guild!.dailyOutboundMessagesSent,
               limit,
               retryWindow,
             ),

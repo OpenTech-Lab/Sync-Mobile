@@ -69,7 +69,7 @@ final friendAddedAtProvider = FutureProvider.family<DateTime?, String>((
       .readFriendAddedAt(serverUrl, userId);
 });
 
-final myTrustSnapshotProvider = FutureProvider<UserTrustSnapshot?>((ref) async {
+final myGuildSnapshotProvider = FutureProvider<UserGuildSnapshot?>((ref) async {
   final appState = await ref.watch(appControllerProvider.future);
   final serverUrl = appState.serverUrl?.trim();
   final accessToken = appState.accessToken?.trim();
@@ -86,7 +86,7 @@ final myTrustSnapshotProvider = FutureProvider<UserTrustSnapshot?>((ref) async {
   final profile = await ref
       .read(remoteUserProfileServiceProvider)
       .getMyProfile(baseUrl: serverUrl, accessToken: freshToken);
-  return profile.trust;
+  return profile.guild;
 });
 
 final remoteUserProfileServiceProvider = Provider<RemoteUserProfileService>((

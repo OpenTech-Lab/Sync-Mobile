@@ -265,16 +265,16 @@
   "profileFriendLinkCopied": "已複製好友連結",
   "profileCopyFriendLink": "複製好友連結",
   "profileTrustSectionTitle": "信任",
-  "profileTrustLevel": "等級 {level}",
-  "@profileTrustLevel": {
+  "profileGuildLevel": "等級 {level}",
+  "@profileGuildLevel": {
     "placeholders": {
       "level": {
         "type": "int"
       }
     }
   },
-  "profileTrustRank": "階級 {rank}",
-  "@profileTrustRank": {
+  "profileGuildRank": "階級 {rank}",
+  "@profileGuildRank": {
     "placeholders": {
       "rank": {
         "type": "String"

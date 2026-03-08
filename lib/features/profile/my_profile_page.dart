@@ -62,7 +62,7 @@ class MyProfileScreen extends ConsumerWidget {
         !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS);
-    final trust = ref.watch(myTrustSnapshotProvider).asData?.value;
+    final guild = ref.watch(myGuildSnapshotProvider).asData?.value;
 
     Future<void> saveUsername() async {
       final result = await showDialog<String>(
@@ -453,7 +453,7 @@ class MyProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          if (trust != null) ...[
+          if (guild != null) ...[
             const SizedBox(height: 32),
             Text(
               l10n.profileTrustSectionTitle,
@@ -465,8 +465,8 @@ class MyProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 14),
-            _TrustSummaryCard(
-              trust: trust,
+            _GuildSummaryCard(
+              guild: guild,
               l10n: l10n,
               inkColor: inkColor,
               ruleColor: ruleColor,
@@ -598,25 +598,25 @@ class MyProfileScreen extends ConsumerWidget {
   }
 }
 
-class _TrustSummaryCard extends StatelessWidget {
-  const _TrustSummaryCard({
-    required this.trust,
+class _GuildSummaryCard extends StatelessWidget {
+  const _GuildSummaryCard({
+    required this.guild,
     required this.l10n,
     required this.inkColor,
     required this.ruleColor,
   });
 
-  final UserTrustSnapshot trust;
+  final UserGuildSnapshot guild;
   final AppLocalizations l10n;
   final Color inkColor;
   final Color ruleColor;
 
   @override
   Widget build(BuildContext context) {
-    final nextLevelActiveDays = trust.nextLevelActiveDays;
+    final nextLevelActiveDays = guild.nextLevelActiveDays;
     final daysUntilNextLevel = nextLevelActiveDays == null
         ? null
-        : (nextLevelActiveDays - trust.activeDays).clamp(0, 9999);
+        : (nextLevelActiveDays - guild.activeDays).clamp(0, 9999);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -632,13 +632,13 @@ class _TrustSummaryCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _TrustBadge(
-                label: l10n.profileTrustLevel(trust.level),
+              _GuildBadge(
+                label: l10n.profileGuildLevel(guild.level),
                 inkColor: inkColor,
                 ruleColor: ruleColor,
               ),
-              _TrustBadge(
-                label: l10n.profileTrustRank(trust.rank),
+              _GuildBadge(
+                label: l10n.profileGuildRank(guild.rank),
                 inkColor: inkColor,
                 ruleColor: ruleColor,
               ),
@@ -646,7 +646,7 @@ class _TrustSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            l10n.profileTrustProgressLabel(trust.activeDays),
+            l10n.profileTrustProgressLabel(guild.activeDays),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w400,
@@ -658,7 +658,7 @@ class _TrustSummaryCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               minHeight: 8,
-              value: (trust.levelProgressPercent.clamp(0, 100)) / 100,
+              value: (guild.levelProgressPercent.clamp(0, 100)) / 100,
               backgroundColor: ruleColor,
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppPalette.neutral500,
@@ -671,7 +671,7 @@ class _TrustSummaryCard extends StatelessWidget {
                 ? l10n.profileTrustMaxLevel
                 : l10n.profileTrustNextLevel(
                     daysUntilNextLevel,
-                    trust.level + 1,
+                    guild.level + 1,
                   ),
             style: const TextStyle(
               fontSize: 11,
@@ -685,9 +685,9 @@ class _TrustSummaryCard extends StatelessWidget {
             label: l10n.profileTrustMessagesLabel,
             value: _formatLimit(
               l10n,
-              enforced: trust.dailyOutboundMessagesEnforced,
-              limit: trust.dailyOutboundMessagesLimit,
-              used: trust.dailyOutboundMessagesSent,
+              enforced: guild.dailyOutboundMessagesEnforced,
+              limit: guild.dailyOutboundMessagesLimit,
+              used: guild.dailyOutboundMessagesSent,
             ),
             inkColor: inkColor,
           ),
@@ -696,9 +696,9 @@ class _TrustSummaryCard extends StatelessWidget {
             label: l10n.profileTrustAttachmentsLabel,
             value: _formatLimit(
               l10n,
-              enforced: trust.dailyAttachmentSendsEnforced,
-              limit: trust.dailyAttachmentSendLimit,
-              used: trust.dailyAttachmentSendsSent,
+              enforced: guild.dailyAttachmentSendsEnforced,
+              limit: guild.dailyAttachmentSendLimit,
+              used: guild.dailyAttachmentSendsSent,
             ),
             inkColor: inkColor,
           ),
@@ -707,37 +707,37 @@ class _TrustSummaryCard extends StatelessWidget {
             label: l10n.profileTrustFriendAddsLabel,
             value: _formatLimit(
               l10n,
-              enforced: trust.dailyFriendAddsEnforced,
-              limit: trust.dailyFriendAddLimit,
-              used: trust.dailyFriendAddsSent,
+              enforced: guild.dailyFriendAddsEnforced,
+              limit: guild.dailyFriendAddLimit,
+              used: guild.dailyFriendAddsSent,
             ),
             inkColor: inkColor,
           ),
-          if (trust.challengeState == 'challenged' ||
-              trust.challengeState == 'frozen') ...[
+          if (guild.challengeState == 'challenged' ||
+              guild.challengeState == 'frozen') ...[
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: trust.challengeState == 'frozen'
+                color: guild.challengeState == 'frozen'
                     ? Colors.red.withValues(alpha: 0.08)
                     : Colors.orange.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: trust.challengeState == 'frozen'
+                  color: guild.challengeState == 'frozen'
                       ? Colors.red.withValues(alpha: 0.4)
                       : Colors.orange.withValues(alpha: 0.4),
                 ),
               ),
               child: Text(
-                trust.challengeState == 'frozen'
+                guild.challengeState == 'frozen'
                     ? l10n.profileTrustChallengeStateFrozen
                     : l10n.profileTrustChallengeStateChallenged,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
-                  color: trust.challengeState == 'frozen'
+                  color: guild.challengeState == 'frozen'
                       ? Colors.red.shade700
                       : Colors.orange.shade800,
                   height: 1.4,
@@ -745,10 +745,10 @@ class _TrustSummaryCard extends StatelessWidget {
               ),
             ),
           ],
-          if (trust.pendingMilestoneNotification != null) ...[
+          if (guild.pendingMilestoneNotification != null) ...[
             const SizedBox(height: 12),
             _MilestoneBanner(
-              notification: trust.pendingMilestoneNotification!,
+              notification: guild.pendingMilestoneNotification!,
               inkColor: inkColor,
               ruleColor: ruleColor,
             ),
@@ -771,8 +771,8 @@ class _TrustSummaryCard extends StatelessWidget {
   }
 }
 
-class _TrustBadge extends StatelessWidget {
-  const _TrustBadge({
+class _GuildBadge extends StatelessWidget {
+  const _GuildBadge({
     required this.label,
     required this.inkColor,
     required this.ruleColor,
@@ -848,7 +848,7 @@ class _MilestoneBanner extends StatefulWidget {
     required this.ruleColor,
   });
 
-  final TrustMilestoneNotification notification;
+  final GuildMilestoneNotification notification;
   final Color inkColor;
   final Color ruleColor;
 

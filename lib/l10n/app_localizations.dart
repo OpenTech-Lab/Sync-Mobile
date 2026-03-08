@@ -1227,20 +1227,20 @@ abstract class AppLocalizations {
   /// No description provided for @profileTrustSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'TRUST'**
+  /// **'GUILD'**
   String get profileTrustSectionTitle;
 
-  /// No description provided for @profileTrustLevel.
+  /// No description provided for @profileGuildLevel.
   ///
   /// In en, this message translates to:
   /// **'Level {level}'**
-  String profileTrustLevel(int level);
+  String profileGuildLevel(int level);
 
-  /// No description provided for @profileTrustRank.
+  /// No description provided for @profileGuildRank.
   ///
   /// In en, this message translates to:
   /// **'Rank {rank}'**
-  String profileTrustRank(String rank);
+  String profileGuildRank(String rank);
 
   /// No description provided for @profileTrustProgressLabel.
   ///

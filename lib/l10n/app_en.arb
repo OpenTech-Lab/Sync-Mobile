@@ -302,17 +302,17 @@
   "profileNoDescriptionYet": "no description yet",
   "profileFriendLinkCopied": "Friend link copied",
   "profileCopyFriendLink": "copy friend link",
-  "profileTrustSectionTitle": "TRUST",
-  "profileTrustLevel": "Level {level}",
-  "@profileTrustLevel": {
+  "profileTrustSectionTitle": "GUILD",
+  "profileGuildLevel": "Level {level}",
+  "@profileGuildLevel": {
     "placeholders": {
       "level": {
         "type": "int"
       }
     }
   },
-  "profileTrustRank": "Rank {rank}",
-  "@profileTrustRank": {
+  "profileGuildRank": "Rank {rank}",
+  "@profileGuildRank": {
     "placeholders": {
       "rank": {
         "type": "String"

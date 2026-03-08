@@ -473,8 +473,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     String displayName = resolved.displayHandle;
     String? avatarBase64;
     String? description;
-    int? trustLevel;
-    String? trustRank;
+    int? guildLevel;
+    String? guildRank;
     try {
       final profile = await ref
           .read(remoteUserProfileServiceProvider)
@@ -487,8 +487,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         displayName = profile.username.trim();
       }
       avatarBase64 = profile.avatarBase64;
-      trustLevel = profile.trust?.level;
-      trustRank = profile.trust?.rank;
+      guildLevel = profile.guild?.level;
+      guildRank = profile.guild?.rank;
     } catch (_) {
       // fallback to resolved handle only
     }
@@ -503,8 +503,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       displayHandle: resolved.displayHandle,
       avatarBase64: avatarBase64,
       description: description,
-      level: trustLevel,
-      rank: trustRank,
+      level: guildLevel,
+      rank: guildRank,
     );
   }
 
@@ -836,8 +836,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final friendAddedAt = isFriend
         ? await prefs.readFriendAddedAt(widget.serverUrl, partnerId)
         : null;
-    int? trustLevel;
-    String? trustRank;
+    int? guildLevel;
+    String? guildRank;
     try {
       final accessToken = await _effectiveAccessToken();
       final profile = await ref
@@ -847,10 +847,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             accessToken: accessToken,
             userId: partnerId,
           );
-      trustLevel = profile.trust?.level;
-      trustRank = profile.trust?.rank;
+      guildLevel = profile.guild?.level;
+      guildRank = profile.guild?.rank;
     } catch (_) {
-      // trust data is optional
+      // guild data is optional
     }
     if (!mounted) {
       return;
@@ -865,8 +865,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           friendAddedAt: friendAddedAt,
           sentMessageCount: sentMessageCount,
           description: description,
-          level: trustLevel,
-          rank: trustRank,
+          level: guildLevel,
+          rank: guildRank,
         ),
       ),
     );

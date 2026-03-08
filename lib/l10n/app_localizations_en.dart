@@ -603,15 +603,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCopyFriendLink => 'copy friend link';
 
   @override
-  String get profileTrustSectionTitle => 'TRUST';
+  String get profileTrustSectionTitle => 'GUILD';
 
   @override
-  String profileTrustLevel(int level) {
+  String profileGuildLevel(int level) {
     return 'Level $level';
   }
 
   @override
-  String profileTrustRank(String rank) {
+  String profileGuildRank(String rank) {
     return 'Rank $rank';
   }
 

@@ -132,11 +132,11 @@ class ChatTargetProfileScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (level != null)
-                  _trustBadge('Lv $level', isDark),
+                  _guildBadge('Lv $level', isDark),
                 if (level != null && rank != null && rank!.isNotEmpty)
                   const SizedBox(width: 6),
                 if (rank != null && rank!.isNotEmpty)
-                  _trustBadge(rank!, isDark),
+                  _guildBadge(rank!, isDark),
               ],
             ),
           ],
@@ -273,7 +273,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
   }
 }
 
-Widget _trustBadge(String label, bool isDark) {
+Widget _guildBadge(String label, bool isDark) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(

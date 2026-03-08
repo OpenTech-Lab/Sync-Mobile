@@ -606,12 +606,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileTrustSectionTitle => '信任';
 
   @override
-  String profileTrustLevel(int level) {
+  String profileGuildLevel(int level) {
     return '等級 $level';
   }
 
   @override
-  String profileTrustRank(String rank) {
+  String profileGuildRank(String rank) {
     return '階級 $rank';
   }
 
@@ -1446,12 +1446,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get profileTrustSectionTitle => '信任';
 
   @override
-  String profileTrustLevel(int level) {
+  String profileGuildLevel(int level) {
     return '等級 $level';
   }
 
   @override
-  String profileTrustRank(String rank) {
+  String profileGuildRank(String rank) {
     return '階級 $rank';
   }
 

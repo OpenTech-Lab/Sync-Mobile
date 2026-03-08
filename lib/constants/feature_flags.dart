@@ -7,7 +7,7 @@
 library feature_flags;
 
 /// Show a fade + scale-in entrance animation on [_MilestoneBanner] when a
-/// trust milestone notification is present in the profile trust snapshot.
+/// guild milestone notification is present in the profile guild snapshot.
 ///
 /// Set to `false` to render the banner statically (no animation).
 const bool kMilestoneAnimationsEnabled = true;

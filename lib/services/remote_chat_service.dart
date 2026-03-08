@@ -12,7 +12,7 @@ class RemoteChatApiException implements Exception {
     required this.message,
     required this.statusCode,
     this.code,
-    this.trust,
+    this.guild,
     this.retryAfterSeconds,
     this.allowedAttachmentTypes = const <String>[],
   });
@@ -20,7 +20,7 @@ class RemoteChatApiException implements Exception {
   final String message;
   final int statusCode;
   final String? code;
-  final UserTrustSnapshot? trust;
+  final UserGuildSnapshot? guild;
   final int? retryAfterSeconds;
   final List<String> allowedAttachmentTypes;
 
@@ -37,9 +37,9 @@ class RemoteChatApiException implements Exception {
               '$fallbackMessage (${response.statusCode}).',
           statusCode: response.statusCode,
           code: decoded['code'] as String?,
-          trust: decoded['trust'] is Map<String, dynamic>
-              ? UserTrustSnapshot.fromJson(
-                  decoded['trust'] as Map<String, dynamic>,
+          guild: decoded['guild'] is Map<String, dynamic>
+              ? UserGuildSnapshot.fromJson(
+                  decoded['guild'] as Map<String, dynamic>,
                 )
               : null,
           retryAfterSeconds: _parseOptionalInt(decoded['retry_after_seconds']),

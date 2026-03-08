@@ -4,14 +4,14 @@ class UserProfile {
     required this.username,
     required this.avatarBase64,
     required this.messagePublicKey,
-    this.trust,
+    this.guild,
   });
 
   final String id;
   final String username;
   final String? avatarBase64;
   final String? messagePublicKey;
-  final UserTrustSnapshot? trust;
+  final UserGuildSnapshot? guild;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -19,8 +19,8 @@ class UserProfile {
       username: (json['username'] as String?)?.trim() ?? '',
       avatarBase64: (json['avatar_base64'] as String?)?.trim(),
       messagePublicKey: (json['message_public_key'] as String?)?.trim(),
-      trust: json['trust'] is Map<String, dynamic>
-          ? UserTrustSnapshot.fromJson(json['trust'] as Map<String, dynamic>)
+      guild: json['guild'] is Map<String, dynamic>
+          ? UserGuildSnapshot.fromJson(json['guild'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -28,8 +28,8 @@ class UserProfile {
 
 enum TrustMilestoneKind { levelUp, rankUp, unlockAttachmentType }
 
-class TrustMilestoneNotification {
-  const TrustMilestoneNotification({
+class GuildMilestoneNotification {
+  const GuildMilestoneNotification({
     required this.kind,
     required this.badgeLabel,
     required this.headlineKey,
@@ -45,14 +45,14 @@ class TrustMilestoneNotification {
   final String newValue;
   final String? unlockedValue;
 
-  factory TrustMilestoneNotification.fromJson(Map<String, dynamic> json) {
+  factory GuildMilestoneNotification.fromJson(Map<String, dynamic> json) {
     final kindStr = (json['kind'] as String?)?.trim() ?? '';
     final kind = switch (kindStr) {
       'rank_up' => TrustMilestoneKind.rankUp,
       'unlock_attachment_type' => TrustMilestoneKind.unlockAttachmentType,
       _ => TrustMilestoneKind.levelUp,
     };
-    return TrustMilestoneNotification(
+    return GuildMilestoneNotification(
       kind: kind,
       badgeLabel: (json['badge_label'] as String?)?.trim() ?? '',
       headlineKey: (json['headline_key'] as String?)?.trim() ?? '',
@@ -63,8 +63,8 @@ class TrustMilestoneNotification {
   }
 }
 
-class UserTrustSnapshot {
-  const UserTrustSnapshot({
+class UserGuildSnapshot {
+  const UserGuildSnapshot({
     required this.activeDays,
     required this.level,
     required this.contributionScore,
@@ -109,10 +109,10 @@ class UserTrustSnapshot {
   final int? dailyFriendAddsRemaining;
   /// One of: "none", "challenged", "frozen".
   final String challengeState;
-  final TrustMilestoneNotification? pendingMilestoneNotification;
+  final GuildMilestoneNotification? pendingMilestoneNotification;
 
-  factory UserTrustSnapshot.fromJson(Map<String, dynamic> json) {
-    return UserTrustSnapshot(
+  factory UserGuildSnapshot.fromJson(Map<String, dynamic> json) {
+    return UserGuildSnapshot(
       activeDays: _readInt(json['active_days']),
       level: _readInt(json['level']),
       contributionScore: _readInt(json['contribution_score']),
@@ -151,7 +151,7 @@ class UserTrustSnapshot {
       challengeState: (json['challenge_state'] as String?)?.trim() ?? 'none',
       pendingMilestoneNotification:
           json['pending_milestone_notification'] is Map<String, dynamic>
-              ? TrustMilestoneNotification.fromJson(
+              ? GuildMilestoneNotification.fromJson(
                   json['pending_milestone_notification']
                       as Map<String, dynamic>,
                 )
