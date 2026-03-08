@@ -936,6 +936,12 @@ abstract class AppLocalizations {
   /// **'NEW'**
   String get chatQuickNewHeader;
 
+  /// No description provided for @chatQuickNewRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'new room'**
+  String get chatQuickNewRoom;
+
   /// No description provided for @chatQuickFriendOrStart.
   ///
   /// In en, this message translates to:
@@ -947,6 +953,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'scan friend qr'**
   String get chatQuickScanFriendQr;
+
+  /// No description provided for @chatCreateRoomHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'ROOM'**
+  String get chatCreateRoomHeader;
+
+  /// No description provided for @chatCreateRoomTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a private room'**
+  String get chatCreateRoomTitle;
+
+  /// No description provided for @chatCreateRoomNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Room name'**
+  String get chatCreateRoomNameLabel;
+
+  /// No description provided for @chatCreateRoomNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekend plans'**
+  String get chatCreateRoomNameHint;
+
+  /// No description provided for @chatCreateRoomMembersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get chatCreateRoomMembersLabel;
+
+  /// No description provided for @chatCreateRoomNoFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Add friends first, or create a room and invite them later.'**
+  String get chatCreateRoomNoFriends;
+
+  /// No description provided for @chatCreateRoomAction.
+  ///
+  /// In en, this message translates to:
+  /// **'C R E A T E'**
+  String get chatCreateRoomAction;
+
+  /// No description provided for @chatRoomCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Room created'**
+  String get chatRoomCreated;
+
+  /// No description provided for @chatDefaultRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Room'**
+  String get chatDefaultRoom;
 
   /// No description provided for @chatScanFriendQrInstruction.
   ///

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import 'encrypted_database.dart';
 
@@ -10,10 +11,16 @@ class ConversationSummary {
     required this.conversationId,
     required this.lastBody,
     required this.lastAt,
+    this.title,
+    this.unreadCount = 0,
   });
   final String conversationId;
   final String lastBody;
   final DateTime lastAt;
+  final String? title;
+  final int unreadCount;
+
+  bool get isRoom => isRoomConversationId(conversationId);
 }
 
 abstract class ChatRepository {
@@ -37,11 +44,23 @@ abstract class ChatRepository {
   Future<void> clearConversation(String conversationId);
 
   Future<List<ConversationSummary>> listConversations();
+
+  Future<List<ChatRoom>> listRooms();
+
+  Future<ChatRoom?> readRoom(String roomId);
+
+  Future<void> replaceRooms(List<ChatRoom> rooms);
+
+  Future<void> updateRoomUnreadCount({
+    required String roomId,
+    required int unreadCount,
+  });
 }
 
 // ── In-memory fallback for Flutter Web (sqflite_sqlcipher is native-only) ───
 class InMemoryChatRepository implements ChatRepository {
   final _store = <String, List<LocalChatMessage>>{};
+  final _rooms = <String, ChatRoom>{};
 
   @override
   Future<List<LocalChatMessage>> listMessages({
@@ -110,21 +129,73 @@ class InMemoryChatRepository implements ChatRepository {
 
   @override
   Future<List<ConversationSummary>> listConversations() async {
-    final summaries = <ConversationSummary>[];
+    final summaries = <String, ConversationSummary>{};
     for (final entry in _store.entries) {
       if (entry.value.isEmpty) continue;
       final sorted = [...entry.value]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      summaries.add(
-        ConversationSummary(
-          conversationId: entry.key,
-          lastBody: sorted.first.body,
-          lastAt: sorted.first.createdAt,
+      final roomId = tryParseRoomId(entry.key);
+      final room = roomId == null ? null : _rooms[roomId];
+      summaries[entry.key] = ConversationSummary(
+        conversationId: entry.key,
+        lastBody: sorted.first.body,
+        lastAt: sorted.first.createdAt,
+        title: room?.name,
+        unreadCount: room?.unreadCount ?? 0,
+      );
+    }
+
+    for (final room in _rooms.values) {
+      summaries.putIfAbsent(
+        room.conversationId,
+        () => ConversationSummary(
+          conversationId: room.conversationId,
+          lastBody: room.lastMessagePreview ?? '',
+          lastAt: room.lastMessageAt ?? room.updatedAt,
+          title: room.name,
+          unreadCount: room.unreadCount,
         ),
       );
     }
-    summaries.sort((a, b) => b.lastAt.compareTo(a.lastAt));
-    return summaries;
+
+    final values = summaries.values.toList(growable: false)
+      ..sort((a, b) => b.lastAt.compareTo(a.lastAt));
+    return values;
+  }
+
+  @override
+  Future<List<ChatRoom>> listRooms() async {
+    final rooms = _rooms.values.toList(growable: false)
+      ..sort((a, b) {
+        final aTs = a.lastMessageAt ?? a.updatedAt;
+        final bTs = b.lastMessageAt ?? b.updatedAt;
+        return bTs.compareTo(aTs);
+      });
+    return rooms;
+  }
+
+  @override
+  Future<ChatRoom?> readRoom(String roomId) async {
+    return _rooms[roomId];
+  }
+
+  @override
+  Future<void> replaceRooms(List<ChatRoom> rooms) async {
+    _rooms
+      ..clear()
+      ..addEntries(rooms.map((room) => MapEntry(room.id, room)));
+  }
+
+  @override
+  Future<void> updateRoomUnreadCount({
+    required String roomId,
+    required int unreadCount,
+  }) async {
+    final room = _rooms[roomId];
+    if (room == null) {
+      return;
+    }
+    _rooms[roomId] = room.copyWith(unreadCount: unreadCount);
   }
 }
 
@@ -241,7 +312,7 @@ class LocalChatRepository implements ChatRepository {
       limit: 5000,
     );
 
-    final summaries = <ConversationSummary>[];
+    final summaries = <String, ConversationSummary>{};
     final seenConversationIds = <String>{};
 
     for (final row in rows) {
@@ -252,16 +323,94 @@ class LocalChatRepository implements ChatRepository {
       }
 
       seenConversationIds.add(conversationId);
-      summaries.add(
-        ConversationSummary(
-          conversationId: conversationId,
-          lastBody: map['body'] as String,
-          lastAt: DateTime.parse(map['created_at'] as String).toUtc(),
+      final roomId = tryParseRoomId(conversationId);
+      final room = roomId == null ? null : await readRoom(roomId);
+      summaries[conversationId] = ConversationSummary(
+        conversationId: conversationId,
+        lastBody: map['body'] as String,
+        lastAt: DateTime.parse(map['created_at'] as String).toUtc(),
+        title: room?.name,
+        unreadCount: room?.unreadCount ?? 0,
+      );
+    }
+
+    final roomRows = await db.query(
+      'chat_rooms',
+      orderBy: 'COALESCE(last_message_at, updated_at) DESC',
+    );
+    for (final row in roomRows) {
+      final room = ChatRoom.fromMap(Map<String, Object?>.from(row));
+      summaries.putIfAbsent(
+        room.conversationId,
+        () => ConversationSummary(
+          conversationId: room.conversationId,
+          lastBody: room.lastMessagePreview ?? '',
+          lastAt: room.lastMessageAt ?? room.updatedAt,
+          title: room.name,
+          unreadCount: room.unreadCount,
         ),
       );
     }
 
-    return summaries;
+    final values = summaries.values.toList(growable: false)
+      ..sort((a, b) => b.lastAt.compareTo(a.lastAt));
+    return values;
+  }
+
+  @override
+  Future<List<ChatRoom>> listRooms() async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'chat_rooms',
+      orderBy: 'COALESCE(last_message_at, updated_at) DESC',
+    );
+    return rows
+        .map((row) => ChatRoom.fromMap(Map<String, Object?>.from(row)))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<ChatRoom?> readRoom(String roomId) async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'chat_rooms',
+      where: 'id = ?',
+      whereArgs: [roomId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return ChatRoom.fromMap(Map<String, Object?>.from(rows.first));
+  }
+
+  @override
+  Future<void> replaceRooms(List<ChatRoom> rooms) async {
+    final db = await _encryptedDatabase.open();
+    await db.transaction((txn) async {
+      await txn.delete('chat_rooms');
+      for (final room in rooms) {
+        await txn.insert(
+          'chat_rooms',
+          room.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> updateRoomUnreadCount({
+    required String roomId,
+    required int unreadCount,
+  }) async {
+    final db = await _encryptedDatabase.open();
+    await db.update(
+      'chat_rooms',
+      {'unread_count': unreadCount},
+      where: 'id = ?',
+      whereArgs: [roomId],
+    );
   }
 
   String _generateMessageId() {

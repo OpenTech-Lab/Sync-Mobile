@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
 import '../services/realtime_sync_service.dart';
@@ -139,11 +140,21 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         );
         await ref.read(chatRepositoryProvider).upsertMessages([message]);
         final partnerId = message.conversationId;
+        final isRoomConversation = isRoomConversationId(partnerId);
         final accessToken = await accessTokenProvider();
         if (accessToken == null || accessToken.isEmpty) {
           ref.invalidate(conversationMessagesProvider(partnerId));
           ref.invalidate(conversationSummariesProvider);
           return;
+        }
+        if (isRoomConversation) {
+          try {
+            await ref
+                .read(roomConversationsProvider.notifier)
+                .syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+          } catch (_) {
+            ref.invalidate(conversationSummariesProvider);
+          }
         }
         await _syncConversationSnapshot(
           partnerId: partnerId,
@@ -154,14 +165,14 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         final visibility = ref.read(chatVisibilityProvider);
         if (!visibility.isConversationOpen(partnerId) &&
             message.senderId != currentUserId) {
-          final avatarBase64 = await ref
-              .read(userProfilePreferencesProvider)
-              .readAvatarBase64(baseUrl, partnerId);
+          final avatarBase64 = isRoomConversation
+              ? null
+              : await ref
+                    .read(userProfilePreferencesProvider)
+                    .readAvatarBase64(baseUrl, partnerId);
           await ref
               .read(realtimeNotificationServiceProvider)
-              .showIncomingMessageNotification(
-                avatarBase64: avatarBase64,
-              );
+              .showIncomingMessageNotification(avatarBase64: avatarBase64);
         }
         await ref
             .read(unreadCountsProvider.notifier)

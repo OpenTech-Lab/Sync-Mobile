@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 
+import '../../models/chat_room.dart';
 import '../../models/local_chat_message.dart';
 import '../../models/sticker.dart';
 import '../../models/friend_qr_payload.dart';
@@ -67,6 +68,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   void initState() {
     super.initState();
     _partnerController.addListener(_onSearchChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_syncRooms());
+    });
     if (widget.initialPartnerId != null &&
         widget.initialPartnerId!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -85,6 +89,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   @override
   void didUpdateWidget(covariant ChatsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.serverUrl != oldWidget.serverUrl ||
+        widget.accessToken != oldWidget.accessToken) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_syncRooms());
+      });
+    }
     final nextPartnerId = widget.initialPartnerId;
     if (nextPartnerId != null &&
         nextPartnerId.isNotEmpty &&
@@ -113,7 +123,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
 
   void _sendTypingSignal(bool isTyping) {
     final partnerId = _activePartnerId;
-    if (partnerId == null || partnerId.isEmpty) {
+    if (partnerId == null ||
+        partnerId.isEmpty ||
+        isRoomConversationId(partnerId)) {
       return;
     }
     ref
@@ -238,6 +250,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     widget.onPartnerChanged(null);
   }
 
+  Future<void> _syncRooms() async {
+    try {
+      final accessToken = await _effectiveAccessToken();
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .syncRooms(baseUrl: widget.serverUrl, accessToken: accessToken);
+    } catch (_) {
+      // Keep the direct-message experience functional even if room sync fails.
+    }
+  }
+
   Future<void> _openPartner(String partnerId) async {
     if (_typingSignalSent) {
       _sendTypingSignal(false);
@@ -245,7 +268,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
     setState(() => _activePartnerId = partnerId);
     widget.onPartnerChanged(partnerId);
-    await _syncUserProfile(partnerId, force: true);
+    if (!isRoomConversationId(partnerId)) {
+      await _syncUserProfile(partnerId, force: true);
+    }
     final accessToken = await _effectiveAccessToken();
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
@@ -257,7 +282,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
-    ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+    if (isRoomConversationId(partnerId)) {
+      final roomId = tryParseRoomId(partnerId);
+      if (roomId != null) {
+        await ref
+            .read(roomConversationsProvider.notifier)
+            .markRoomReadLocal(roomId);
+      }
+    } else {
+      ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+    }
     ref.invalidate(conversationSummariesProvider);
   }
 
@@ -588,6 +622,265 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await _openFromTarget(target);
   }
 
+  Future<_CreateRoomInput?> _promptForRoomCreation() async {
+    final nameController = TextEditingController();
+    final friendIds =
+        ref.read(friendIdsProvider).value ??
+        await ref.read(friendIdsProvider.future).catchError((_) {
+          return const <String>[];
+        });
+    if (!mounted) {
+      return null;
+    }
+    final memberOptions =
+        friendIds
+            .map(
+              (userId) => _RoomMemberOption(
+                userId: userId,
+                displayName: _displayNameOrFallback(
+                  userId,
+                  ref.read(userDisplayNameProvider(userId)).value,
+                ),
+              ),
+            )
+            .toList(growable: false)
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    final result = await showDialog<_CreateRoomInput>(
+      context: context,
+      builder: (context) {
+        final selectedIds = <String>{};
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final hasName = nameController.text.trim().isNotEmpty;
+            return Dialog(
+              backgroundColor: bgColor,
+              surfaceTintColor: AppPalette.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 44,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      _l10n.chatCreateRoomHeader,
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 2.6,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _l10n.chatCreateRoomTitle,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      onChanged: (_) => setState(() {}),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: _l10n.chatCreateRoomNameLabel,
+                        hintText: _l10n.chatCreateRoomNameHint,
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppPalette.neutral500),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 11,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      _l10n.chatCreateRoomMembersLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppPalette.neutral500,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (memberOptions.isEmpty)
+                      Text(
+                        _l10n.chatCreateRoomNoFriends,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 220),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: memberOptions.length,
+                          separatorBuilder: (_, _) =>
+                              Divider(height: 1, color: ruleColor),
+                          itemBuilder: (_, index) {
+                            final option = memberOptions[index];
+                            final selected = selectedIds.contains(
+                              option.userId,
+                            );
+                            return CheckboxListTile(
+                              value: selected,
+                              onChanged: (_) {
+                                setState(() {
+                                  if (selected) {
+                                    selectedIds.remove(option.userId);
+                                  } else {
+                                    selectedIds.add(option.userId);
+                                  }
+                                });
+                              },
+                              dense: true,
+                              visualDensity: VisualDensity.compact,
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(
+                                option.displayName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: inkColor,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              _l10n.actionCancel,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppPalette.neutral500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          onTap: hasName
+                              ? () => Navigator.of(context).pop(
+                                  _CreateRoomInput(
+                                    name: nameController.text.trim(),
+                                    memberIds: selectedIds.toList(
+                                      growable: false,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              _l10n.chatCreateRoomAction,
+                              style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 2.4,
+                                fontWeight: FontWeight.w500,
+                                color: hasName
+                                    ? inkColor
+                                    : AppPalette.neutral500.withValues(
+                                        alpha: 0.5,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nameController.dispose();
+    });
+    return result;
+  }
+
+  Future<void> _openNewRoom() async {
+    final input = await _promptForRoomCreation();
+    if (!mounted || input == null) {
+      return;
+    }
+
+    try {
+      final accessToken = await _effectiveAccessToken();
+      final room = await ref
+          .read(roomConversationsProvider.notifier)
+          .createRoom(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            name: input.name,
+            memberIds: input.memberIds,
+          );
+      if (!mounted) {
+        return;
+      }
+      showAppToast(
+        context,
+        _l10n.chatRoomCreated,
+        duration: const Duration(milliseconds: 900),
+      );
+      await _openPartner(room.conversationId);
+    } catch (error) {
+      if (!mounted) return;
+      showAppToast(context, error.toString(), variant: AppToastVariant.error);
+    }
+  }
+
   Future<void> _scanQrAndOpen() async {
     final payload = await Navigator.of(context).push<FriendQrPayload>(
       MaterialPageRoute<FriendQrPayload>(
@@ -813,11 +1106,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
   }
 
-  Future<void> _openActivePartnerProfile() async {
-    final partnerId = _activePartnerId;
-    if (partnerId == null || partnerId.isEmpty) {
-      return;
-    }
+  Future<void> _openUserProfile(String partnerId) async {
     await _syncUserProfile(partnerId);
     if (!mounted) {
       return;
@@ -904,6 +1193,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
   }
 
+  Future<void> _openActivePartnerProfile() async {
+    final partnerId = _activePartnerId;
+    if (partnerId == null ||
+        partnerId.isEmpty ||
+        isRoomConversationId(partnerId)) {
+      return;
+    }
+    await _openUserProfile(partnerId);
+  }
+
   Future<int> _sentMessageCountForPartner(String partnerId) async {
     final messages = await ref
         .read(chatRepositoryProvider)
@@ -929,7 +1228,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         await ref
             .read(conversationMessagesProvider(partnerId).notifier)
             .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
-        ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+        if (isRoomConversationId(partnerId)) {
+          final roomId = tryParseRoomId(partnerId);
+          if (roomId != null) {
+            await ref
+                .read(roomConversationsProvider.notifier)
+                .markRoomReadLocal(roomId);
+          }
+        } else {
+          ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+        }
       } catch (_) {
         failed.add(partnerId);
       }
@@ -969,17 +1277,32 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final cs = Theme.of(context).colorScheme;
     final stickers =
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
-    final unreadCounts =
+    final remoteUnreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final conversationSummaries =
         ref.watch(conversationSummariesProvider).value ??
         const <ConversationSummary>[];
+    final allSummariesById = <String, ConversationSummary>{
+      for (final summary in conversationSummaries)
+        summary.conversationId: summary,
+    };
+    final unreadCounts = <String, int>{
+      ...remoteUnreadCounts,
+      for (final summary in conversationSummaries)
+        summary.conversationId: summary.isRoom
+            ? summary.unreadCount
+            : (remoteUnreadCounts[summary.conversationId] ??
+                  summary.unreadCount),
+    };
     final searchQuery = _partnerController.text.trim().toLowerCase();
     final filteredSummaries = searchQuery.isEmpty
         ? conversationSummaries
         : conversationSummaries
               .where((summary) {
-                return summary.conversationId.toLowerCase().contains(
+                return (summary.title ?? summary.conversationId)
+                        .toLowerCase()
+                        .contains(searchQuery) ||
+                    summary.conversationId.toLowerCase().contains(
                       searchQuery,
                     ) ||
                     summary.lastBody.toLowerCase().contains(searchQuery);
@@ -1012,14 +1335,21 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           }
           return a.compareTo(b);
         });
-    final rowUserIds = orderedConversationIds.toSet();
+    final rowUserIds = orderedConversationIds
+        .where((id) => !isRoomConversationId(id))
+        .toSet();
     _prefetchVisibleProfiles(rowUserIds);
+    final activeSummary = _activePartnerId == null
+        ? null
+        : allSummariesById[_activePartnerId!];
     final activeUnread = _activePartnerId == null
         ? 0
         : (unreadCounts[_activePartnerId!] ?? 0);
     final inConversation = _activePartnerId != null;
     final activeDisplayName = _activePartnerId == null
         ? null
+        : isRoomConversationId(_activePartnerId!)
+        ? (activeSummary?.title ?? _l10n.chatDefaultRoom)
         : _displayNameOrFallback(
             _activePartnerId!,
             ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
@@ -1032,6 +1362,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ChatUiPreferences.defaultTypingStyleSpeedMs;
     final isTargetTyping =
         _activePartnerId != null &&
+        !isRoomConversationId(_activePartnerId!) &&
         (realtimeState?.typingPartnerIds.contains(_activePartnerId!) ?? false);
     final messagesAsync = _activePartnerId == null
         ? null
@@ -1049,7 +1380,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               centerTitle: true,
               title: InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: _openActivePartnerProfile,
+                onTap: isRoomConversationId(_activePartnerId!)
+                    ? null
+                    : _openActivePartnerProfile,
                 child: Text(
                   activeDisplayName ?? _l10n.chatDefaultTitle,
                   maxLines: 1,
@@ -1083,10 +1416,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   summariesById: summariesById,
                   onQuickAction: (action) {
                     switch (action) {
+                      case _ChatQuickAction.newRoom:
+                        _openNewRoom();
+                        break;
                       case _ChatQuickAction.newFriendOrChat:
                         _openNewFriendOrChat();
+                        break;
                       case _ChatQuickAction.scanFriendQr:
                         _scanQrAndOpen();
+                        break;
                     }
                   },
                   onOpenConversation: (id) async {
@@ -1147,6 +1485,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                   ),
                                   ...messages,
                                 ];
+                                _prefetchVisibleProfiles(
+                                  displayedMessages.map((m) => m.senderId),
+                                );
 
                                 return displayedMessages.isEmpty
                                     ? Center(
@@ -1220,8 +1561,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                 currentUserId:
                                                     widget.currentUserId,
                                                 partnerId: _activePartnerId!,
-                                                onPartnerAvatarTap:
-                                                    _openActivePartnerProfile,
+                                                isRoomConversation:
+                                                    isRoomConversationId(
+                                                      _activePartnerId!,
+                                                    ),
+                                                onAvatarTap:
+                                                    message.senderId ==
+                                                        widget.currentUserId
+                                                    ? null
+                                                    : () => _openUserProfile(
+                                                        message.senderId,
+                                                      ),
                                                 stickers: stickers,
                                                 serverUrl: widget.serverUrl,
                                                 accessToken: widget.accessToken,
@@ -1293,7 +1643,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   }
 }
 
-enum _ChatQuickAction { newFriendOrChat, scanFriendQr }
+enum _ChatQuickAction { newRoom, newFriendOrChat, scanFriendQr }
 
 enum _OutgoingDeliveryState { sending, failed, blocked }
 
@@ -1393,6 +1743,20 @@ class _ChatTargetInput {
 
   final String friendId;
   final String serverUrl;
+}
+
+class _CreateRoomInput {
+  const _CreateRoomInput({required this.name, required this.memberIds});
+
+  final String name;
+  final List<String> memberIds;
+}
+
+class _RoomMemberOption {
+  const _RoomMemberOption({required this.userId, required this.displayName});
+
+  final String userId;
+  final String displayName;
 }
 
 class _ResolvedTargetProfile {
@@ -1630,9 +1994,18 @@ class _ConversationStarter extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final summary = summariesById[userId];
     final unreadCount = unreadCounts[userId] ?? 0;
-    final displayNameAsync = ref.watch(userDisplayNameProvider(userId));
-    final avatarBase64Async = ref.watch(userAvatarBase64Provider(userId));
-    final displayName = _displayNameOrFallback(userId, displayNameAsync.value);
+    final isRoom = summary?.isRoom ?? isRoomConversationId(userId);
+    final displayNameAsync = isRoom
+        ? null
+        : ref.watch(userDisplayNameProvider(userId));
+    final avatarBase64Async = isRoom
+        ? null
+        : ref.watch(userAvatarBase64Provider(userId));
+    final displayName = isRoom
+        ? ((summary?.title?.trim().isNotEmpty ?? false)
+              ? summary!.title!.trim()
+              : l10n.chatDefaultRoom)
+        : _displayNameOrFallback(userId, displayNameAsync?.value);
 
     // avatar warm palette
     const palette = [
@@ -1645,6 +2018,13 @@ class _ConversationStarter extends ConsumerWidget {
     ];
     final hash = userId.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarColor = palette[hash.abs() % palette.length];
+    final subtitle = summary == null
+        ? null
+        : (summary.lastBody.trim().isNotEmpty
+              ? _formatLastBody(summary.lastBody, l10n)
+              : isRoom
+              ? l10n.chatDefaultRoom
+              : null);
 
     return Column(
       children: [
@@ -1657,10 +2037,16 @@ class _ConversationStarter extends ConsumerWidget {
                 // avatar
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: avatarBase64Async.value != null
+                  backgroundColor: !isRoom && avatarBase64Async?.value != null
                       ? Colors.transparent
                       : avatarColor,
-                  child: avatarBase64Async.value == null
+                  child: isRoom
+                      ? const Icon(
+                          Icons.group_outlined,
+                          size: 18,
+                          color: AppPalette.white,
+                        )
+                      : avatarBase64Async?.value == null
                       ? Text(
                           userId.length >= 2
                               ? userId.substring(0, 2).toUpperCase()
@@ -1674,7 +2060,7 @@ class _ConversationStarter extends ConsumerWidget {
                       : ClipOval(
                           child: SizedBox.expand(
                             child: Image.memory(
-                              base64Decode(avatarBase64Async.value!),
+                              base64Decode(avatarBase64Async!.value!),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -1697,7 +2083,7 @@ class _ConversationStarter extends ConsumerWidget {
                       ),
                       if (summary != null)
                         Text(
-                          _formatLastBody(summary.lastBody, l10n),
+                          subtitle ?? _formatLastBody(summary.lastBody, l10n),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -2158,7 +2544,8 @@ class _MessageBubble extends ConsumerWidget {
     required this.isMine,
     required this.currentUserId,
     required this.partnerId,
-    required this.onPartnerAvatarTap,
+    required this.isRoomConversation,
+    this.onAvatarTap,
     required this.stickers,
     required this.serverUrl,
     required this.accessToken,
@@ -2174,7 +2561,8 @@ class _MessageBubble extends ConsumerWidget {
   final bool isMine;
   final String currentUserId;
   final String partnerId;
-  final VoidCallback onPartnerAvatarTap;
+  final bool isRoomConversation;
+  final VoidCallback? onAvatarTap;
   final List<Sticker> stickers;
   final String serverUrl;
   final String accessToken;
@@ -2259,15 +2647,15 @@ class _MessageBubble extends ConsumerWidget {
     final isTruncated = overflowProbe.didExceedMaxLines;
 
     final avatarId = isMine ? currentUserId : message.senderId;
+    final senderDisplayName = !isMine && isRoomConversation
+        ? _displayNameOrFallback(
+            message.senderId,
+            ref.watch(userDisplayNameProvider(message.senderId)).value,
+          )
+        : null;
     // Watch avatar providers locally so only individual bubbles rebuild on
     // avatar changes — the parent page is not involved in avatar reloads.
-    final currentUserAvatarBase64 = ref
-        .watch(userAvatarBase64Provider(currentUserId))
-        .value;
-    final partnerAvatarBase64 = ref
-        .watch(userAvatarBase64Provider(partnerId))
-        .value;
-    final avatarBase64 = isMine ? currentUserAvatarBase64 : partnerAvatarBase64;
+    final avatarBase64 = ref.watch(userAvatarBase64Provider(avatarId)).value;
 
     const palette = [
       AppPalette.avatarTone1,
@@ -2291,7 +2679,7 @@ class _MessageBubble extends ConsumerWidget {
           children: [
             if (!isMine) ...[
               GestureDetector(
-                onTap: onPartnerAvatarTap,
+                onTap: onAvatarTap,
                 child: _MessageAvatar(
                   userId: avatarId,
                   avatarBase64: avatarBase64,
@@ -2306,6 +2694,19 @@ class _MessageBubble extends ConsumerWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
+                if (senderDisplayName != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, bottom: 4),
+                    child: Text(
+                      senderDisplayName,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
+                ],
                 Container(
                   constraints: BoxConstraints(maxWidth: maxBubbleWidth),
                   decoration: BoxDecoration(
@@ -2400,7 +2801,7 @@ class _MessageBubble extends ConsumerWidget {
               children: [
                 if (!isMine) ...[
                   GestureDetector(
-                    onTap: onPartnerAvatarTap,
+                    onTap: onAvatarTap,
                     child: _MessageAvatar(
                       userId: avatarId,
                       avatarBase64: avatarBase64,
@@ -2415,6 +2816,19 @@ class _MessageBubble extends ConsumerWidget {
                       ? CrossAxisAlignment.end
                       : CrossAxisAlignment.start,
                   children: [
+                    if (senderDisplayName != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 2, bottom: 4),
+                        child: Text(
+                          senderDisplayName,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppPalette.neutral500,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ),
+                    ],
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.memory(
@@ -2589,7 +3003,7 @@ class _MessageBubble extends ConsumerWidget {
         children: [
           if (!isMine) ...[
             GestureDetector(
-              onTap: onPartnerAvatarTap,
+              onTap: onAvatarTap,
               child: _MessageAvatar(
                 userId: avatarId,
                 avatarBase64: avatarBase64,
@@ -2604,6 +3018,19 @@ class _MessageBubble extends ConsumerWidget {
                 ? CrossAxisAlignment.end
                 : CrossAxisAlignment.start,
             children: [
+              if (senderDisplayName != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, bottom: 4),
+                  child: Text(
+                    senderDisplayName,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppPalette.neutral500,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ),
+              ],
               bubble,
               if (blockedStatusLabel != null) ...[
                 const SizedBox(height: 4),
@@ -2970,6 +3397,12 @@ class _QuickActionSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+            Divider(height: 1, color: ruleColor),
+            _SheetItem(
+              label: AppLocalizations.of(context)!.chatQuickNewRoom,
+              inkColor: inkColor,
+              onTap: () => Navigator.of(context).pop(_ChatQuickAction.newRoom),
+            ),
             Divider(height: 1, color: ruleColor),
             _SheetItem(
               label: AppLocalizations.of(context)!.chatQuickFriendOrStart,

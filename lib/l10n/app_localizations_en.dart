@@ -457,10 +457,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatQuickNewHeader => 'NEW';
 
   @override
+  String get chatQuickNewRoom => 'new room';
+
+  @override
   String get chatQuickFriendOrStart => 'friend / start chat';
 
   @override
   String get chatQuickScanFriendQr => 'scan friend qr';
+
+  @override
+  String get chatCreateRoomHeader => 'ROOM';
+
+  @override
+  String get chatCreateRoomTitle => 'Create a private room';
+
+  @override
+  String get chatCreateRoomNameLabel => 'Room name';
+
+  @override
+  String get chatCreateRoomNameHint => 'Weekend plans';
+
+  @override
+  String get chatCreateRoomMembersLabel => 'Members';
+
+  @override
+  String get chatCreateRoomNoFriends => 'Add friends first, or create a room and invite them later.';
+
+  @override
+  String get chatCreateRoomAction => 'C R E A T E';
+
+  @override
+  String get chatRoomCreated => 'Room created';
+
+  @override
+  String get chatDefaultRoom => 'Room';
 
   @override
   String get chatScanFriendQrInstruction => 'point camera at a friend\'s qr code';

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_controller.dart';
+import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../services/backup_preferences.dart';
 import '../services/local_chat_repository.dart';
@@ -42,12 +43,65 @@ final conversationSummariesProvider = FutureProvider<List<ConversationSummary>>(
   },
 );
 
+final roomConversationsProvider =
+    AsyncNotifierProvider<RoomConversationsController, List<ChatRoom>>(
+      RoomConversationsController.new,
+    );
+
 final conversationMessagesProvider =
     AsyncNotifierProviderFamily<
       ConversationMessagesController,
       List<LocalChatMessage>,
       String
     >(ConversationMessagesController.new);
+
+class RoomConversationsController extends AsyncNotifier<List<ChatRoom>> {
+  ChatRepository get _repository => ref.read(chatRepositoryProvider);
+  RemoteChatService get _remoteChatService =>
+      ref.read(remoteChatServiceProvider);
+
+  @override
+  Future<List<ChatRoom>> build() {
+    ref.watch(chatRepositoryProvider);
+    return _repository.listRooms();
+  }
+
+  Future<List<ChatRoom>> syncRooms({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final rooms = await _remoteChatService.listRooms(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+    );
+    await _repository.replaceRooms(rooms);
+    ref.invalidate(conversationSummariesProvider);
+    state = AsyncData(await _repository.listRooms());
+    return rooms;
+  }
+
+  Future<ChatRoom> createRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String name,
+    required List<String> memberIds,
+  }) async {
+    final room = await _remoteChatService.createRoom(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      name: name,
+      memberIds: memberIds,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+    return room;
+  }
+
+  Future<void> markRoomReadLocal(String roomId) async {
+    await _repository.updateRoomUnreadCount(roomId: roomId, unreadCount: 0);
+    ref.invalidate(conversationSummariesProvider);
+    state = AsyncData(await _repository.listRooms());
+  }
+}
 
 class ConversationMessagesController
     extends FamilyAsyncNotifier<List<LocalChatMessage>, String> {
@@ -70,18 +124,28 @@ class ConversationMessagesController
     return _repository.listMessages(conversationId: partnerId, limit: 200);
   }
 
+  bool get _isRoomConversation => isRoomConversationId(arg);
+  String get _roomId => tryParseRoomId(arg)!;
+
   Future<void> syncLatest({
     required String baseUrl,
     required String accessToken,
     required String currentUserId,
   }) async {
-    final latest = await _remoteChatService.getConversation(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-      currentUserId: currentUserId,
-      partnerId: arg,
-      limit: 30,
-    );
+    final latest = _isRoomConversation
+        ? await _remoteChatService.getRoomMessages(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            roomId: _roomId,
+            limit: 30,
+          )
+        : await _remoteChatService.getConversation(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+            partnerId: arg,
+            limit: 30,
+          );
 
     // Don't restore messages that pre-date a local-data deletion.
     final clearedAt = await BackupPreferences().readChatClearedAt(baseUrl);
@@ -91,6 +155,11 @@ class ConversationMessagesController
 
     await _repository.upsertMessages(toUpsert);
     ref.invalidate(conversationSummariesProvider);
+    if (_isRoomConversation) {
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .markRoomReadLocal(_roomId);
+    }
     final local = await _repository.listMessages(
       conversationId: arg,
       limit: 200,
@@ -114,14 +183,22 @@ class ConversationMessagesController
     }
 
     final before = current.last.id;
-    final older = await _remoteChatService.getConversation(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-      currentUserId: currentUserId,
-      partnerId: arg,
-      before: before,
-      limit: 30,
-    );
+    final older = _isRoomConversation
+        ? await _remoteChatService.getRoomMessages(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            roomId: _roomId,
+            before: before,
+            limit: 30,
+          )
+        : await _remoteChatService.getConversation(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+            partnerId: arg,
+            before: before,
+            limit: 30,
+          );
 
     await _repository.upsertMessages(older);
     ref.invalidate(conversationSummariesProvider);
@@ -144,30 +221,50 @@ class ConversationMessagesController
       return;
     }
 
-    final senderPublicKey = await _e2eeService.ensureDevicePublicKeyBase64();
-    final recipientPublicKey = await _resolveRecipientPublicKey(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-    );
-
-    final sent = await _remoteChatService.sendMessage(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-      currentUserId: currentUserId,
-      senderPublicKey: senderPublicKey,
-      recipientPublicKey: recipientPublicKey,
-      partnerId: arg,
-      body: trimmed,
-      recipientServerUrl: recipientServerUrl,
-    );
+    final sent = _isRoomConversation
+        ? await _remoteChatService.sendRoomMessage(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            roomId: _roomId,
+            body: trimmed,
+          )
+        : await (() async {
+            final senderPublicKey = await _e2eeService
+                .ensureDevicePublicKeyBase64();
+            final recipientPublicKey = await _resolveRecipientPublicKey(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+            );
+            return _remoteChatService.sendMessage(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              senderPublicKey: senderPublicKey,
+              recipientPublicKey: recipientPublicKey,
+              partnerId: arg,
+              body: trimmed,
+              recipientServerUrl: recipientServerUrl,
+            );
+          })();
 
     await _repository.upsertMessages([sent]);
     ref.invalidate(conversationSummariesProvider);
-    await _remoteChatService.markRead(
-      baseUrl: baseUrl,
-      accessToken: accessToken,
-      partnerId: arg,
-    );
+    if (_isRoomConversation) {
+      await _remoteChatService.markRoomRead(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        roomId: _roomId,
+      );
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .markRoomReadLocal(_roomId);
+    } else {
+      await _remoteChatService.markRead(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        partnerId: arg,
+      );
+    }
 
     final local = await _repository.listMessages(
       conversationId: arg,
@@ -208,6 +305,13 @@ class ConversationMessagesController
   }
 
   Future<int> markRead({required String baseUrl, required String accessToken}) {
+    if (_isRoomConversation) {
+      return _remoteChatService.markRoomRead(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        roomId: _roomId,
+      );
+    }
     return _remoteChatService.markRead(
       baseUrl: baseUrl,
       accessToken: accessToken,

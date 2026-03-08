@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
 
@@ -213,6 +214,27 @@ class RealtimeSyncService {
         conversationId: partnerId,
         senderId: senderId,
         body: messageJson['content'] as String,
+        createdAt: DateTime.parse(messageJson['created_at'] as String).toUtc(),
+      );
+      return RealtimeEvent.message(message);
+    }
+
+    if (type == 'new_room_message') {
+      final roomId = decoded['room_id'] as String?;
+      final messageJson = decoded['message'];
+      if (roomId == null || messageJson is! Map<String, dynamic>) {
+        return null;
+      }
+      final senderId = messageJson['sender_id'] as String?;
+      if (senderId == null) {
+        return null;
+      }
+
+      final message = LocalChatMessage(
+        id: messageJson['id'] as String,
+        conversationId: roomConversationId(roomId),
+        senderId: senderId,
+        body: (messageJson['content'] as String?) ?? '',
         createdAt: DateTime.parse(messageJson['created_at'] as String).toUtc(),
       );
       return RealtimeEvent.message(message);

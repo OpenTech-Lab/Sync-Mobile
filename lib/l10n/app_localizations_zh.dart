@@ -457,10 +457,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatQuickNewHeader => 'NEW';
 
   @override
+  String get chatQuickNewRoom => 'new room';
+
+  @override
   String get chatQuickFriendOrStart => 'friend / start chat';
 
   @override
   String get chatQuickScanFriendQr => 'scan friend qr';
+
+  @override
+  String get chatCreateRoomHeader => 'ROOM';
+
+  @override
+  String get chatCreateRoomTitle => 'Create a private room';
+
+  @override
+  String get chatCreateRoomNameLabel => 'Room name';
+
+  @override
+  String get chatCreateRoomNameHint => 'Weekend plans';
+
+  @override
+  String get chatCreateRoomMembersLabel => 'Members';
+
+  @override
+  String get chatCreateRoomNoFriends => 'Add friends first, or create a room and invite them later.';
+
+  @override
+  String get chatCreateRoomAction => 'C R E A T E';
+
+  @override
+  String get chatRoomCreated => 'Room created';
+
+  @override
+  String get chatDefaultRoom => 'Room';
 
   @override
   String get chatScanFriendQrInstruction => 'point camera at a friend\'s qr code';
@@ -1309,10 +1339,40 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get chatQuickNewHeader => '新增';
 
   @override
+  String get chatQuickNewRoom => '新增群組';
+
+  @override
   String get chatQuickFriendOrStart => '好友 / 開始聊天';
 
   @override
   String get chatQuickScanFriendQr => '掃描好友 QR';
+
+  @override
+  String get chatCreateRoomHeader => '群組';
+
+  @override
+  String get chatCreateRoomTitle => '建立私人群組';
+
+  @override
+  String get chatCreateRoomNameLabel => '群組名稱';
+
+  @override
+  String get chatCreateRoomNameHint => '週末計畫';
+
+  @override
+  String get chatCreateRoomMembersLabel => '成員';
+
+  @override
+  String get chatCreateRoomNoFriends => '先加入好友，或先建立群組後再邀請。';
+
+  @override
+  String get chatCreateRoomAction => '建 立 群 組';
+
+  @override
+  String get chatRoomCreated => '已建立群組';
+
+  @override
+  String get chatDefaultRoom => '群組';
 
   @override
   String get chatScanFriendQrInstruction => '將鏡頭對準好友的 QR 碼';

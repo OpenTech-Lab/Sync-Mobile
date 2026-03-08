@@ -16,7 +16,7 @@ class EncryptedDatabase {
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _legacyDatabaseName = 'sync_local_chat.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
   static const _legacyDatabaseKeyStorageKey = 'local_chat_db_key';
 
   final String _serverUrl;
@@ -59,6 +59,12 @@ class EncryptedDatabase {
         await db.execute(
           'CREATE INDEX idx_local_messages_conversation_created_at ON local_messages(conversation_id, created_at DESC)',
         );
+        await _createRoomsTable(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createRoomsTable(db);
+        }
       },
     );
 
@@ -121,5 +127,23 @@ class EncryptedDatabase {
 
     await _secureStorage.write(key: _databaseKeyStorageKey, value: legacyKey);
     await _secureStorage.delete(key: _legacyDatabaseKeyStorageKey);
+  }
+
+  Future<void> _createRoomsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_rooms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        member_count INTEGER NOT NULL DEFAULT 0,
+        unread_count INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_preview TEXT,
+        last_message_at TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_rooms_updated_at ON chat_rooms(updated_at DESC)',
+    );
   }
 }

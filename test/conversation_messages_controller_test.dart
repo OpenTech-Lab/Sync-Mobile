@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/models/chat_room.dart';
 import 'package:mobile/models/local_chat_message.dart';
 import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/services/local_chat_repository.dart';
@@ -8,9 +9,11 @@ import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/services/remote_user_profile_service.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
 import 'package:mobile/state/user_profile_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _InMemoryChatRepository implements ChatRepository {
   final List<LocalChatMessage> _messages = [];
+  final Map<String, ChatRoom> _rooms = {};
 
   @override
   Future<void> addMessage({
@@ -92,6 +95,35 @@ class _InMemoryChatRepository implements ChatRepository {
     summaries.sort((a, b) => b.lastAt.compareTo(a.lastAt));
     return summaries;
   }
+
+  @override
+  Future<List<ChatRoom>> listRooms() async {
+    return _rooms.values.toList(growable: false);
+  }
+
+  @override
+  Future<ChatRoom?> readRoom(String roomId) async {
+    return _rooms[roomId];
+  }
+
+  @override
+  Future<void> replaceRooms(List<ChatRoom> rooms) async {
+    _rooms
+      ..clear()
+      ..addEntries(rooms.map((room) => MapEntry(room.id, room)));
+  }
+
+  @override
+  Future<void> updateRoomUnreadCount({
+    required String roomId,
+    required int unreadCount,
+  }) async {
+    final room = _rooms[roomId];
+    if (room == null) {
+      return;
+    }
+    _rooms[roomId] = room.copyWith(unreadCount: unreadCount);
+  }
 }
 
 class _FakeRemoteChatService extends RemoteChatService {
@@ -143,6 +175,49 @@ class _FakeRemoteChatService extends RemoteChatService {
     required String baseUrl,
     required String accessToken,
     required String partnerId,
+  }) async {
+    return 1;
+  }
+
+  @override
+  Future<List<LocalChatMessage>> getRoomMessages({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    String? before,
+    int limit = 50,
+  }) async {
+    final conversationId = roomConversationId(roomId);
+    final pageIndex = _pageIndexes[conversationId] ?? 0;
+    final pages = _pages[conversationId] ?? const [];
+    if (pageIndex >= pages.length) {
+      return const [];
+    }
+    _pageIndexes[conversationId] = pageIndex + 1;
+    return pages[pageIndex];
+  }
+
+  @override
+  Future<LocalChatMessage> sendRoomMessage({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String body,
+  }) async {
+    return LocalChatMessage(
+      id: 'room-sent-1',
+      conversationId: roomConversationId(roomId),
+      senderId: 'me',
+      body: body,
+      createdAt: DateTime.utc(2026, 3, 2, 12, 1),
+    );
+  }
+
+  @override
+  Future<int> markRoomRead({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
   }) async {
     return 1;
   }
@@ -211,6 +286,8 @@ class _FakeMessageE2eeService extends MessageE2eeService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
   const partnerId = '11111111-1111-1111-1111-111111111111';
 
   test('syncLatest caches remote messages in local store', () async {

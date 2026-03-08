@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/chat_room.dart';
 import 'dev_http_client.dart';
 import 'message_e2ee_service.dart';
 import '../models/local_chat_message.dart';
@@ -102,6 +103,55 @@ class RemoteChatService {
   final http.Client _httpClient;
   final MessageE2eeService _e2eeService;
 
+  Future<List<ChatRoom>> listRooms({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms');
+
+    final response = await _httpClient
+        .get(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw StateError('Failed to load rooms (${response.statusCode}).');
+    }
+
+    final json = jsonDecode(response.body) as List<dynamic>;
+    return json
+        .map((raw) => ChatRoom.fromJson(raw as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<ChatRoom> createRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String name,
+    required List<String> memberIds,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms');
+
+    final response = await _httpClient
+        .post(
+          uri,
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({'name': name.trim(), 'member_ids': memberIds}),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 201) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to create room',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return ChatRoom.fromJson(json);
+  }
+
   Future<List<LocalChatMessage>> getConversation({
     required String baseUrl,
     required String accessToken,
@@ -138,6 +188,43 @@ class RemoteChatService {
       );
     }
     return result;
+  }
+
+  Future<List<LocalChatMessage>> getRoomMessages({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    String? before,
+    int limit = 50,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/messages').replace(
+      queryParameters: {
+        if (before != null && before.isNotEmpty) 'before': before,
+        'limit': '$limit',
+      },
+    );
+
+    final response = await _httpClient
+        .get(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Failed to load room messages (${response.statusCode}).',
+      );
+    }
+
+    final json = jsonDecode(response.body) as List<dynamic>;
+    final conversationId = roomConversationId(roomId);
+    return json
+        .map(
+          (raw) => _fromRoomMessageJson(
+            raw as Map<String, dynamic>,
+            conversationId: conversationId,
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<LocalChatMessage> sendMessage({
@@ -188,6 +275,37 @@ class RemoteChatService {
     );
   }
 
+  Future<LocalChatMessage> sendRoomMessage({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String body,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/messages');
+
+    final response = await _httpClient
+        .post(
+          uri,
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({'content': body}),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 201) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to send room message',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return _fromRoomMessageJson(
+      json,
+      conversationId: roomConversationId(roomId),
+    );
+  }
+
   Future<ResolvedContact> resolveContact({
     required String baseUrl,
     required String accessToken,
@@ -230,6 +348,27 @@ class RemoteChatService {
 
     if (response.statusCode != 200) {
       throw StateError('Failed to mark read (${response.statusCode}).');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final count = json['count'];
+    return count is int ? count : 0;
+  }
+
+  Future<int> markRoomRead({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/read');
+
+    final response = await _httpClient
+        .post(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw StateError('Failed to mark room read (${response.statusCode}).');
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -290,6 +429,19 @@ class RemoteChatService {
       conversationId: conversationId,
       senderId: senderId,
       body: decrypted ?? '[Encrypted message: key unavailable on this device]',
+      createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
+    );
+  }
+
+  LocalChatMessage _fromRoomMessageJson(
+    Map<String, dynamic> json, {
+    required String conversationId,
+  }) {
+    return LocalChatMessage(
+      id: json['id'] as String,
+      conversationId: conversationId,
+      senderId: json['sender_id'] as String,
+      body: (json['content'] as String?)?.trim() ?? '',
       createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
     );
   }
