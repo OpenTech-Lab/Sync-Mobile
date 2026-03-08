@@ -7,6 +7,8 @@ import '../../ui/components/molecules/language_picker.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../services/server_health_service.dart';
+import '../../services/server_preferences.dart';
+import '../../services/server_scope.dart';
 import '../../state/app_controller.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -33,11 +35,36 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late final TextEditingController _serverUrlController;
+  final _prefs = ServerPreferences();
+  List<PlanetPreset> _customPresets = [];
 
   @override
   void initState() {
     super.initState();
     _serverUrlController = TextEditingController(text: widget.initialUrl ?? '');
+    _loadCustomPresets();
+  }
+
+  Future<void> _loadCustomPresets() async {
+    final raw = await _prefs.readCustomPresets();
+    if (!mounted) return;
+    setState(() {
+      _customPresets = raw.map((e) => PlanetPreset(name: e['name']!, url: e['url']!)).toList();
+    });
+  }
+
+  Future<void> _handleContinue(String url) async {
+    final isOfficial = officialPlanetPresets.any(
+      (p) => normalizeServerUrl(p.url) == normalizeServerUrl(url),
+    );
+    if (!isOfficial && widget.planetInfo != null) {
+      final name = (widget.planetInfo!.instanceName ?? '').trim().isNotEmpty
+          ? widget.planetInfo!.instanceName!.trim()
+          : widget.planetInfo!.host;
+      await _prefs.saveCustomPreset(url, name);
+      await _loadCustomPresets();
+    }
+    await widget.onContinue(url);
   }
 
   @override
@@ -142,7 +169,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
 
             // ── presets ──
-            if (officialPlanetPresets.isNotEmpty) ...[
+            if (officialPlanetPresets.isNotEmpty || _customPresets.isNotEmpty) ...[
               const SizedBox(height: 20),
               const SizedBox(height: 14),
               Text(
@@ -158,7 +185,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Wrap(
                 spacing: 20,
                 runSpacing: 10,
-                children: officialPlanetPresets
+                children: [
+                  ...officialPlanetPresets,
+                  ..._customPresets,
+                ]
                     .map(
                       (preset) => GestureDetector(
                         onTap: () => _serverUrlController.text = preset.url,
@@ -209,7 +239,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 label: l10n.continueAction,
                 borderColor: ruleColor,
                 textColor: inkColor,
-                onTap: () => widget.onContinue(_serverUrlController.text),
+                onTap: () => _handleContinue(_serverUrlController.text),
               ),
             ],
 

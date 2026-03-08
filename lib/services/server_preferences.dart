@@ -41,6 +41,7 @@ class ServerPreferences {
   static const _serverUrlKey = 'server_url';
   static const _savedUserIdPrefix = 'saved_user_id_';
   static const _planetInfoPrefix = 'planet_info_';
+  static const _customPresetsKey = 'custom_planet_presets';
 
   Future<String?> readServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -159,5 +160,33 @@ class ServerPreferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_planetInfoKey(serverUrl));
     await prefs.remove(_legacyPlanetInfoKey(serverUrl));
+  }
+
+  Future<List<Map<String, String>>> readCustomPresets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customPresetsKey);
+    if (raw == null || raw.trim().isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map((e) => {'name': (e['name'] as String?) ?? '', 'url': (e['url'] as String?) ?? ''})
+          .where((e) => e['name']!.isNotEmpty && e['url']!.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveCustomPreset(String url, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = await readCustomPresets();
+    final normalizedUrl = normalizeServerUrl(url);
+    // Remove any existing entry for this URL, then prepend the latest.
+    final updated = [
+      {'name': name, 'url': normalizedUrl},
+      ...existing.where((e) => normalizeServerUrl(e['url']!) != normalizedUrl),
+    ];
+    await prefs.setString(_customPresetsKey, jsonEncode(updated));
   }
 }
