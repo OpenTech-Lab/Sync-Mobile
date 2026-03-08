@@ -643,6 +643,41 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get profileTrustFriendAddsLabel => 'friend adds today';
+
+  @override
+  String get profileTrustChallengeStateChallenged =>
+      'Your account is under review. Some actions may be limited.';
+
+  @override
+  String get profileTrustChallengeStateFrozen =>
+      'Your account progression is paused. Contact support if you believe this is an error.';
+
+  @override
+  String get profileTrustMilestoneLevelUp => 'Level Up!';
+
+  @override
+  String get profileTrustMilestoneRankUp => 'Rank Up!';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => 'New file type unlocked!';
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return 'You reached $level. Keep it up!';
+  }
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return 'You earned $rank. New perks are active.';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String fileType) {
+    return 'You can now send $fileType files.';
+  }
+
+  @override
   String get profileFriendQrTitle => 'FRIEND QR';
 
   @override

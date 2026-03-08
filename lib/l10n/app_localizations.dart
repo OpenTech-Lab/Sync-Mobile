@@ -1284,6 +1284,36 @@ abstract class AppLocalizations {
   /// **'{used} / {limit}'**
   String profileTrustUsage(int used, int limit);
 
+  /// Label for daily friend-add limit row.
+  ///
+  /// In en, this message translates to:
+  /// **'friend adds today'**
+  String get profileTrustFriendAddsLabel;
+
+  /// Challenge state banner — account under review.
+  String get profileTrustChallengeStateChallenged;
+
+  /// Challenge state banner — account progression frozen.
+  String get profileTrustChallengeStateFrozen;
+
+  /// Milestone toast headline for level-up.
+  String get profileTrustMilestoneLevelUp;
+
+  /// Milestone toast headline for rank-up.
+  String get profileTrustMilestoneRankUp;
+
+  /// Milestone toast headline for attachment-type unlock.
+  String get profileTrustMilestoneUnlockAttachmentType;
+
+  /// Milestone toast detail copy for level-up.
+  String profileTrustMilestoneLevelDetail(String level);
+
+  /// Milestone toast detail copy for rank-up.
+  String profileTrustMilestoneRankDetail(String rank);
+
+  /// Milestone toast detail copy for attachment-type unlock.
+  String profileTrustMilestoneUnlockDetail(String fileType);
+
   /// No description provided for @profileFriendQrTitle.
   ///
   /// In en, this message translates to:

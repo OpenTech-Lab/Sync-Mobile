@@ -643,6 +643,39 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get profileTrustFriendAddsLabel => '今日加好友次数';
+
+  @override
+  String get profileTrustChallengeStateChallenged => '您的账号正在审核中，部分操作可能受限。';
+
+  @override
+  String get profileTrustChallengeStateFrozen => '您的账号进度已暂停，如有疑问请联系客服。';
+
+  @override
+  String get profileTrustMilestoneLevelUp => '等级提升！';
+
+  @override
+  String get profileTrustMilestoneRankUp => '段位提升！';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => '解锁新文件类型！';
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return '您已达到 $level，继续保持！';
+  }
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return '您获得了 $rank，新特权已生效。';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String fileType) {
+    return '您现在可以发送 $fileType 文件。';
+  }
+
+  @override
   String get profileFriendQrTitle => '好友 QR';
 
   @override
@@ -1447,6 +1480,39 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String profileTrustUsage(int used, int limit) {
     return '$used / $limit';
+  }
+
+  @override
+  String get profileTrustFriendAddsLabel => '今日加好友次数';
+
+  @override
+  String get profileTrustChallengeStateChallenged => '您的账号正在审核中，部分操作可能受限。';
+
+  @override
+  String get profileTrustChallengeStateFrozen => '您的账号进度已暂停，如有疑问请联系客服。';
+
+  @override
+  String get profileTrustMilestoneLevelUp => '等级提升！';
+
+  @override
+  String get profileTrustMilestoneRankUp => '段位提升！';
+
+  @override
+  String get profileTrustMilestoneUnlockAttachmentType => '解锁新文件类型！';
+
+  @override
+  String profileTrustMilestoneLevelDetail(String level) {
+    return '您已达到 $level，继续保持！';
+  }
+
+  @override
+  String profileTrustMilestoneRankDetail(String rank) {
+    return '您获得了 $rank，新特权已生效。';
+  }
+
+  @override
+  String profileTrustMilestoneUnlockDetail(String fileType) {
+    return '您现在可以发送 $fileType 文件。';
   }
 
   @override

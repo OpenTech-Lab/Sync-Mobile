@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../constants/feature_flags.dart';
 import '../../constants/planet_presets.dart';
 import '../../models/friend_qr_payload.dart';
 import '../../models/qr_login_payload.dart';
@@ -701,6 +702,57 @@ class _TrustSummaryCard extends StatelessWidget {
             ),
             inkColor: inkColor,
           ),
+          const SizedBox(height: 8),
+          _TrustLimitRow(
+            label: l10n.profileTrustFriendAddsLabel,
+            value: _formatLimit(
+              l10n,
+              enforced: trust.dailyFriendAddsEnforced,
+              limit: trust.dailyFriendAddLimit,
+              used: trust.dailyFriendAddsSent,
+            ),
+            inkColor: inkColor,
+          ),
+          if (trust.challengeState == 'challenged' ||
+              trust.challengeState == 'frozen') ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: trust.challengeState == 'frozen'
+                    ? Colors.red.withValues(alpha: 0.08)
+                    : Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: trust.challengeState == 'frozen'
+                      ? Colors.red.withValues(alpha: 0.4)
+                      : Colors.orange.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Text(
+                trust.challengeState == 'frozen'
+                    ? l10n.profileTrustChallengeStateFrozen
+                    : l10n.profileTrustChallengeStateChallenged,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: trust.challengeState == 'frozen'
+                      ? Colors.red.shade700
+                      : Colors.orange.shade800,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+          if (trust.pendingMilestoneNotification != null) ...[
+            const SizedBox(height: 12),
+            _MilestoneBanner(
+              notification: trust.pendingMilestoneNotification!,
+              inkColor: inkColor,
+              ruleColor: ruleColor,
+            ),
+          ],
         ],
       ),
     );
@@ -785,6 +837,145 @@ class _TrustLimitRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MilestoneBanner extends StatefulWidget {
+  const _MilestoneBanner({
+    required this.notification,
+    required this.inkColor,
+    required this.ruleColor,
+  });
+
+  final TrustMilestoneNotification notification;
+  final Color inkColor;
+  final Color ruleColor;
+
+  @override
+  State<_MilestoneBanner> createState() => _MilestoneBannerState();
+}
+
+class _MilestoneBannerState extends State<_MilestoneBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kMilestoneAnimationsEnabled) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 350),
+      );
+      _opacity = CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      );
+      _scale = Tween<double>(begin: 0.92, end: 1.0).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+      );
+      _controller.forward();
+    } else {
+      _controller = AnimationController(vsync: this);
+      _opacity = const AlwaysStoppedAnimation(1.0);
+      _scale = const AlwaysStoppedAnimation(1.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final headline = switch (widget.notification.kind) {
+      TrustMilestoneKind.rankUp => l10n.profileTrustMilestoneRankUp,
+      TrustMilestoneKind.unlockAttachmentType =>
+        l10n.profileTrustMilestoneUnlockAttachmentType,
+      TrustMilestoneKind.levelUp => l10n.profileTrustMilestoneLevelUp,
+    };
+    final detail = switch (widget.notification.kind) {
+      TrustMilestoneKind.rankUp =>
+        l10n.profileTrustMilestoneRankDetail(widget.notification.newValue),
+      TrustMilestoneKind.unlockAttachmentType =>
+        l10n.profileTrustMilestoneUnlockDetail(
+          widget.notification.unlockedValue ?? widget.notification.newValue,
+        ),
+      TrustMilestoneKind.levelUp =>
+        l10n.profileTrustMilestoneLevelDetail(widget.notification.newValue),
+    };
+
+    final banner = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: widget.ruleColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: widget.ruleColor),
+            ),
+            child: Text(
+              widget.notification.badgeLabel,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: widget.inkColor,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headline,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: widget.inkColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w300,
+                    color: AppPalette.neutral500,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!kMilestoneAnimationsEnabled) return banner;
+
+    return FadeTransition(
+      opacity: _opacity,
+      child: ScaleTransition(
+        scale: _scale,
+        alignment: Alignment.topCenter,
+        child: banner,
+      ),
     );
   }
 }

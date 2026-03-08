@@ -26,6 +26,43 @@ class UserProfile {
   }
 }
 
+enum TrustMilestoneKind { levelUp, rankUp, unlockAttachmentType }
+
+class TrustMilestoneNotification {
+  const TrustMilestoneNotification({
+    required this.kind,
+    required this.badgeLabel,
+    required this.headlineKey,
+    required this.detailKey,
+    required this.newValue,
+    this.unlockedValue,
+  });
+
+  final TrustMilestoneKind kind;
+  final String badgeLabel;
+  final String headlineKey;
+  final String detailKey;
+  final String newValue;
+  final String? unlockedValue;
+
+  factory TrustMilestoneNotification.fromJson(Map<String, dynamic> json) {
+    final kindStr = (json['kind'] as String?)?.trim() ?? '';
+    final kind = switch (kindStr) {
+      'rank_up' => TrustMilestoneKind.rankUp,
+      'unlock_attachment_type' => TrustMilestoneKind.unlockAttachmentType,
+      _ => TrustMilestoneKind.levelUp,
+    };
+    return TrustMilestoneNotification(
+      kind: kind,
+      badgeLabel: (json['badge_label'] as String?)?.trim() ?? '',
+      headlineKey: (json['headline_key'] as String?)?.trim() ?? '',
+      detailKey: (json['detail_key'] as String?)?.trim() ?? '',
+      newValue: (json['new_value'] as String?)?.trim() ?? '',
+      unlockedValue: (json['unlocked_value'] as String?)?.trim(),
+    );
+  }
+}
+
 class UserTrustSnapshot {
   const UserTrustSnapshot({
     required this.activeDays,
@@ -43,6 +80,12 @@ class UserTrustSnapshot {
     required this.dailyAttachmentSendsSent,
     required this.dailyAttachmentSendsRemaining,
     required this.allowedAttachmentTypes,
+    required this.dailyFriendAddsEnforced,
+    required this.dailyFriendAddLimit,
+    required this.dailyFriendAddsSent,
+    required this.dailyFriendAddsRemaining,
+    required this.challengeState,
+    this.pendingMilestoneNotification,
   });
 
   final int activeDays;
@@ -60,6 +103,13 @@ class UserTrustSnapshot {
   final int dailyAttachmentSendsSent;
   final int? dailyAttachmentSendsRemaining;
   final List<String> allowedAttachmentTypes;
+  final bool dailyFriendAddsEnforced;
+  final int? dailyFriendAddLimit;
+  final int dailyFriendAddsSent;
+  final int? dailyFriendAddsRemaining;
+  /// One of: "none", "challenged", "frozen".
+  final String challengeState;
+  final TrustMilestoneNotification? pendingMilestoneNotification;
 
   factory UserTrustSnapshot.fromJson(Map<String, dynamic> json) {
     return UserTrustSnapshot(
@@ -93,6 +143,19 @@ class UserTrustSnapshot {
               .map((value) => value.trim())
               .where((value) => value.isNotEmpty)
               .toList(growable: false),
+      dailyFriendAddsEnforced: json['daily_friend_adds_enforced'] == true,
+      dailyFriendAddLimit: _readNullableInt(json['daily_friend_add_limit']),
+      dailyFriendAddsSent: _readInt(json['daily_friend_adds_sent']),
+      dailyFriendAddsRemaining:
+          _readNullableInt(json['daily_friend_adds_remaining']),
+      challengeState: (json['challenge_state'] as String?)?.trim() ?? 'none',
+      pendingMilestoneNotification:
+          json['pending_milestone_notification'] is Map<String, dynamic>
+              ? TrustMilestoneNotification.fromJson(
+                  json['pending_milestone_notification']
+                      as Map<String, dynamic>,
+                )
+              : null,
     );
   }
 
