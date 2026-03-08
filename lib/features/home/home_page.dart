@@ -141,7 +141,7 @@ class HomeTab extends ConsumerWidget {
                       .watch(userAvatarBase64Provider(id))
                       .value;
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 2),
                     leading: CircleAvatar(
                       radius: 18,
                       backgroundColor: avatarBase64 != null
