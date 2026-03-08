@@ -473,6 +473,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     String displayName = resolved.displayHandle;
     String? avatarBase64;
     String? description;
+    int? trustLevel;
+    String? trustRank;
     try {
       final profile = await ref
           .read(remoteUserProfileServiceProvider)
@@ -485,6 +487,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         displayName = profile.username.trim();
       }
       avatarBase64 = profile.avatarBase64;
+      trustLevel = profile.trust?.level;
+      trustRank = profile.trust?.rank;
     } catch (_) {
       // fallback to resolved handle only
     }
@@ -499,6 +503,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       displayHandle: resolved.displayHandle,
       avatarBase64: avatarBase64,
       description: description,
+      level: trustLevel,
+      rank: trustRank,
     );
   }
 
@@ -532,6 +538,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
             friendAddedAt: friendAddedAt,
             sentMessageCount: sentMessageCount,
             description: resolved.description,
+            level: resolved.level,
+            rank: resolved.rank,
           ),
         ),
       );
@@ -828,6 +836,22 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final friendAddedAt = isFriend
         ? await prefs.readFriendAddedAt(widget.serverUrl, partnerId)
         : null;
+    int? trustLevel;
+    String? trustRank;
+    try {
+      final accessToken = await _effectiveAccessToken();
+      final profile = await ref
+          .read(remoteUserProfileServiceProvider)
+          .getUserProfile(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            userId: partnerId,
+          );
+      trustLevel = profile.trust?.level;
+      trustRank = profile.trust?.rank;
+    } catch (_) {
+      // trust data is optional
+    }
     if (!mounted) {
       return;
     }
@@ -841,6 +865,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           friendAddedAt: friendAddedAt,
           sentMessageCount: sentMessageCount,
           description: description,
+          level: trustLevel,
+          rank: trustRank,
         ),
       ),
     );
@@ -1377,6 +1403,8 @@ class _ResolvedTargetProfile {
     required this.displayHandle,
     required this.avatarBase64,
     required this.description,
+    this.level,
+    this.rank,
   });
 
   final String partnerId;
@@ -1385,6 +1413,8 @@ class _ResolvedTargetProfile {
   final String displayHandle;
   final String? avatarBase64;
   final String? description;
+  final int? level;
+  final String? rank;
 }
 
 // —————————————————————————————————————————————————————

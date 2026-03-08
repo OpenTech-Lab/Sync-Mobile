@@ -18,6 +18,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
     this.friendAddedAt,
     this.sentMessageCount,
     this.description,
+    this.level,
+    this.rank,
   });
 
   final String displayName;
@@ -27,6 +29,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
   final DateTime? friendAddedAt;
   final int? sentMessageCount;
   final String? description;
+  final int? level;
+  final String? rank;
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +126,20 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          if (level != null || (rank != null && rank!.isNotEmpty)) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (level != null)
+                  _trustBadge('Lv $level', isDark),
+                if (level != null && rank != null && rank!.isNotEmpty)
+                  const SizedBox(width: 6),
+                if (rank != null && rank!.isNotEmpty)
+                  _trustBadge(rank!, isDark),
+              ],
+            ),
+          ],
           if (isFriend) ...[
             const SizedBox(height: 8),
             Row(
@@ -253,6 +271,24 @@ class ChatTargetProfileScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _trustBadge(String label, bool isDark) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: isDark ? AppPalette.neutral800 : AppPalette.neutral100,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+        color: isDark ? AppPalette.neutral300 : AppPalette.neutral500,
+      ),
+    ),
+  );
 }
 
 String _friendSinceLabel(DateTime value) {

@@ -214,6 +214,21 @@ class HomeTab extends ConsumerWidget {
                         serverUrl,
                         id,
                       );
+                      int? trustLevel;
+                      String? trustRank;
+                      try {
+                        final profile = await ref
+                            .read(remoteUserProfileServiceProvider)
+                            .getUserProfile(
+                              baseUrl: serverUrl,
+                              accessToken: accessToken,
+                              userId: id,
+                            );
+                        trustLevel = profile.trust?.level;
+                        trustRank = profile.trust?.rank;
+                      } catch (_) {
+                        // trust data is optional
+                      }
                       if (!context.mounted) {
                         return;
                       }
@@ -228,6 +243,8 @@ class HomeTab extends ConsumerWidget {
                                 friendAddedAt: friendAddedAt,
                                 sentMessageCount: sentMessageCount,
                                 description: description,
+                                level: trustLevel,
+                                rank: trustRank,
                               ),
                             ),
                           );
@@ -348,6 +365,7 @@ class _ProfileCard extends ConsumerWidget {
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
+    final trust = ref.watch(myTrustSnapshotProvider).asData?.value;
     final displayName = (currentUsername ?? '').trim().isEmpty
         ? (currentUserId.length >= 8
               ? currentUserId.substring(0, 8)
@@ -423,6 +441,17 @@ class _ProfileCard extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (trust != null) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      _HomeTrustBadge(label: 'Lv ${trust.level}', mutedColor: mutedColor),
+                      if (trust.rank.isNotEmpty)
+                        _HomeTrustBadge(label: trust.rank, mutedColor: mutedColor),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 2),
                 Text(
                   l10n.homeViewProfile,
@@ -436,6 +465,34 @@ class _ProfileCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small pill badge shown on the home profile card for level / rank.
+// ---------------------------------------------------------------------------
+class _HomeTrustBadge extends StatelessWidget {
+  const _HomeTrustBadge({required this.label, required this.mutedColor});
+  final String label;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: mutedColor.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w400,
+          color: mutedColor,
+        ),
       ),
     );
   }
