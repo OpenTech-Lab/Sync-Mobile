@@ -251,6 +251,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     widget.onPartnerChanged(null);
   }
 
+  Future<void> _clearConversation(String conversationId) async {
+    if (_activePartnerId == conversationId) {
+      _closeActiveConversation();
+    }
+    final repository = ref.read(chatRepositoryProvider);
+    await repository.clearConversation(conversationId);
+    ref.invalidate(conversationSummariesProvider);
+  }
+
   Future<void> _syncRooms() async {
     try {
       final accessToken = await _effectiveAccessToken();
@@ -1458,6 +1467,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   onOpenConversation: (id) async {
                     await _openPartner(id);
                   },
+                  onClearConversation: _clearConversation,
                   onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
                   onStartNewChat: _openNewFriendOrChat,
                   onAddFriend: _openNewFriendOrChat,
@@ -1822,6 +1832,7 @@ class _ConversationStarter extends ConsumerWidget {
     required this.summariesById,
     required this.onQuickAction,
     required this.onOpenConversation,
+    required this.onClearConversation,
     required this.onMarkAllRead,
     required this.onStartNewChat,
     required this.onAddFriend,
@@ -1834,6 +1845,7 @@ class _ConversationStarter extends ConsumerWidget {
   final Map<String, ConversationSummary> summariesById;
   final ValueChanged<_ChatQuickAction> onQuickAction;
   final ValueChanged<String> onOpenConversation;
+  final Future<void> Function(String) onClearConversation;
   final Future<void> Function() onMarkAllRead;
   final VoidCallback onStartNewChat;
   final VoidCallback onAddFriend;
@@ -2054,7 +2066,7 @@ class _ConversationStarter extends ConsumerWidget {
               ? l10n.chatDefaultRoom
               : null);
 
-    return Column(
+    final rowContent = Column(
       children: [
         InkWell(
           onTap: () => onOpenConversation(userId),
@@ -2163,6 +2175,39 @@ class _ConversationStarter extends ConsumerWidget {
           ),
         ),
       ],
+      );
+
+    if (isRoom) return rowContent;
+
+    return Dismissible(
+      key: ValueKey('convo_$userId'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: AppPalette.danger700.withValues(alpha: 0.85),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.delete_outline, color: AppPalette.white, size: 20),
+            const SizedBox(height: 2),
+            Text(
+              l10n.chatClearHistory,
+              style: const TextStyle(
+                color: AppPalette.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+      confirmDismiss: (_) async {
+        await onClearConversation(userId);
+        return true;
+      },
+      onDismissed: (_) {},
+      child: rowContent,
     );
   }
 }

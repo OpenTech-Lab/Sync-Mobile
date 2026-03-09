@@ -1002,6 +1002,12 @@ abstract class AppLocalizations {
   /// **'Room created'**
   String get chatRoomCreated;
 
+  /// No description provided for @chatClearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get chatClearHistory;
+
   /// No description provided for @chatDefaultRoom.
   ///
   /// In en, this message translates to:

@@ -490,6 +490,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRoomCreated => 'Room created';
 
   @override
+  String get chatClearHistory => 'Clear';
+
+  @override
   String get chatDefaultRoom => 'Room';
 
   @override
@@ -1370,6 +1373,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatRoomCreated => '已建立群組';
+
+  @override
+  String get chatClearHistory => '清除';
 
   @override
   String get chatDefaultRoom => '群組';

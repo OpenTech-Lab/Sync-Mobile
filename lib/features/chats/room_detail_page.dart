@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/chat_room.dart';
-import '../../services/remote_chat_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
-enum RoomDetailAction { left, deleted }
+enum RoomDetailAction { left, deleted, startChat }
 
 class RoomDetailPage extends ConsumerStatefulWidget {
   const RoomDetailPage({
@@ -213,6 +212,14 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         const SizedBox(height: 20),
 
         // ── actions ──
+        OutlineActionButton(
+          label: 'Open chat',
+          borderColor: ruleColor,
+          textColor: inkColor,
+          disabled: _actionInProgress,
+          onTap: () => Navigator.of(context).pop(RoomDetailAction.startChat),
+        ),
+        const SizedBox(height: 12),
         OutlineActionButton(
           label: 'Leave this room',
           borderColor: ruleColor,

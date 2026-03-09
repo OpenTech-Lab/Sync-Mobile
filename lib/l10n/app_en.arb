@@ -258,6 +258,7 @@
   "chatCreateRoomNoFriends": "Add friends first, or create a room and invite them later.",
   "chatCreateRoomAction": "C R E A T E",
   "chatRoomCreated": "Room created",
+  "chatClearHistory": "Clear",
   "chatDefaultRoom": "Room",
   "chatScanFriendQrInstruction": "point camera at a friend's qr code",
   "chatTargetCancelFriend": "cancel friend",

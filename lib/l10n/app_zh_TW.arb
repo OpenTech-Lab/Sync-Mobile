@@ -227,6 +227,7 @@
   "chatCreateRoomNoFriends": "先加入好友，或先建立群組後再邀請。",
   "chatCreateRoomAction": "建 立 群 組",
   "chatRoomCreated": "已建立群組",
+  "chatClearHistory": "清除",
   "chatDefaultRoom": "群組",
   "chatScanFriendQrInstruction": "將鏡頭對準好友的 QR 碼",
   "chatTargetCancelFriend": "取消好友",

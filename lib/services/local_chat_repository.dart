@@ -136,6 +136,8 @@ class InMemoryChatRepository implements ChatRepository {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final roomId = tryParseRoomId(entry.key);
       final room = roomId == null ? null : _rooms[roomId];
+      // Skip room conversations whose room no longer exists (e.g. after delete).
+      if (roomId != null && room == null) continue;
       summaries[entry.key] = ConversationSummary(
         conversationId: entry.key,
         lastBody: sorted.first.body,
@@ -325,6 +327,8 @@ class LocalChatRepository implements ChatRepository {
       seenConversationIds.add(conversationId);
       final roomId = tryParseRoomId(conversationId);
       final room = roomId == null ? null : await readRoom(roomId);
+      // Skip room conversations whose room no longer exists (e.g. after delete).
+      if (roomId != null && room == null) continue;
       summaries[conversationId] = ConversationSummary(
         conversationId: conversationId,
         lastBody: map['body'] as String,

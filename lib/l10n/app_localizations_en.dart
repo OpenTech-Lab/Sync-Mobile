@@ -490,6 +490,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoomCreated => 'Room created';
 
   @override
+  String get chatClearHistory => 'Clear';
+
+  @override
   String get chatDefaultRoom => 'Room';
 
   @override

@@ -7,8 +7,10 @@ import '../../ui/components/atoms/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
+import '../../models/chat_room.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../chats/chat_target_profile_page.dart';
+import '../chats/room_detail_page.dart';
 import '../profile/my_profile_page.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
@@ -66,6 +68,13 @@ class HomeTab extends ConsumerWidget {
               mutedColor: AppPalette.neutral500,
             ),
             const SizedBox(height: 32),
+            _RoomsSection(
+              serverUrl: serverUrl,
+              currentUserId: currentUserId,
+              inkColor: inkColor,
+              ruleColor: ruleColor,
+              onOpenChat: onOpenChat,
+            ),
             if (totalUnread > 0) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,6 +320,145 @@ String _planetNameFromServerUrl(String serverUrl) {
     return host;
   }
   return normalized;
+}
+
+// ---------------------------------------------------------------------------
+// Rooms section shown on the home tab.
+// ---------------------------------------------------------------------------
+class _RoomsSection extends ConsumerWidget {
+  const _RoomsSection({
+    required this.serverUrl,
+    required this.currentUserId,
+    required this.inkColor,
+    required this.ruleColor,
+    this.onOpenChat,
+  });
+
+  final String serverUrl;
+  final String currentUserId;
+  final Color inkColor;
+  final Color ruleColor;
+  final ValueChanged<String>? onOpenChat;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roomsAsync = ref.watch(roomConversationsProvider);
+    final rooms = roomsAsync.value ?? const <ChatRoom>[];
+    if (rooms.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(text: 'Rooms', ruleColor: ruleColor),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: rooms.length,
+          itemBuilder: (ctx, i) {
+            final room = rooms[i];
+            return _RoomRow(
+              room: room,
+              inkColor: inkColor,
+              onTap: () async {
+                final action = await Navigator.of(context)
+                    .push<RoomDetailAction>(
+                      MaterialPageRoute<RoomDetailAction>(
+                        builder: (_) => RoomDetailPage(
+                          serverUrl: serverUrl,
+                          roomId: room.id,
+                          currentUserId: currentUserId,
+                        ),
+                      ),
+                    );
+                if (!context.mounted || action == null) return;
+                if (action == RoomDetailAction.startChat) {
+                  onOpenChat?.call(room.conversationId);
+                } else if (action == RoomDetailAction.left ||
+                    action == RoomDetailAction.deleted) {
+                  ref.invalidate(roomConversationsProvider);
+                }
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+}
+
+class _RoomRow extends StatelessWidget {
+  const _RoomRow({
+    required this.room,
+    required this.inkColor,
+    required this.onTap,
+  });
+
+  final ChatRoom room;
+  final Color inkColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const palette = [
+      AppPalette.avatarTone1,
+      AppPalette.avatarTone2,
+      AppPalette.avatarTone3,
+      AppPalette.avatarTone4,
+      AppPalette.avatarTone5,
+      AppPalette.avatarTone6,
+    ];
+    final hash = room.name.codeUnits.fold(0, (a, b) => a ^ b);
+    final avatarBg = palette[hash.abs() % palette.length];
+    final initials = room.name.trim().isEmpty
+        ? '#'
+        : room.name.trim().substring(0, 1).toUpperCase();
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+      leading: CircleAvatar(
+        radius: 18,
+        backgroundColor: avatarBg,
+        child: Text(
+          initials,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
+            color: AppPalette.white,
+          ),
+        ),
+      ),
+      title: Text(
+        room.name,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w300,
+          color: inkColor,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: room.unreadCount > 0
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppPalette.danger700,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${room.unreadCount}',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: AppPalette.white,
+                ),
+              ),
+            )
+          : null,
+      onTap: onTap,
+    );
+  }
 }
 
 class _SectionLabel extends StatelessWidget {
