@@ -54,6 +54,11 @@ class ChatsTab extends ConsumerStatefulWidget {
 }
 
 class _ChatsTabState extends ConsumerState<ChatsTab> {
+  static const _conversationListPaneKey = ValueKey<String>('chats-list-pane');
+  static const _conversationDetailPaneKey = ValueKey<String>(
+    'chats-conversation-pane',
+  );
+
   final _imagePicker = ImagePicker();
   final _partnerController = TextEditingController();
   final _partnerFocusNode = FocusNode();
@@ -255,6 +260,44 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
     setState(() => _activePartnerId = null);
     widget.onPartnerChanged(null);
+  }
+
+  Widget _buildChatPaneTransition(Widget child, Animation<double> animation) {
+    final pane = child.key == _conversationDetailPaneKey
+        ? ChatPaneKind.conversation
+        : ChatPaneKind.list;
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOutCubic,
+    );
+    return ClipRect(
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: chatPaneTransitionBeginOffset(pane),
+          end: Offset.zero,
+        ).animate(curvedAnimation),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildChatPaneLayout(
+    Widget? currentChild,
+    List<Widget> previousChildren,
+  ) {
+    final currentIsConversation =
+        currentChild?.key == _conversationDetailPaneKey;
+    final currentChildWidgets = currentChild == null
+        ? const <Widget>[]
+        : <Widget>[currentChild];
+    return Stack(
+      fit: StackFit.expand,
+      alignment: Alignment.topLeft,
+      children: currentIsConversation
+          ? <Widget>[...previousChildren, ...currentChildWidgets]
+          : <Widget>[...currentChildWidgets, ...previousChildren],
+    );
   }
 
   Future<void> _clearConversation(String conversationId) async {
@@ -499,9 +542,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     return ChatTargetInput(friendId: value, serverUrl: defaultServerUrl);
   }
 
-  Future<ResolvedTargetProfile?> _resolveTarget(
-    ChatTargetInput target,
-  ) async {
+  Future<ResolvedTargetProfile?> _resolveTarget(ChatTargetInput target) async {
     final friendId = target.friendId.trim();
     final serverUrl = target.serverUrl.trim();
 
@@ -1410,6 +1451,231 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
+    final listPane = KeyedSubtree(
+      key: _conversationListPaneKey,
+      child: SafeArea(
+        child: ConversationStarter(
+          controller: _partnerController,
+          focusNode: _partnerFocusNode,
+          unreadCounts: unreadCounts,
+          orderedConversationIds: orderedConversationIds,
+          summariesById: summariesById,
+          onQuickAction: (action) {
+            switch (action) {
+              case ChatQuickAction.newRoom:
+                _openNewRoom();
+                break;
+              case ChatQuickAction.newFriendOrChat:
+                _openNewFriendOrChat();
+                break;
+              case ChatQuickAction.scanFriendQr:
+                _scanQrAndOpen();
+                break;
+            }
+          },
+          onOpenConversation: (id) async {
+            await _openPartner(id);
+          },
+          onClearConversation: _clearConversation,
+          onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
+          onStartNewChat: _openNewFriendOrChat,
+          onAddFriend: _openNewFriendOrChat,
+        ),
+      ),
+    );
+    final conversationPane = KeyedSubtree(
+      key: _conversationDetailPaneKey,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: (details) {
+          final velocity = details.primaryVelocity ?? 0;
+          if (velocity > 450) {
+            _closeActiveConversation();
+          }
+        },
+        child: Column(
+          children: [
+            // Messages list
+            Expanded(
+              child: messagesAsync == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : messagesAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text('$err', textAlign: TextAlign.center),
+                        ),
+                      ),
+                      data: (messages) {
+                        final activePartnerId = _activePartnerId;
+                        final draftMessages = activePartnerId == null
+                            ? const <OutgoingMessageDraft>[]
+                            : (_outgoingDraftsByPartner[activePartnerId] ??
+                                  const <OutgoingMessageDraft>[]);
+                        final draftById = <String, OutgoingMessageDraft>{
+                          for (final draft in draftMessages) draft.id: draft,
+                        };
+                        final displayedMessages = <LocalChatMessage>[
+                          ...draftMessages.map(
+                            (draft) => LocalChatMessage(
+                              id: draft.id,
+                              conversationId: draft.partnerId,
+                              senderId: widget.currentUserId,
+                              body: draft.body,
+                              createdAt: draft.createdAt,
+                            ),
+                          ),
+                          ...messages,
+                        ];
+                        _prefetchVisibleProfiles(
+                          displayedMessages.map((m) => m.senderId),
+                        );
+
+                        return displayedMessages.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.chat_bubble_outline,
+                                      size: 48,
+                                      color: cs.outlineVariant,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _l10n.chatNoMessagesYet,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                reverse: true,
+                                controller: _messageScrollController,
+                                padding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  8,
+                                  12,
+                                  8,
+                                ),
+                                itemCount: displayedMessages.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 6),
+                                itemBuilder: (ctx, i) {
+                                  final message = displayedMessages[i];
+                                  final draft = draftById[message.id];
+                                  final showDayDivider =
+                                      i == displayedMessages.length - 1 ||
+                                      !isSameDay(
+                                        message.createdAt,
+                                        displayedMessages[i + 1].createdAt,
+                                      );
+                                  return Column(
+                                    children: [
+                                      if (showDayDivider)
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            0,
+                                            8,
+                                            0,
+                                            6,
+                                          ),
+                                          child: DayDivider(
+                                            label: dayLabel(
+                                              context,
+                                              message.createdAt,
+                                            ),
+                                          ),
+                                        ),
+                                      MessageBubble(
+                                        key: ValueKey(message.id),
+                                        message: message,
+                                        isMine:
+                                            message.senderId ==
+                                            widget.currentUserId,
+                                        currentUserId: widget.currentUserId,
+                                        partnerId: _activePartnerId!,
+                                        isRoomConversation:
+                                            isRoomConversationId(
+                                              _activePartnerId!,
+                                            ),
+                                        onAvatarTap:
+                                            message.senderId ==
+                                                widget.currentUserId
+                                            ? null
+                                            : () => _openUserProfile(
+                                                message.senderId,
+                                              ),
+                                        stickers: stickers,
+                                        serverUrl: widget.serverUrl,
+                                        accessToken: widget.accessToken,
+                                        deliveryState: draft?.state,
+                                        statusLabel: draft?.statusLabel,
+                                        onRetryTap: draft == null
+                                            ? null
+                                            : () => _retryOutgoingDraft(draft),
+                                        typingStyleModeEnabled:
+                                            typingStyleModeEnabled,
+                                        typingStyleSpeedMs: typingStyleSpeedMs,
+                                        animateAsDraft: draft != null,
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                      },
+                    ),
+            ),
+
+            // Typing indicator
+            if (isTargetTyping)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _l10n.chatTypingIndicator(
+                      activeDisplayName ?? _l10n.chatDefaultPartner,
+                    ),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Composer
+            SafeArea(
+              top: false,
+              child: Composer(
+                messageController: _messageController,
+                selectedMediaBytes: _selectedMediaBytes,
+                selectedMediaName: _selectedMediaName,
+                stickers: stickers,
+                onChanged: _onComposerChanged,
+                onSend: _sendMessage,
+                onPickMedia: _pickMedia,
+                onClearMedia: _clearMedia,
+                onStickerSelected: (sticker) async {
+                  if (_activePartnerId == null) return;
+                  await _sendMessageWithOptimisticBubble(
+                    '[sticker:${sticker.id}:${sticker.name}]',
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    final activePane = inConversation ? conversationPane : listPane;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -1449,239 +1715,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: _activePartnerId == null
-            ? SafeArea(
-                child: ConversationStarter(
-                  controller: _partnerController,
-                  focusNode: _partnerFocusNode,
-                  unreadCounts: unreadCounts,
-                  orderedConversationIds: orderedConversationIds,
-                  summariesById: summariesById,
-                  onQuickAction: (action) {
-                    switch (action) {
-                      case ChatQuickAction.newRoom:
-                        _openNewRoom();
-                        break;
-                      case ChatQuickAction.newFriendOrChat:
-                        _openNewFriendOrChat();
-                        break;
-                      case ChatQuickAction.scanFriendQr:
-                        _scanQrAndOpen();
-                        break;
-                    }
-                  },
-                  onOpenConversation: (id) async {
-                    await _openPartner(id);
-                  },
-                  onClearConversation: _clearConversation,
-                  onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
-                  onStartNewChat: _openNewFriendOrChat,
-                  onAddFriend: _openNewFriendOrChat,
-                ),
-              )
-            : GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onHorizontalDragEnd: (details) {
-                  final velocity = details.primaryVelocity ?? 0;
-                  if (velocity > 450) {
-                    _closeActiveConversation();
-                  }
-                },
-                child: Column(
-                  children: [
-                    // Messages list
-                    Expanded(
-                      child: messagesAsync == null
-                          ? const Center(child: CircularProgressIndicator())
-                          : messagesAsync.when(
-                              loading: () => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              error: (err, _) => Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: Text(
-                                    '$err',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                              data: (messages) {
-                                final activePartnerId = _activePartnerId;
-                                final draftMessages = activePartnerId == null
-                                    ? const <OutgoingMessageDraft>[]
-                                    : (_outgoingDraftsByPartner[activePartnerId] ??
-                                          const <OutgoingMessageDraft>[]);
-                                final draftById =
-                                    <String, OutgoingMessageDraft>{
-                                      for (final draft in draftMessages)
-                                        draft.id: draft,
-                                    };
-                                final displayedMessages = <LocalChatMessage>[
-                                  ...draftMessages.map(
-                                    (draft) => LocalChatMessage(
-                                      id: draft.id,
-                                      conversationId: draft.partnerId,
-                                      senderId: widget.currentUserId,
-                                      body: draft.body,
-                                      createdAt: draft.createdAt,
-                                    ),
-                                  ),
-                                  ...messages,
-                                ];
-                                _prefetchVisibleProfiles(
-                                  displayedMessages.map((m) => m.senderId),
-                                );
-
-                                return displayedMessages.isEmpty
-                                    ? Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.chat_bubble_outline,
-                                              size: 48,
-                                              color: cs.outlineVariant,
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              _l10n.chatNoMessagesYet,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                color: cs.onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    : ListView.separated(
-                                        reverse: true,
-                                        controller: _messageScrollController,
-                                        padding: const EdgeInsets.fromLTRB(
-                                          12,
-                                          8,
-                                          12,
-                                          8,
-                                        ),
-                                        itemCount: displayedMessages.length,
-                                        separatorBuilder: (_, _) =>
-                                            const SizedBox(height: 6),
-                                        itemBuilder: (ctx, i) {
-                                          final message = displayedMessages[i];
-                                          final draft = draftById[message.id];
-                                          final showDayDivider =
-                                              i ==
-                                                  displayedMessages.length -
-                                                      1 ||
-                                              !isSameDay(
-                                                message.createdAt,
-                                                displayedMessages[i + 1]
-                                                    .createdAt,
-                                              );
-                                          return Column(
-                                            children: [
-                                              if (showDayDivider)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.fromLTRB(
-                                                        0,
-                                                        8,
-                                                        0,
-                                                        6,
-                                                      ),
-                                                  child: DayDivider(
-                                                    label: dayLabel(
-                                                      context,
-                                                      message.createdAt,
-                                                    ),
-                                                  ),
-                                                ),
-                                              MessageBubble(
-                                                key: ValueKey(message.id),
-                                                message: message,
-                                                isMine:
-                                                    message.senderId ==
-                                                    widget.currentUserId,
-                                                currentUserId:
-                                                    widget.currentUserId,
-                                                partnerId: _activePartnerId!,
-                                                isRoomConversation:
-                                                    isRoomConversationId(
-                                                      _activePartnerId!,
-                                                    ),
-                                                onAvatarTap:
-                                                    message.senderId ==
-                                                        widget.currentUserId
-                                                    ? null
-                                                    : () => _openUserProfile(
-                                                        message.senderId,
-                                                      ),
-                                                stickers: stickers,
-                                                serverUrl: widget.serverUrl,
-                                                accessToken: widget.accessToken,
-                                                deliveryState: draft?.state,
-                                                statusLabel: draft?.statusLabel,
-                                                onRetryTap: draft == null
-                                                    ? null
-                                                    : () => _retryOutgoingDraft(
-                                                        draft,
-                                                      ),
-                                                typingStyleModeEnabled:
-                                                    typingStyleModeEnabled,
-                                                typingStyleSpeedMs:
-                                                    typingStyleSpeedMs,
-                                                animateAsDraft: draft != null,
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                              },
-                            ),
-                    ),
-
-                    // Typing indicator
-                    if (isTargetTyping)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            _l10n.chatTypingIndicator(
-                              activeDisplayName ?? _l10n.chatDefaultPartner,
-                            ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Composer
-                    SafeArea(
-                      top: false,
-                      child: Composer(
-                        messageController: _messageController,
-                        selectedMediaBytes: _selectedMediaBytes,
-                        selectedMediaName: _selectedMediaName,
-                        stickers: stickers,
-                        onChanged: _onComposerChanged,
-                        onSend: _sendMessage,
-                        onPickMedia: _pickMedia,
-                        onClearMedia: _clearMedia,
-                        onStickerSelected: (sticker) async {
-                          if (_activePartnerId == null) return;
-                          await _sendMessageWithOptimisticBubble(
-                            '[sticker:${sticker.id}:${sticker.name}]',
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        child: AnimatedSwitcher(
+          duration: chatPaneTransitionDuration,
+          reverseDuration: chatPaneTransitionReverseDuration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeOutCubic,
+          transitionBuilder: _buildChatPaneTransition,
+          layoutBuilder: _buildChatPaneLayout,
+          child: activePane,
+        ),
       ),
     );
   }

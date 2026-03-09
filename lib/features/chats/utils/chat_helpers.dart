@@ -3,6 +3,18 @@ import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../ui/tokens/colors/app_palette.dart';
 
+enum ChatPaneKind { list, conversation }
+
+const Duration chatPaneTransitionDuration = Duration(milliseconds: 260);
+const Duration chatPaneTransitionReverseDuration = Duration(milliseconds: 220);
+
+Offset chatPaneTransitionBeginOffset(ChatPaneKind pane) {
+  return switch (pane) {
+    ChatPaneKind.list => const Offset(-0.12, 0),
+    ChatPaneKind.conversation => const Offset(1, 0),
+  };
+}
+
 bool isSameDay(DateTime a, DateTime b) {
   final x = a.toLocal();
   final y = b.toLocal();
@@ -12,7 +24,9 @@ bool isSameDay(DateTime a, DateTime b) {
 String dayLabel(BuildContext context, DateTime dt) {
   final local = dt.toLocal();
   final now = DateTime.now();
-  if (local.year == now.year && local.month == now.month && local.day == now.day) {
+  if (local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day) {
     return AppLocalizations.of(context)!.chatToday;
   }
   final m = local.month.toString().padLeft(2, '0');
