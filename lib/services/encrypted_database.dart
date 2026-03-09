@@ -9,6 +9,41 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'server_scope.dart';
 
+@visibleForTesting
+String? selectStoredEncryptionKey({
+  required bool scopedFileExists,
+  required String? scopedKey,
+  required String? legacyKey,
+}) {
+  final normalizedScopedKey = scopedKey?.trim();
+  if (normalizedScopedKey != null && normalizedScopedKey.isNotEmpty) {
+    return normalizedScopedKey;
+  }
+
+  final normalizedLegacyKey = legacyKey?.trim();
+  if (scopedFileExists &&
+      normalizedLegacyKey != null &&
+      normalizedLegacyKey.isNotEmpty) {
+    return normalizedLegacyKey;
+  }
+
+  return null;
+}
+
+@visibleForTesting
+bool isRecoverableDatabaseOpenError(Object error) {
+  if (error is DatabaseException && error.isOpenFailedError()) {
+    return true;
+  }
+  final message = error.toString().toLowerCase();
+  return message.contains('file is not a database') ||
+      message.contains('sqlitenotadatabaseexception') ||
+      message.contains('hmac check failed') ||
+      message.contains('cipher_migrate') ||
+      message.contains('error decrypting page') ||
+      message.contains('bad decrypt');
+}
+
 class EncryptedDatabase {
   EncryptedDatabase({
     required String serverUrl,
@@ -127,17 +162,19 @@ class EncryptedDatabase {
     final legacyKey = await _secureStorage.read(
       key: _legacyDatabaseKeyStorageKey,
     );
-    if (scopedFileExists && legacyKey != null && legacyKey.isNotEmpty) {
-      if (scopedKey != legacyKey) {
+    final storedKey = selectStoredEncryptionKey(
+      scopedFileExists: scopedFileExists,
+      scopedKey: scopedKey,
+      legacyKey: legacyKey,
+    );
+    if (storedKey != null) {
+      if (scopedKey == null || scopedKey.trim().isEmpty) {
         await _secureStorage.write(
           key: _databaseKeyStorageKey,
-          value: legacyKey,
+          value: storedKey,
         );
       }
-      return legacyKey;
-    }
-    if (scopedKey != null && scopedKey.isNotEmpty) {
-      return scopedKey;
+      return storedKey;
     }
 
     final legacyPath = path.join(documentsDirectory, _legacyDatabaseName);
@@ -200,9 +237,7 @@ class EncryptedDatabase {
   }
 
   bool _isRecoverableOpenError(Object error) {
-    final message = error.toString().toLowerCase();
-    return message.contains('file is not a database') ||
-        message.contains('sqlitenotadatabaseexception');
+    return isRecoverableDatabaseOpenError(error);
   }
 
   Future<void> _resetUnreadableDatabase(String databasePath) async {
