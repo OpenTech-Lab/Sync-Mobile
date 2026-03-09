@@ -26,6 +26,12 @@ import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
+import 'models/outgoing_draft.dart';
+import 'utils/chat_helpers.dart';
+import 'widgets/conversation_starter.dart';
+import 'widgets/composer.dart';
+import 'widgets/message_bubble.dart';
+import 'widgets/quick_action_sheet.dart';
 
 class ChatsTab extends ConsumerStatefulWidget {
   const ChatsTab({
@@ -61,8 +67,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   final Set<String> _profileSyncInFlight = <String>{};
   final Set<String> _profileSyncedOnce = <String>{};
   final Map<String, String> _partnerServerUrlOverrides = <String, String>{};
-  final Map<String, List<_OutgoingMessageDraft>> _outgoingDraftsByPartner =
-      <String, List<_OutgoingMessageDraft>>{};
+  final Map<String, List<OutgoingMessageDraft>> _outgoingDraftsByPartner =
+      <String, List<OutgoingMessageDraft>>{};
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   @override
@@ -305,14 +311,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     ref.invalidate(conversationSummariesProvider);
   }
 
-  Future<_ChatTargetInput?> _promptForChatTarget() async {
+  Future<ChatTargetInput?> _promptForChatTarget() async {
     final targetController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
-    final result = await showDialog<_ChatTargetInput>(
+    final result = await showDialog<ChatTargetInput>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -464,7 +470,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     return result;
   }
 
-  _ChatTargetInput _parseChatTargetInput(
+  ChatTargetInput _parseChatTargetInput(
     String raw, {
     required String defaultServerUrl,
   }) {
@@ -484,17 +490,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       final origin = host.isEmpty
           ? ''
           : '${parsed.scheme}://$host${parsed.hasPort ? ':${parsed.port}' : ''}';
-      return _ChatTargetInput(
+      return ChatTargetInput(
         friendId: id,
         serverUrl: origin.isEmpty ? defaultServerUrl : origin,
       );
     }
 
-    return _ChatTargetInput(friendId: value, serverUrl: defaultServerUrl);
+    return ChatTargetInput(friendId: value, serverUrl: defaultServerUrl);
   }
 
-  Future<_ResolvedTargetProfile?> _resolveTarget(
-    _ChatTargetInput target,
+  Future<ResolvedTargetProfile?> _resolveTarget(
+    ChatTargetInput target,
   ) async {
     final friendId = target.friendId.trim();
     final serverUrl = target.serverUrl.trim();
@@ -540,7 +546,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         .read(userProfilePreferencesProvider)
         .readDescription(widget.serverUrl, resolved.partnerId);
 
-    return _ResolvedTargetProfile(
+    return ResolvedTargetProfile(
       partnerId: resolved.partnerId,
       recipientServerUrl: resolved.recipientServerUrl,
       displayName: displayName,
@@ -552,7 +558,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     );
   }
 
-  Future<void> _openFromTarget(_ChatTargetInput target) async {
+  Future<void> _openFromTarget(ChatTargetInput target) async {
     try {
       final resolved = await _resolveTarget(target);
       if (!mounted || resolved == null) {
@@ -632,7 +638,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await _openFromTarget(target);
   }
 
-  Future<_CreateRoomInput?> _promptForRoomCreation() async {
+  Future<CreateRoomInput?> _promptForRoomCreation() async {
     final nameController = TextEditingController();
     final friendIds =
         ref.read(friendIdsProvider).value ??
@@ -645,9 +651,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final memberOptions =
         friendIds
             .map(
-              (userId) => _RoomMemberOption(
+              (userId) => RoomMemberOption(
                 userId: userId,
-                displayName: _displayNameOrFallback(
+                displayName: displayNameOrFallback(
                   userId,
                   ref.read(userDisplayNameProvider(userId)).value,
                 ),
@@ -661,7 +667,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
-    final result = await showDialog<_CreateRoomInput>(
+    final result = await showDialog<CreateRoomInput>(
       context: context,
       builder: (context) {
         final selectedIds = <String>{};
@@ -815,7 +821,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                         GestureDetector(
                           onTap: hasName
                               ? () => Navigator.of(context).pop(
-                                  _CreateRoomInput(
+                                  CreateRoomInput(
                                     name: nameController.text.trim(),
                                     memberIds: selectedIds.toList(
                                       growable: false,
@@ -902,7 +908,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
 
     await _openFromTarget(
-      _ChatTargetInput(friendId: payload.userId, serverUrl: payload.serverUrl),
+      ChatTargetInput(friendId: payload.userId, serverUrl: payload.serverUrl),
     );
   }
 
@@ -964,12 +970,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   String _addOutgoingDraft({required String partnerId, required String body}) {
     final id =
         'draft-${DateTime.now().microsecondsSinceEpoch}-${body.length.hashCode.abs()}';
-    final next = _OutgoingMessageDraft(
+    final next = OutgoingMessageDraft(
       id: id,
       partnerId: partnerId,
       body: body,
       createdAt: DateTime.now().toUtc(),
-      state: _OutgoingDeliveryState.sending,
+      state: OutgoingDeliveryState.sending,
     );
     setState(() {
       final current = _outgoingDraftsByPartner[partnerId] ?? const [];
@@ -1004,7 +1010,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     _updateOutgoingDraftStatus(
       partnerId: partnerId,
       draftId: draftId,
-      state: _OutgoingDeliveryState.failed,
+      state: OutgoingDeliveryState.failed,
     );
   }
 
@@ -1016,7 +1022,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     _updateOutgoingDraftStatus(
       partnerId: partnerId,
       draftId: draftId,
-      state: _OutgoingDeliveryState.blocked,
+      state: OutgoingDeliveryState.blocked,
       statusLabel: statusLabel,
     );
   }
@@ -1024,7 +1030,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   void _updateOutgoingDraftStatus({
     required String partnerId,
     required String draftId,
-    required _OutgoingDeliveryState state,
+    required OutgoingDeliveryState state,
     String? statusLabel,
   }) {
     if (!_outgoingDraftsByPartner.containsKey(partnerId)) {
@@ -1037,7 +1043,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 ? draft.copyWith(
                     state: state,
                     statusLabel: statusLabel,
-                    resetStatusLabel: state != _OutgoingDeliveryState.blocked,
+                    resetStatusLabel: state != OutgoingDeliveryState.blocked,
                   )
                 : draft,
           )
@@ -1071,8 +1077,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     );
   }
 
-  Future<void> _retryOutgoingDraft(_OutgoingMessageDraft draft) async {
-    if (draft.state != _OutgoingDeliveryState.failed) {
+  Future<void> _retryOutgoingDraft(OutgoingMessageDraft draft) async {
+    if (draft.state != OutgoingDeliveryState.failed) {
       return;
     }
     setState(() {
@@ -1081,7 +1087,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
           .map(
             (item) => item.id == draft.id
                 ? item.copyWith(
-                    state: _OutgoingDeliveryState.sending,
+                    state: OutgoingDeliveryState.sending,
                     resetStatusLabel: true,
                   )
                 : item,
@@ -1121,7 +1127,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     if (!mounted) {
       return;
     }
-    final displayName = _displayNameOrFallback(
+    final displayName = displayNameOrFallback(
       partnerId,
       ref.read(userDisplayNameProvider(partnerId)).value,
     );
@@ -1387,7 +1393,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         ? null
         : isRoomConversationId(_activePartnerId!)
         ? (activeSummary?.title ?? _l10n.chatDefaultRoom)
-        : _displayNameOrFallback(
+        : displayNameOrFallback(
             _activePartnerId!,
             ref.watch(userDisplayNameProvider(_activePartnerId!)).value,
           );
@@ -1435,7 +1441,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 if (activeUnread > 0)
                   Padding(
                     padding: const EdgeInsets.only(right: 16),
-                    child: _UnreadBadge(count: activeUnread),
+                    child: UnreadBadge(count: activeUnread),
                   ),
               ],
             )
@@ -1445,7 +1451,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: _activePartnerId == null
             ? SafeArea(
-                child: _ConversationStarter(
+                child: ConversationStarter(
                   controller: _partnerController,
                   focusNode: _partnerFocusNode,
                   unreadCounts: unreadCounts,
@@ -1453,13 +1459,13 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                   summariesById: summariesById,
                   onQuickAction: (action) {
                     switch (action) {
-                      case _ChatQuickAction.newRoom:
+                      case ChatQuickAction.newRoom:
                         _openNewRoom();
                         break;
-                      case _ChatQuickAction.newFriendOrChat:
+                      case ChatQuickAction.newFriendOrChat:
                         _openNewFriendOrChat();
                         break;
-                      case _ChatQuickAction.scanFriendQr:
+                      case ChatQuickAction.scanFriendQr:
                         _scanQrAndOpen();
                         break;
                     }
@@ -1503,11 +1509,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                               data: (messages) {
                                 final activePartnerId = _activePartnerId;
                                 final draftMessages = activePartnerId == null
-                                    ? const <_OutgoingMessageDraft>[]
+                                    ? const <OutgoingMessageDraft>[]
                                     : (_outgoingDraftsByPartner[activePartnerId] ??
-                                          const <_OutgoingMessageDraft>[]);
+                                          const <OutgoingMessageDraft>[]);
                                 final draftById =
-                                    <String, _OutgoingMessageDraft>{
+                                    <String, OutgoingMessageDraft>{
                                       for (final draft in draftMessages)
                                         draft.id: draft,
                                     };
@@ -1567,7 +1573,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                               i ==
                                                   displayedMessages.length -
                                                       1 ||
-                                              !_isSameDay(
+                                              !isSameDay(
                                                 message.createdAt,
                                                 displayedMessages[i + 1]
                                                     .createdAt,
@@ -1583,14 +1589,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                                                         0,
                                                         6,
                                                       ),
-                                                  child: _DayDivider(
-                                                    label: _dayLabel(
+                                                  child: DayDivider(
+                                                    label: dayLabel(
                                                       context,
                                                       message.createdAt,
                                                     ),
                                                   ),
                                                 ),
-                                              _MessageBubble(
+                                              MessageBubble(
                                                 key: ValueKey(message.id),
                                                 message: message,
                                                 isMine:
@@ -1656,7 +1662,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                     // Composer
                     SafeArea(
                       top: false,
-                      child: _Composer(
+                      child: Composer(
                         messageController: _messageController,
                         selectedMediaBytes: _selectedMediaBytes,
                         selectedMediaName: _selectedMediaName,
@@ -1677,1904 +1683,6 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
                 ),
               ),
       ),
-    );
-  }
-}
-
-enum _ChatQuickAction { newRoom, newFriendOrChat, scanFriendQr }
-
-enum _OutgoingDeliveryState { sending, failed, blocked }
-
-class _OutgoingMessageDraft {
-  const _OutgoingMessageDraft({
-    required this.id,
-    required this.partnerId,
-    required this.body,
-    required this.createdAt,
-    required this.state,
-    this.statusLabel,
-  });
-
-  final String id;
-  final String partnerId;
-  final String body;
-  final DateTime createdAt;
-  final _OutgoingDeliveryState state;
-  final String? statusLabel;
-
-  _OutgoingMessageDraft copyWith({
-    _OutgoingDeliveryState? state,
-    String? statusLabel,
-    bool resetStatusLabel = false,
-  }) {
-    return _OutgoingMessageDraft(
-      id: id,
-      partnerId: partnerId,
-      body: body,
-      createdAt: createdAt,
-      state: state ?? this.state,
-      statusLabel: resetStatusLabel ? null : (statusLabel ?? this.statusLabel),
-    );
-  }
-}
-
-bool _isSameDay(DateTime a, DateTime b) {
-  final x = a.toLocal();
-  final y = b.toLocal();
-  return x.year == y.year && x.month == y.month && x.day == y.day;
-}
-
-String _dayLabel(BuildContext context, DateTime dt) {
-  final local = dt.toLocal();
-  final now = DateTime.now();
-  if (local.year == now.year &&
-      local.month == now.month &&
-      local.day == now.day) {
-    return AppLocalizations.of(context)!.chatToday;
-  }
-  final m = local.month.toString().padLeft(2, '0');
-  final d = local.day.toString().padLeft(2, '0');
-  return '${local.year}-$m-$d';
-}
-
-class _DayDivider extends StatelessWidget {
-  const _DayDivider({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: AppPalette.neutral500.withValues(alpha: 0.22),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppPalette.neutral300,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: AppPalette.neutral500.withValues(alpha: 0.22),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ChatTargetInput {
-  const _ChatTargetInput({required this.friendId, required this.serverUrl});
-
-  final String friendId;
-  final String serverUrl;
-}
-
-class _CreateRoomInput {
-  const _CreateRoomInput({required this.name, required this.memberIds});
-
-  final String name;
-  final List<String> memberIds;
-}
-
-class _RoomMemberOption {
-  const _RoomMemberOption({required this.userId, required this.displayName});
-
-  final String userId;
-  final String displayName;
-}
-
-class _ResolvedTargetProfile {
-  const _ResolvedTargetProfile({
-    required this.partnerId,
-    required this.recipientServerUrl,
-    required this.displayName,
-    required this.displayHandle,
-    required this.avatarBase64,
-    required this.description,
-    this.level,
-    this.rank,
-  });
-
-  final String partnerId;
-  final String recipientServerUrl;
-  final String displayName;
-  final String displayHandle;
-  final String? avatarBase64;
-  final String? description;
-  final int? level;
-  final String? rank;
-}
-
-// —————————————————————————————————————————————————————
-// Conversation starter (empty state)
-// —————————————————————————————————————————————————————
-
-class _ConversationStarter extends ConsumerWidget {
-  const _ConversationStarter({
-    required this.controller,
-    required this.focusNode,
-    required this.unreadCounts,
-    required this.orderedConversationIds,
-    required this.summariesById,
-    required this.onQuickAction,
-    required this.onOpenConversation,
-    required this.onClearConversation,
-    required this.onMarkAllRead,
-    required this.onStartNewChat,
-    required this.onAddFriend,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final Map<String, int> unreadCounts;
-  final List<String> orderedConversationIds;
-  final Map<String, ConversationSummary> summariesById;
-  final ValueChanged<_ChatQuickAction> onQuickAction;
-  final ValueChanged<String> onOpenConversation;
-  final Future<void> Function(String) onClearConversation;
-  final Future<void> Function() onMarkAllRead;
-  final VoidCallback onStartNewChat;
-  final VoidCallback onAddFriend;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-
-    final unreadConversationIds = orderedConversationIds
-        .where((id) => (unreadCounts[id] ?? 0) > 0)
-        .toList(growable: false);
-    final chatConversationIds = orderedConversationIds
-        .where((id) => (unreadCounts[id] ?? 0) == 0)
-        .toList(growable: false);
-    final hasAnyRows =
-        unreadConversationIds.isNotEmpty || chatConversationIds.isNotEmpty;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
-      children: [
-        // ── search + quick action ──
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                autocorrect: false,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w300,
-                  color: inkColor,
-                ),
-                decoration: InputDecoration(
-                  hintText: l10n.chatSearchHint,
-                  hintStyle: TextStyle(
-                    fontSize: 14,
-                    color: AppPalette.neutral500.withValues(alpha: 0.55),
-                    fontWeight: FontWeight.w300,
-                  ),
-                  border: UnderlineInputBorder(
-                    borderSide: BorderSide(color: ruleColor),
-                  ),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: ruleColor),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppPalette.neutral500),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  isDense: true,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () async {
-                final action = await showModalBottomSheet<_ChatQuickAction>(
-                  context: context,
-                  backgroundColor: bgColor,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  builder: (_) => _QuickActionSheet(
-                    inkColor: inkColor,
-                    mutedColor: AppPalette.neutral500,
-                    ruleColor: ruleColor,
-                  ),
-                );
-                if (action != null) onQuickAction(action);
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.add, color: inkColor, size: 22),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // ── unread section ──
-        if (unreadConversationIds.isNotEmpty) ...[
-          Row(
-            children: [
-              Text(
-                l10n.chatUnreadHeader,
-                style: const TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 2.4,
-                  color: AppPalette.neutral500,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: onMarkAllRead,
-                child: Text(
-                  l10n.chatMarkAllRead,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppPalette.neutral500,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Divider(height: 1, thickness: 1, color: ruleColor),
-          const SizedBox(height: 4),
-          ...unreadConversationIds.map(
-            (userId) => _buildConversationRow(
-              context,
-              ref,
-              userId,
-              summariesById,
-              inkColor,
-              AppPalette.neutral500,
-            ),
-          ),
-        ],
-
-        if (hasAnyRows && chatConversationIds.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            l10n.chatChatsHeader,
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 2.4,
-              color: AppPalette.neutral500,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Divider(height: 1, thickness: 1, color: ruleColor),
-          const SizedBox(height: 4),
-        ],
-
-        if (!hasAnyRows)
-          Padding(
-            padding: const EdgeInsets.only(top: 20),
-            child: Text(
-              l10n.chatNoChatsYet,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-                color: AppPalette.neutral500,
-              ),
-            ),
-          )
-        else
-          ...chatConversationIds.map(
-            (userId) => _buildConversationRow(
-              context,
-              ref,
-              userId,
-              summariesById,
-              inkColor,
-              AppPalette.neutral500,
-            ),
-          ),
-      ],
-    );
-  }
-
-  String _formatLastBody(String body, AppLocalizations l10n) {
-    if (body.startsWith('[sticker:')) return l10n.chatSentASticker;
-    if (body.startsWith('[media-data:')) return l10n.chatSentAnAttachment;
-    return body;
-  }
-
-  Widget _buildConversationRow(
-    BuildContext context,
-    WidgetRef ref,
-    String userId,
-    Map<String, ConversationSummary> summariesById,
-    Color inkColor,
-    Color mutedColor,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    final summary = summariesById[userId];
-    final unreadCount = unreadCounts[userId] ?? 0;
-    final isRoom = summary?.isRoom ?? isRoomConversationId(userId);
-    final displayNameAsync = isRoom
-        ? null
-        : ref.watch(userDisplayNameProvider(userId));
-    final avatarBase64Async = isRoom
-        ? null
-        : ref.watch(userAvatarBase64Provider(userId));
-    final displayName = isRoom
-        ? ((summary?.title?.trim().isNotEmpty ?? false)
-              ? summary!.title!.trim()
-              : l10n.chatDefaultRoom)
-        : _displayNameOrFallback(userId, displayNameAsync?.value);
-
-    // avatar warm palette
-    const palette = [
-      AppPalette.avatarTone1,
-      AppPalette.avatarTone2,
-      AppPalette.avatarTone3,
-      AppPalette.avatarTone4,
-      AppPalette.avatarTone5,
-      AppPalette.avatarTone6,
-    ];
-    final hash = userId.codeUnits.fold(0, (a, b) => a ^ b);
-    final avatarColor = palette[hash.abs() % palette.length];
-    final subtitle = summary == null
-        ? null
-        : (summary.lastBody.trim().isNotEmpty
-              ? _formatLastBody(summary.lastBody, l10n)
-              : isRoom
-              ? l10n.chatDefaultRoom
-              : null);
-
-    final rowContent = Column(
-      children: [
-        InkWell(
-          onTap: () => onOpenConversation(userId),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              children: [
-                // avatar
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: !isRoom && avatarBase64Async?.value != null
-                      ? Colors.transparent
-                      : avatarColor,
-                  child: isRoom
-                      ? const Icon(
-                          Icons.group_outlined,
-                          size: 18,
-                          color: AppPalette.white,
-                        )
-                      : avatarBase64Async?.value == null
-                      ? Text(
-                          userId.length >= 2
-                              ? userId.substring(0, 2).toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: AppPalette.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        )
-                      : ClipOval(
-                          child: SizedBox.expand(
-                            child: Image.memory(
-                              base64Decode(avatarBase64Async!.value!),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w300,
-                          color: inkColor,
-                        ),
-                      ),
-                      if (summary != null)
-                        Text(
-                          subtitle ?? _formatLastBody(summary.lastBody, l10n),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: mutedColor,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (summary != null)
-                      Text(
-                        _timeLabel(summary.lastAt),
-                        style: TextStyle(fontSize: 11, color: mutedColor),
-                      ),
-                    if (unreadCount > 0) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppPalette.danger700,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$unreadCount',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppPalette.danger700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-
-    if (isRoom) return rowContent;
-
-    return Dismissible(
-      key: ValueKey('convo_$userId'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: AppPalette.danger700.withValues(alpha: 0.85),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.delete_outline, color: AppPalette.white, size: 20),
-            const SizedBox(height: 2),
-            Text(
-              l10n.chatClearHistory,
-              style: const TextStyle(
-                color: AppPalette.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        await onClearConversation(userId);
-        return true;
-      },
-      onDismissed: (_) {},
-      child: rowContent,
-    );
-  }
-}
-
-String _displayNameOrFallback(String userId, String? displayName) {
-  final normalized = (displayName ?? '').trim();
-  if (normalized.isNotEmpty) {
-    return normalized;
-  }
-  return userId.length >= 8 ? userId.substring(0, 8) : userId;
-}
-
-String _timeLabel(DateTime dt) {
-  final local = dt.toLocal();
-  final h = local.hour.toString().padLeft(2, '0');
-  final m = local.minute.toString().padLeft(2, '0');
-  return '$h:$m';
-}
-
-// —————————————————————————————————————————————————————
-// Composer toolbar
-// —————————————————————————————————————————————————————
-
-class _Composer extends StatelessWidget {
-  const _Composer({
-    required this.messageController,
-    required this.selectedMediaBytes,
-    required this.selectedMediaName,
-    required this.stickers,
-    required this.onChanged,
-    required this.onSend,
-    required this.onPickMedia,
-    required this.onClearMedia,
-    required this.onStickerSelected,
-  });
-
-  final TextEditingController messageController;
-  final Uint8List? selectedMediaBytes;
-  final String? selectedMediaName;
-  final List<Sticker> stickers;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onSend;
-  final VoidCallback onPickMedia;
-  final VoidCallback onClearMedia;
-  final ValueChanged<Sticker> onStickerSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-
-    return Container(
-      color: bgColor,
-      padding: const EdgeInsets.fromLTRB(0, 6, 0, 10),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Media preview
-          if (selectedMediaBytes != null)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(border: Border.all(color: ruleColor)),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    child: Image.memory(
-                      selectedMediaBytes!,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      selectedMediaName ?? l10n.chatSelectedMediaFallback,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w300,
-                        color: AppPalette.neutral500,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: onClearMedia,
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.close,
-                        size: 16,
-                        color: AppPalette.neutral500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          Divider(height: 1, thickness: 1, color: ruleColor),
-
-          // Input row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Attach
-                _ComposerIconButton(
-                  icon: Icons.attach_file_outlined,
-                  tooltip: l10n.chatAttachImageTooltip,
-                  onPressed: onPickMedia,
-                ),
-                // Stickers
-                _ComposerIconButton(
-                  icon: Icons.tag_faces_outlined,
-                  tooltip: l10n.chatStickersTooltip,
-                  onPressed: () async {
-                    final selected = await showModalBottomSheet<Sticker>(
-                      context: context,
-                      backgroundColor: bgColor,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      builder: (_) => _StickerPicker(stickers: stickers),
-                    );
-                    if (selected != null) {
-                      onStickerSelected(selected);
-                    }
-                  },
-                ),
-                // Text field
-                Expanded(
-                  child: TextField(
-                    controller: messageController,
-                    onChanged: onChanged,
-                    minLines: 1,
-                    maxLines: 5,
-                    textCapitalization: TextCapitalization.sentences,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: l10n.chatMessageHint,
-                      hintStyle: const TextStyle(
-                        color: AppPalette.neutral500,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w300,
-                      ),
-                      filled: false,
-                      border: const UnderlineInputBorder(
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 10,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Send — plain text arrow
-                GestureDetector(
-                  onTap: onSend,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 4, 8),
-                    child: const Icon(
-                      Icons.arrow_upward_rounded,
-                      size: 22,
-                      color: AppPalette.neutral500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ComposerIconButton extends StatelessWidget {
-  const _ComposerIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, size: 22),
-      tooltip: tooltip,
-      onPressed: onPressed,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      constraints: const BoxConstraints(minWidth: 36, minHeight: 44),
-    );
-  }
-}
-
-// —————————————————————————————————————————————————————
-// Sticker picker
-// —————————————————————————————————————————————————————
-
-class _StickerPicker extends StatefulWidget {
-  const _StickerPicker({required this.stickers});
-  final List<Sticker> stickers;
-
-  @override
-  State<_StickerPicker> createState() => _StickerPickerState();
-}
-
-class _StickerPickerState extends State<_StickerPicker> {
-  String? _selectedGroup;
-
-  String _normalizeGroupName(String raw) {
-    final normalized = raw.trim();
-    if (normalized.isEmpty) {
-      return "General";
-    }
-    return normalized;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-    final tabBackgroundColor = colorScheme.surfaceContainerLow;
-    final tabSelectedBackgroundColor = colorScheme.surfaceContainerHighest;
-    if (widget.stickers.isEmpty) {
-      return SizedBox(
-        height: 140,
-        child: Center(
-          child: Text(
-            l10n.chatNoStickersYet,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w300,
-              color: AppPalette.neutral500,
-            ),
-          ),
-        ),
-      );
-    }
-
-    final grouped = <String, List<Sticker>>{};
-    for (final sticker in widget.stickers) {
-      final groupName = _normalizeGroupName(sticker.groupName);
-      grouped.putIfAbsent(groupName, () => <Sticker>[]).add(sticker);
-    }
-    final groups = grouped.keys.toList(growable: false);
-    final selectedGroup = groups.contains(_selectedGroup)
-        ? _selectedGroup!
-        : groups.first;
-    final visibleStickers = (grouped[selectedGroup] ?? const <Sticker>[])
-        .where((s) => s.name != '__tab__')
-        .toList(growable: false);
-
-    final tabImages = <String, Uint8List?>{};
-    for (final groupName in groups) {
-      final groupStickers = grouped[groupName] ?? const <Sticker>[];
-      final tabSticker =
-          groupStickers.where((s) => s.name == '__tab__').firstOrNull ??
-          groupStickers.firstOrNull;
-      if (tabSticker != null) {
-        try {
-          tabImages[groupName] = base64Decode(tabSticker.contentBase64);
-        } catch (_) {}
-      }
-    }
-
-    return SizedBox(
-      height: 320,
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l10n.chatStickersHeader,
-                style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 2.8,
-                  fontWeight: FontWeight.w400,
-                  color: AppPalette.neutral500,
-                ),
-              ),
-            ),
-          ),
-          const Divider(height: 1, color: AppPalette.neutral300),
-          SizedBox(
-            height: 60,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (_, i) {
-                final groupName = groups[i];
-                final tabImage = tabImages[groupName];
-                final isSelected = groupName == selectedGroup;
-                return Tooltip(
-                  message: groupName,
-                  child: Material(
-                    color: AppPalette.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () {
-                        setState(() {
-                          _selectedGroup = groupName;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 120),
-                        curve: Curves.easeOut,
-                        width: 40,
-                        height: 40,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? tabSelectedBackgroundColor
-                              : tabBackgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: tabImage != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Image.memory(
-                                  tabImage,
-                                  fit: BoxFit.contain,
-                                  filterQuality: FilterQuality.medium,
-                                ),
-                              )
-                            : Center(
-                                child: Text(
-                                  groupName,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: groups.length,
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: visibleStickers.length,
-              itemBuilder: (_, i) {
-                final sticker = visibleStickers[i];
-                Uint8List bytes;
-                try {
-                  bytes = base64Decode(sticker.contentBase64);
-                } catch (_) {
-                  return const SizedBox.shrink();
-                }
-                return GestureDetector(
-                  onTap: () => Navigator.of(context).pop(sticker),
-                  child: Image.memory(bytes, fit: BoxFit.cover),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// —————————————————————————————————————————————————————
-// Message bubble
-// —————————————————————————————————————————————————————
-
-class _MessageBubble extends ConsumerWidget {
-  const _MessageBubble({
-    super.key,
-    required this.message,
-    required this.isMine,
-    required this.currentUserId,
-    required this.partnerId,
-    required this.isRoomConversation,
-    this.onAvatarTap,
-    required this.stickers,
-    required this.serverUrl,
-    required this.accessToken,
-    this.deliveryState,
-    this.statusLabel,
-    this.onRetryTap,
-    this.typingStyleModeEnabled = false,
-    this.typingStyleSpeedMs = ChatUiPreferences.defaultTypingStyleSpeedMs,
-    this.animateAsDraft = false,
-  });
-
-  final LocalChatMessage message;
-  final bool isMine;
-  final String currentUserId;
-  final String partnerId;
-  final bool isRoomConversation;
-  final VoidCallback? onAvatarTap;
-  final List<Sticker> stickers;
-  final String serverUrl;
-  final String accessToken;
-  final _OutgoingDeliveryState? deliveryState;
-  final String? statusLabel;
-  final VoidCallback? onRetryTap;
-  final bool typingStyleModeEnabled;
-  final int typingStyleSpeedMs;
-  final bool animateAsDraft;
-
-  static const double _kMaxBubbleHeight = 180;
-
-  static String? _parseStickerId(String body) {
-    final match = RegExp(
-      r'^\[sticker:([^:\]]+):[^\]]*\]$',
-    ).firstMatch(body.trim());
-    return match?.group(1);
-  }
-
-  /// Returns the decoded image bytes and remaining text from a body that
-  /// contains a [media-data:base64] token. Returns null if none found.
-  static ({Uint8List bytes, String text})? _parseMediaData(String body) {
-    final match = RegExp(r'\[media-data:([A-Za-z0-9+/=]+)\]').firstMatch(body);
-    if (match == null) return null;
-    try {
-      final bytes = base64Decode(match.group(1)!);
-      final text = body.replaceFirst(match.group(0)!, '').trim();
-      return (bytes: bytes, text: text);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  void _openDetail(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _MessageDetailScreen(message: message, isMine: isMine),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-
-    // Warm bubble colours
-    final myBubble = isDark
-        ? AppPalette.chatBubbleSelfDark
-        : AppPalette.chatBubbleSelfLight;
-    final theirBubble = isDark
-        ? AppPalette.chatBubblePeerDark
-        : AppPalette.chatBubblePeerLight;
-
-    final bubbleColor = isMine ? myBubble : theirBubble;
-    final onBubble = inkColor;
-    final statusColor = deliveryState == _OutgoingDeliveryState.failed
-        ? AppPalette.danger700
-        : AppPalette.neutral500;
-    final blockedStatusLabel =
-        isMine &&
-            deliveryState == _OutgoingDeliveryState.blocked &&
-            statusLabel != null &&
-            statusLabel!.trim().isNotEmpty
-        ? statusLabel!.trim()
-        : null;
-    const textMaxLines = 7;
-    final messageTextStyle = TextStyle(
-      color: onBubble,
-      fontSize: 14,
-      fontWeight: FontWeight.w300,
-      height: 1.5,
-    );
-    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.68;
-    final overflowProbe = TextPainter(
-      text: TextSpan(text: message.body, style: messageTextStyle),
-      textDirection: Directionality.of(context),
-      maxLines: textMaxLines,
-    )..layout(maxWidth: maxBubbleWidth - 24);
-    final isTruncated = overflowProbe.didExceedMaxLines;
-
-    final avatarId = isMine ? currentUserId : message.senderId;
-    final senderDisplayName = !isMine && isRoomConversation
-        ? _displayNameOrFallback(
-            message.senderId,
-            ref.watch(userDisplayNameProvider(message.senderId)).value,
-          )
-        : null;
-    // Watch avatar providers locally so only individual bubbles rebuild on
-    // avatar changes — the parent page is not involved in avatar reloads.
-    final avatarBase64 = ref.watch(userAvatarBase64Provider(avatarId)).value;
-
-    const palette = [
-      AppPalette.avatarTone1,
-      AppPalette.avatarTone2,
-      AppPalette.avatarTone3,
-      AppPalette.avatarTone4,
-      AppPalette.avatarTone5,
-      AppPalette.avatarTone6,
-    ];
-    final hash = avatarId.codeUnits.fold(0, (a, b) => a ^ b);
-    final avatarBg = palette[hash.abs() % palette.length];
-
-    // ── Image/media message ──────────────────────────────────────────────────
-    final media = _parseMediaData(message.body);
-    if (media != null) {
-      return Align(
-        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (!isMine) ...[
-              GestureDetector(
-                onTap: onAvatarTap,
-                child: _MessageAvatar(
-                  userId: avatarId,
-                  avatarBase64: avatarBase64,
-                  avatarBg: avatarBg,
-                ),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: isMine
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (senderDisplayName != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 2, bottom: 4),
-                    child: Text(
-                      senderDisplayName,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppPalette.neutral500,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-                ],
-                Container(
-                  constraints: BoxConstraints(maxWidth: maxBubbleWidth),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.memory(
-                        media.bytes,
-                        fit: BoxFit.cover,
-                        width: maxBubbleWidth,
-                      ),
-                      if (media.text.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-                          child: Text(media.text, style: messageTextStyle),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _timeLabel(message.createdAt),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppPalette.neutral500,
-                  ),
-                ),
-                if (blockedStatusLabel != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    blockedStatusLabel,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppPalette.neutral500,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            if (isMine) ...[
-              const SizedBox(width: 6),
-              _MessageAvatar(
-                userId: avatarId,
-                avatarBase64: avatarBase64,
-                avatarBg: avatarBg,
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-    // ────────────────────────────────────────────────────────────────────────
-
-    // ── Sticker message ─────────────────────────────────────────────────────
-    final stickerId = _parseStickerId(message.body);
-    if (stickerId != null) {
-      Sticker? found;
-      for (final s in stickers) {
-        if (s.id == stickerId) {
-          found = s;
-          break;
-        }
-      }
-      // If not in local cache, try fetching on-demand from server
-      if (found == null) {
-        final remote = ref.watch(
-          stickerByIdProvider((
-            id: stickerId,
-            baseUrl: serverUrl,
-            accessToken: accessToken,
-          )),
-        );
-        found = remote.valueOrNull;
-      }
-      if (found != null) {
-        Uint8List? stickerBytes;
-        try {
-          stickerBytes = base64Decode(found.contentBase64);
-        } catch (_) {}
-        if (stickerBytes != null) {
-          return Align(
-            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (!isMine) ...[
-                  GestureDetector(
-                    onTap: onAvatarTap,
-                    child: _MessageAvatar(
-                      userId: avatarId,
-                      avatarBase64: avatarBase64,
-                      avatarBg: avatarBg,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: isMine
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    if (senderDisplayName != null) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 2, bottom: 4),
-                        child: Text(
-                          senderDisplayName,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppPalette.neutral500,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
-                    ],
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        stickerBytes,
-                        width: 128,
-                        height: 128,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _timeLabel(message.createdAt),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppPalette.neutral500,
-                      ),
-                    ),
-                    if (blockedStatusLabel != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        blockedStatusLabel,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppPalette.neutral500,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (isMine) ...[
-                  const SizedBox(width: 6),
-                  _MessageAvatar(
-                    userId: avatarId,
-                    avatarBase64: avatarBase64,
-                    avatarBg: avatarBg,
-                  ),
-                ],
-              ],
-            ),
-          );
-        }
-      }
-    }
-    // ────────────────────────────────────────────────────────────────────────
-
-    Widget bubble = Container(
-      constraints: BoxConstraints(
-        minWidth: 84,
-        maxWidth: maxBubbleWidth,
-        maxHeight: _kMaxBubbleHeight,
-      ),
-      decoration: BoxDecoration(
-        color: bubbleColor,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(6),
-          topRight: const Radius.circular(6),
-          bottomLeft: Radius.circular(isMine ? 6 : 2),
-          bottomRight: Radius.circular(isMine ? 2 : 6),
-        ),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 26),
-            child: _TypingStyleMessageText(
-              messageId: message.id,
-              body: message.body,
-              createdAt: message.createdAt,
-              enabled: typingStyleModeEnabled && (!isMine || animateAsDraft),
-              typingFrameMs: typingStyleSpeedMs,
-              maxLines: textMaxLines,
-              textAlign: TextAlign.left,
-              style: messageTextStyle,
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [bubbleColor.withValues(alpha: 0), bubbleColor],
-                  stops: const [0.0, 0.55],
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-              child: Row(
-                children: isMine
-                    ? [
-                        if (isTruncated)
-                          Text(
-                            l10n.chatMore,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppPalette.neutral500,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        const Spacer(),
-                        if (deliveryState != null) ...[
-                          if (deliveryState == _OutgoingDeliveryState.sending)
-                            Icon(Icons.schedule, size: 11, color: statusColor),
-                          if (deliveryState == _OutgoingDeliveryState.failed)
-                            GestureDetector(
-                              onTap: onRetryTap,
-                              child: Icon(
-                                Icons.refresh,
-                                size: 12,
-                                color: statusColor,
-                              ),
-                            ),
-                          if (deliveryState == _OutgoingDeliveryState.blocked)
-                            Icon(
-                              Icons.block_rounded,
-                              size: 12,
-                              color: statusColor,
-                            ),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(
-                          _timeLabel(message.createdAt),
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.fade,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppPalette.neutral500,
-                          ),
-                        ),
-                      ]
-                    : [
-                        Text(
-                          _timeLabel(message.createdAt),
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.fade,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppPalette.neutral500,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (isTruncated)
-                          Text(
-                            l10n.chatMore,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppPalette.neutral500,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                      ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    bubble = GestureDetector(onTap: () => _openDetail(context), child: bubble);
-
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMine) ...[
-            GestureDetector(
-              onTap: onAvatarTap,
-              child: _MessageAvatar(
-                userId: avatarId,
-                avatarBase64: avatarBase64,
-                avatarBg: avatarBg,
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: isMine
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
-            children: [
-              if (senderDisplayName != null) ...[
-                Padding(
-                  padding: const EdgeInsets.only(left: 2, bottom: 4),
-                  child: Text(
-                    senderDisplayName,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppPalette.neutral500,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ),
-              ],
-              bubble,
-              if (blockedStatusLabel != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  blockedStatusLabel,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppPalette.neutral500,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (isMine) ...[
-            const SizedBox(width: 6),
-            _MessageAvatar(
-              userId: avatarId,
-              avatarBase64: avatarBase64,
-              avatarBg: avatarBg,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _timeLabel(DateTime dt) {
-    final local = dt.toLocal();
-    final h = local.hour.toString().padLeft(2, '0');
-    final m = local.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-}
-
-class _TypingStyleMessageText extends StatefulWidget {
-  const _TypingStyleMessageText({
-    required this.messageId,
-    required this.body,
-    required this.createdAt,
-    required this.enabled,
-    required this.typingFrameMs,
-    required this.maxLines,
-    required this.textAlign,
-    required this.style,
-  });
-
-  final String messageId;
-  final String body;
-  final DateTime createdAt;
-  final bool enabled;
-  final int typingFrameMs;
-  final int maxLines;
-  final TextAlign textAlign;
-  final TextStyle style;
-
-  @override
-  State<_TypingStyleMessageText> createState() =>
-      _TypingStyleMessageTextState();
-}
-
-class _TypingStyleMessageTextState extends State<_TypingStyleMessageText> {
-  static const _typingWindow = Duration(seconds: 20);
-
-  Timer? _timer;
-  List<String> _chars = const <String>[];
-  int _index = 0;
-  String _display = '';
-  bool _animating = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _configure();
-  }
-
-  @override
-  void didUpdateWidget(covariant _TypingStyleMessageText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.messageId != widget.messageId ||
-        oldWidget.body != widget.body ||
-        oldWidget.enabled != widget.enabled ||
-        oldWidget.typingFrameMs != widget.typingFrameMs) {
-      _configure();
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _configure() {
-    _timer?.cancel();
-    final shouldAnimate =
-        widget.enabled &&
-        DateTime.now().toUtc().difference(widget.createdAt.toUtc()) <=
-            _typingWindow &&
-        widget.body.trim().isNotEmpty;
-    if (!shouldAnimate) {
-      setState(() {
-        _chars = const <String>[];
-        _index = 0;
-        _display = widget.body;
-        _animating = false;
-      });
-      return;
-    }
-
-    _chars = widget.body.characters.toList(growable: false);
-    _index = 0;
-    setState(() {
-      _display = '';
-      _animating = true;
-    });
-    _timer = Timer.periodic(Duration(milliseconds: widget.typingFrameMs), (
-      timer,
-    ) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_index >= _chars.length) {
-        timer.cancel();
-        setState(() {
-          _animating = false;
-          _display = widget.body;
-        });
-        return;
-      }
-      _index += 1;
-      setState(() {
-        _display = _chars.take(_index).join();
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final text = _animating ? '$_display▌' : _display;
-    return Text(
-      text,
-      maxLines: widget.maxLines,
-      overflow: TextOverflow.fade,
-      softWrap: true,
-      textAlign: widget.textAlign,
-      style: widget.style,
-    );
-  }
-}
-
-// —————————————————————————————————————————————————————
-// Message detail screen
-// —————————————————————————————————————————————————————
-
-class _MessageDetailScreen extends StatelessWidget {
-  const _MessageDetailScreen({required this.message, required this.isMine});
-
-  final LocalChatMessage message;
-  final bool isMine;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-
-    final local = message.createdAt.toLocal();
-    final dateStr =
-        '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        surfaceTintColor: AppPalette.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          isMine
-              ? AppLocalizations.of(context)!.chatMessageDetailTitleMine
-              : AppLocalizations.of(context)!.chatMessageDetailTitleOther,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: AppPalette.neutral500),
-        actions: [
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: message.body));
-              showAppToast(
-                context,
-                AppLocalizations.of(context)!.chatCopiedToClipboard,
-                duration: const Duration(milliseconds: 900),
-              );
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Text(
-                AppLocalizations.of(context)!.actionCopy,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppPalette.neutral500,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SelectableText(
-              message.body,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w300,
-                color: inkColor,
-                height: 1.7,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Divider(height: 1, color: ruleColor),
-            const SizedBox(height: 16),
-            Text(
-              dateStr,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppPalette.neutral500,
-                letterSpacing: 0.2,
-              ),
-            ),
-            if (!isMine) ...[
-              const SizedBox(height: 6),
-              Text(
-                message.senderId,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppPalette.neutral500,
-                  letterSpacing: 0.2,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MessageAvatar extends StatefulWidget {
-  const _MessageAvatar({
-    required this.userId,
-    required this.avatarBase64,
-    required this.avatarBg,
-  });
-
-  final String userId;
-  final String? avatarBase64;
-  final Color avatarBg;
-
-  @override
-  State<_MessageAvatar> createState() => _MessageAvatarState();
-}
-
-class _MessageAvatarState extends State<_MessageAvatar> {
-  /// Last successfully decoded avatar bytes. Retained across rebuilds even
-  /// when the provider temporarily returns null (e.g. during invalidation),
-  /// so the avatar never flickers back to initials while reloading.
-  String? _cachedBase64;
-  Uint8List? _cachedBytes;
-
-  @override
-  void initState() {
-    super.initState();
-    _tryUpdateCache(widget.avatarBase64);
-  }
-
-  @override
-  void didUpdateWidget(_MessageAvatar old) {
-    super.didUpdateWidget(old);
-    _tryUpdateCache(widget.avatarBase64);
-  }
-
-  void _tryUpdateCache(String? base64) {
-    if (base64 != null && base64 != _cachedBase64) {
-      _cachedBase64 = base64;
-      _cachedBytes = base64Decode(base64);
-    }
-    // When base64 is null (provider in loading state after invalidation),
-    // keep _cachedBytes so the image remains visible — no flash to initials.
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = _cachedBytes;
-    final initials = widget.userId.length >= 2
-        ? widget.userId.substring(0, 2).toUpperCase()
-        : '?';
-
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: bytes != null ? Colors.transparent : widget.avatarBg,
-      child: bytes == null
-          ? Text(
-              initials,
-              style: const TextStyle(
-                color: AppPalette.white,
-                fontSize: 8,
-                fontWeight: FontWeight.w300,
-              ),
-            )
-          : ClipOval(
-              child: SizedBox.expand(
-                child: Image.memory(bytes, fit: BoxFit.cover),
-              ),
-            ),
-    );
-  }
-}
-
-// —————————————————————————————————————————————————————
-// Quick action sheet (Minimal)
-// —————————————————————————————————————————————————————
-
-class _QuickActionSheet extends StatelessWidget {
-  const _QuickActionSheet({
-    required this.inkColor,
-    required this.mutedColor,
-    required this.ruleColor,
-  });
-
-  final Color inkColor;
-  final Color mutedColor;
-  final Color ruleColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.chatQuickNewHeader,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.8,
-                color: mutedColor,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Divider(height: 1, color: ruleColor),
-            _SheetItem(
-              label: AppLocalizations.of(context)!.chatQuickNewRoom,
-              inkColor: inkColor,
-              onTap: () => Navigator.of(context).pop(_ChatQuickAction.newRoom),
-            ),
-            Divider(height: 1, color: ruleColor),
-            _SheetItem(
-              label: AppLocalizations.of(context)!.chatQuickFriendOrStart,
-              inkColor: inkColor,
-              onTap: () =>
-                  Navigator.of(context).pop(_ChatQuickAction.newFriendOrChat),
-            ),
-            Divider(height: 1, color: ruleColor),
-            _SheetItem(
-              label: AppLocalizations.of(context)!.chatQuickScanFriendQr,
-              inkColor: inkColor,
-              onTap: () =>
-                  Navigator.of(context).pop(_ChatQuickAction.scanFriendQr),
-            ),
-            Divider(height: 1, color: ruleColor),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  AppLocalizations.of(context)!.actionCancel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: mutedColor,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetItem extends StatelessWidget {
-  const _SheetItem({
-    required this.label,
-    required this.inkColor,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color inkColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// —————————————————————————————————————————————————————
-// Unread badge
-// —————————————————————————————————————————————————————
-
-class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-            color: AppPalette.danger700,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          count > 99 ? '99+' : '$count',
-          style: const TextStyle(
-            color: AppPalette.danger700,
-            fontSize: 11,
-            fontWeight: FontWeight.w300,
-          ),
-        ),
-      ],
     );
   }
 }

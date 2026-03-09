@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import 'package:mobile/l10n/app_localizations.dart';
+
+import '../../../ui/tokens/colors/app_palette.dart';
+
+bool isSameDay(DateTime a, DateTime b) {
+  final x = a.toLocal();
+  final y = b.toLocal();
+  return x.year == y.year && x.month == y.month && x.day == y.day;
+}
+
+String dayLabel(BuildContext context, DateTime dt) {
+  final local = dt.toLocal();
+  final now = DateTime.now();
+  if (local.year == now.year && local.month == now.month && local.day == now.day) {
+    return AppLocalizations.of(context)!.chatToday;
+  }
+  final m = local.month.toString().padLeft(2, '0');
+  final d = local.day.toString().padLeft(2, '0');
+  return '${local.year}-$m-$d';
+}
+
+String displayNameOrFallback(String userId, String? displayName) {
+  final normalized = (displayName ?? '').trim();
+  if (normalized.isNotEmpty) return normalized;
+  return userId.length >= 8 ? userId.substring(0, 8) : userId;
+}
+
+String timeLabel(DateTime dt) {
+  final local = dt.toLocal();
+  final h = local.hour.toString().padLeft(2, '0');
+  final m = local.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
+class DayDivider extends StatelessWidget {
+  const DayDivider({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: AppPalette.neutral500.withValues(alpha: 0.22),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppPalette.neutral300,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: AppPalette.neutral500.withValues(alpha: 0.22),
+          ),
+        ),
+      ],
+    );
+  }
+}

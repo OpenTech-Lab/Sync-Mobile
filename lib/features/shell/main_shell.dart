@@ -162,6 +162,7 @@ class _MainShellState extends ConsumerState<MainShell>
         accessToken: widget.accessToken,
         currentUserId: widget.currentUserId,
         currentUsername: widget.currentUsername,
+        planetInfo: widget.planetInfo,
         onOpenChat: (friendId) {
           // Switch to Chats tab and pre-select the friend
           setState(() {

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../models/chat_room.dart';
+import '../../services/server_health_service.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../chats/chat_target_profile_page.dart';
 import '../chats/room_detail_page.dart';
@@ -22,6 +23,7 @@ class HomeTab extends ConsumerWidget {
     required this.accessToken,
     required this.currentUserId,
     required this.currentUsername,
+    required this.planetInfo,
     this.onOpenChat,
   });
 
@@ -29,6 +31,7 @@ class HomeTab extends ConsumerWidget {
   final String accessToken;
   final String currentUserId;
   final String? currentUsername;
+  final PlanetInfo? planetInfo;
   final ValueChanged<String>? onOpenChat;
 
   @override
@@ -47,7 +50,11 @@ class HomeTab extends ConsumerWidget {
       (sum, count) => sum + count,
     );
     final friendIds = ref.watch(friendIdsProvider).value ?? const <String>[];
-    final planetLabel = _planetNameFromServerUrl(serverUrl);
+    final planetLabel = resolvePlanetName(
+      serverUrl: serverUrl,
+      instanceName: planetInfo?.instanceName,
+      fallbackName: l10n.settingsPlanetUnknownName,
+    );
 
     String initials(String uuid) =>
         uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
@@ -304,22 +311,6 @@ String _displayNameOrFallback(String userId, String? displayName) {
     return normalized;
   }
   return userId.length >= 8 ? userId.substring(0, 8) : userId;
-}
-
-String _planetNameFromServerUrl(String serverUrl) {
-  final normalized = serverUrl.trim();
-  final preset = officialPlanetPresets.firstWhere(
-    (item) => item.url.toLowerCase() == normalized.toLowerCase(),
-    orElse: () => PlanetPreset(name: '', url: ''),
-  );
-  if (preset.name.isNotEmpty) {
-    return preset.name;
-  }
-  final host = Uri.tryParse(normalized)?.host.trim() ?? '';
-  if (host.isNotEmpty) {
-    return host;
-  }
-  return normalized;
 }
 
 // ---------------------------------------------------------------------------
