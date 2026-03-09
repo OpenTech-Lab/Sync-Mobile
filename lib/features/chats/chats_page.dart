@@ -1317,7 +1317,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final remoteUnreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final conversationSummaries =
-        ref.watch(conversationSummariesProvider).value ??
+        ref.watch(conversationSummariesProvider).valueOrNull ??
         const <ConversationSummary>[];
     final allSummariesById = <String, ConversationSummary>{
       for (final summary in conversationSummaries)
@@ -2175,7 +2175,7 @@ class _ConversationStarter extends ConsumerWidget {
           ),
         ),
       ],
-      );
+    );
 
     if (isRoom) return rowContent;
 

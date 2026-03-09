@@ -3,9 +3,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-http.Client createClient() {
-  final io = HttpClient();
-  io.badCertificateCallback = (X509Certificate _, String host, int port) {
+void configureDevBadCertificateCallback(HttpClient client) {
+  client.badCertificateCallback = (X509Certificate _, String host, int port) {
     if (port <= 0) {
       return false;
     }
@@ -20,5 +19,10 @@ http.Client createClient() {
         RegExp(r'^10\.').hasMatch(h) ||
         RegExp(r'^172\.(1[6-9]|2[0-9]|3[01])\.').hasMatch(h);
   };
+}
+
+http.Client createClient() {
+  final io = HttpClient();
+  configureDevBadCertificateCallback(io);
   return IOClient(io);
 }

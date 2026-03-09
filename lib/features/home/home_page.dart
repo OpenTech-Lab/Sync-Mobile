@@ -343,7 +343,7 @@ class _RoomsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roomsAsync = ref.watch(roomConversationsProvider);
-    final rooms = roomsAsync.value ?? const <ChatRoom>[];
+    final rooms = roomsAsync.valueOrNull ?? const <ChatRoom>[];
     if (rooms.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -594,9 +594,15 @@ class _ProfileCard extends ConsumerWidget {
                   Wrap(
                     spacing: 6,
                     children: [
-                      _HomeGuildBadge(label: 'Lv ${guild.level}', mutedColor: mutedColor),
+                      _HomeGuildBadge(
+                        label: 'Lv ${guild.level}',
+                        mutedColor: mutedColor,
+                      ),
                       if (guild.rank.isNotEmpty)
-                        _HomeGuildBadge(label: guild.rank, mutedColor: mutedColor),
+                        _HomeGuildBadge(
+                          label: guild.rank,
+                          mutedColor: mutedColor,
+                        ),
                     ],
                   ),
                 ],

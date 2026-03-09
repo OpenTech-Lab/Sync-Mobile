@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'dev_web_socket_channel.dart';
 import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
@@ -96,7 +97,7 @@ class RealtimeSyncService {
         return;
       }
       final wsUri = _wsUri(baseUrl, accessToken);
-      final channel = WebSocketChannel.connect(wsUri);
+      final channel = connectDevWebSocketChannel(wsUri);
       _channel = channel;
       _events.add(RealtimeEvent.connection(RealtimeConnectionStatus.connected));
 

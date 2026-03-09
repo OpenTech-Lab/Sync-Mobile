@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -22,6 +23,7 @@ class EncryptedDatabase {
   final String _serverUrl;
   final FlutterSecureStorage _secureStorage;
   Database? _database;
+  Future<Database>? _openingDatabase;
 
   String get _databaseName =>
       'sync_local_chat_${serverDatabaseSlug(_serverUrl)}.db';
@@ -34,18 +36,65 @@ class EncryptedDatabase {
       return _database!;
     }
 
+    final openingDatabase = _openingDatabase;
+    if (openingDatabase != null) {
+      return openingDatabase;
+    }
+
+    final future = _openInternal();
+    _openingDatabase = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_openingDatabase, future)) {
+        _openingDatabase = null;
+      }
+    }
+  }
+
+  Future<Database> _openInternal() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final databasePath = path.join(documentsDirectory.path, _databaseName);
     await _migrateLegacyDatabaseIfNeeded(
       documentsDirectory: documentsDirectory.path,
       databasePath: databasePath,
     );
-    final encryptionKey = await _readOrCreateEncryptionKey();
+    final encryptionKey = await _readOrCreateEncryptionKey(
+      documentsDirectory: documentsDirectory.path,
+      databasePath: databasePath,
+    );
 
-    _database = await openDatabase(
+    try {
+      _database = await _openDatabase(databasePath, encryptionKey);
+    } catch (error) {
+      if (!_isRecoverableOpenError(error)) {
+        rethrow;
+      }
+      debugPrint(
+        'EncryptedDatabase: resetting unreadable local cache at $databasePath',
+      );
+      _database = null;
+      await _resetUnreadableDatabase(databasePath);
+      _database = await _openDatabase(databasePath, encryptionKey);
+    }
+
+    return _database!;
+  }
+
+  Future<void> close() async {
+    await _openingDatabase;
+    if (_database != null && _database!.isOpen) {
+      await _database!.close();
+    }
+    _database = null;
+  }
+
+  Future<Database> _openDatabase(String databasePath, String encryptionKey) {
+    return openDatabase(
       databasePath,
       version: _databaseVersion,
       password: encryptionKey,
+      singleInstance: false,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE local_messages (
@@ -67,21 +116,36 @@ class EncryptedDatabase {
         }
       },
     );
-
-    return _database!;
   }
 
-  Future<void> close() async {
-    if (_database != null && _database!.isOpen) {
-      await _database!.close();
+  Future<String> _readOrCreateEncryptionKey({
+    required String documentsDirectory,
+    required String databasePath,
+  }) async {
+    final scopedFileExists = await File(databasePath).exists();
+    final scopedKey = await _secureStorage.read(key: _databaseKeyStorageKey);
+    final legacyKey = await _secureStorage.read(
+      key: _legacyDatabaseKeyStorageKey,
+    );
+    if (scopedFileExists && legacyKey != null && legacyKey.isNotEmpty) {
+      if (scopedKey != legacyKey) {
+        await _secureStorage.write(
+          key: _databaseKeyStorageKey,
+          value: legacyKey,
+        );
+      }
+      return legacyKey;
     }
-    _database = null;
-  }
+    if (scopedKey != null && scopedKey.isNotEmpty) {
+      return scopedKey;
+    }
 
-  Future<String> _readOrCreateEncryptionKey() async {
-    final existing = await _secureStorage.read(key: _databaseKeyStorageKey);
-    if (existing != null && existing.isNotEmpty) {
-      return existing;
+    final legacyPath = path.join(documentsDirectory, _legacyDatabaseName);
+    if (legacyKey != null &&
+        legacyKey.isNotEmpty &&
+        await File(legacyPath).exists()) {
+      await _secureStorage.write(key: _databaseKeyStorageKey, value: legacyKey);
+      return legacyKey;
     }
 
     final random = Random.secure();
@@ -111,7 +175,13 @@ class EncryptedDatabase {
       return;
     }
 
-    await legacyFile.rename(databasePath);
+    try {
+      await legacyFile.rename(databasePath);
+    } on FileSystemException {
+      if (!await scopedFile.exists()) {
+        rethrow;
+      }
+    }
 
     final scopedKey = await _secureStorage.read(key: _databaseKeyStorageKey);
     if (scopedKey != null && scopedKey.isNotEmpty) {
@@ -127,6 +197,47 @@ class EncryptedDatabase {
 
     await _secureStorage.write(key: _databaseKeyStorageKey, value: legacyKey);
     await _secureStorage.delete(key: _legacyDatabaseKeyStorageKey);
+  }
+
+  bool _isRecoverableOpenError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('file is not a database') ||
+        message.contains('sqlitenotadatabaseexception');
+  }
+
+  Future<void> _resetUnreadableDatabase(String databasePath) async {
+    Object? deleteError;
+    try {
+      await deleteDatabase(databasePath);
+    } catch (error) {
+      deleteError = error;
+    }
+
+    await _deleteDatabaseFiles(databasePath);
+
+    if (await File(databasePath).exists()) {
+      throw StateError(
+        'Failed to remove unreadable local cache at $databasePath'
+        '${deleteError == null ? '' : ': $deleteError'}',
+      );
+    }
+  }
+
+  Future<void> _deleteDatabaseFiles(String databasePath) async {
+    const suffixes = <String>['', '-wal', '-shm', '-journal'];
+    for (final suffix in suffixes) {
+      final file = File('$databasePath$suffix');
+      if (!await file.exists()) {
+        continue;
+      }
+      try {
+        await file.delete();
+      } on FileSystemException {
+        if (await file.exists()) {
+          rethrow;
+        }
+      }
+    }
   }
 
   Future<void> _createRoomsTable(Database db) async {
