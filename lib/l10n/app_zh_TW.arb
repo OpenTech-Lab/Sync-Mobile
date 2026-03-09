@@ -275,7 +275,7 @@
   "profileNoDescriptionYet": "尚無描述",
   "profileFriendLinkCopied": "已複製好友連結",
   "profileCopyFriendLink": "複製好友連結",
-  "profileTrustSectionTitle": "信任",
+  "profileTrustSectionTitle": "GUILD",
   "profileGuildLevel": "等級 {level}",
   "@profileGuildLevel": {
     "placeholders": {

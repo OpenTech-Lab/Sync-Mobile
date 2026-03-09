@@ -1521,7 +1521,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get profileCopyFriendLink => '複製好友連結';
 
   @override
-  String get profileTrustSectionTitle => '信任';
+  String get profileTrustSectionTitle => 'GUILD';
 
   @override
   String profileGuildLevel(int level) {
