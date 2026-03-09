@@ -3,16 +3,31 @@ import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../ui/tokens/colors/app_palette.dart';
 
-enum ChatPaneKind { list, conversation }
-
 const Duration chatPaneTransitionDuration = Duration(milliseconds: 260);
 const Duration chatPaneTransitionReverseDuration = Duration(milliseconds: 220);
+const double chatPaneBackGestureVelocityThreshold = 450;
+const double chatPaneBackGestureDismissThreshold = 0.35;
+const double chatPaneBackgroundParallaxFactor = 0.33;
+const Curve chatPaneTransitionCurve = Curves.easeOutCubic;
 
-Offset chatPaneTransitionBeginOffset(ChatPaneKind pane) {
-  return switch (pane) {
-    ChatPaneKind.list => const Offset(-0.12, 0),
-    ChatPaneKind.conversation => const Offset(1, 0),
-  };
+double chatPaneBackgroundParallaxProgress(
+  double transitionProgress, {
+  required bool linearTransition,
+}) {
+  final clamped = transitionProgress.clamp(0.0, 1.0);
+  final adjusted = linearTransition
+      ? clamped
+      : chatPaneTransitionCurve.transform(clamped);
+  return adjusted * chatPaneBackgroundParallaxFactor;
+}
+
+bool shouldCompleteChatBackGesture({
+  required double transitionProgress,
+  required double velocity,
+}) {
+  final clamped = transitionProgress.clamp(0.0, 1.0);
+  return velocity > chatPaneBackGestureVelocityThreshold ||
+      clamped <= (1 - chatPaneBackGestureDismissThreshold);
 }
 
 bool isSameDay(DateTime a, DateTime b) {

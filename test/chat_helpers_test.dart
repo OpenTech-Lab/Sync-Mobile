@@ -2,17 +2,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/utils/chat_helpers.dart';
 
 void main() {
-  test(
-    'chat pane transition offsets match list and conversation directions',
-    () {
-      expect(
-        chatPaneTransitionBeginOffset(ChatPaneKind.list),
-        const Offset(-0.12, 0),
-      );
-      expect(
-        chatPaneTransitionBeginOffset(ChatPaneKind.conversation),
-        const Offset(1, 0),
-      );
-    },
-  );
+  test('chat pane background parallax matches Cupertino-style factor', () {
+    expect(
+      chatPaneBackgroundParallaxProgress(1, linearTransition: true),
+      chatPaneBackgroundParallaxFactor,
+    );
+    expect(chatPaneBackgroundParallaxProgress(0, linearTransition: true), 0);
+  });
+
+  test('chat back gesture completion handles drag progress and fling', () {
+    expect(
+      shouldCompleteChatBackGesture(
+        transitionProgress: 0.9,
+        velocity: chatPaneBackGestureVelocityThreshold + 1,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldCompleteChatBackGesture(
+        transitionProgress: 1 - chatPaneBackGestureDismissThreshold + 0.01,
+        velocity: 0,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldCompleteChatBackGesture(
+        transitionProgress: 1 - chatPaneBackGestureDismissThreshold,
+        velocity: 0,
+      ),
+      isTrue,
+    );
+  });
 }

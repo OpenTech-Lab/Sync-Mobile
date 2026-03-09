@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
@@ -53,19 +54,18 @@ class ChatsTab extends ConsumerStatefulWidget {
   ConsumerState<ChatsTab> createState() => _ChatsTabState();
 }
 
-class _ChatsTabState extends ConsumerState<ChatsTab> {
-  static const _conversationListPaneKey = ValueKey<String>('chats-list-pane');
-  static const _conversationDetailPaneKey = ValueKey<String>(
-    'chats-conversation-pane',
-  );
-
+class _ChatsTabState extends ConsumerState<ChatsTab>
+    with SingleTickerProviderStateMixin {
   final _imagePicker = ImagePicker();
   final _partnerController = TextEditingController();
   final _partnerFocusNode = FocusNode();
   final _messageController = TextEditingController();
   final _messageScrollController = ScrollController();
+  late final AnimationController _conversationPaneController;
   String? _activePartnerId;
   bool _typingSignalSent = false;
+  bool _isBackGestureInProgress = false;
+  bool _isClosingActiveConversation = false;
   Timer? _typingIdleTimer;
   Uint8List? _selectedMediaBytes;
   String? _selectedMediaName;
@@ -79,6 +79,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
   @override
   void initState() {
     super.initState();
+    _conversationPaneController = AnimationController(
+      vsync: this,
+      duration: chatPaneTransitionDuration,
+      reverseDuration: chatPaneTransitionReverseDuration,
+    );
     _partnerController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_syncRooms());
@@ -130,6 +135,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     _partnerFocusNode.dispose();
     _messageController.dispose();
     _messageScrollController.dispose();
+    _conversationPaneController.dispose();
     super.dispose();
   }
 
@@ -253,51 +259,84 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     }
   }
 
+  void _setBackGestureInProgress(bool value) {
+    if (_isBackGestureInProgress == value || !mounted) {
+      return;
+    }
+    setState(() => _isBackGestureInProgress = value);
+  }
+
   void _closeActiveConversation() {
+    unawaited(_closeActiveConversationWithAnimation());
+  }
+
+  Future<void> _closeActiveConversationWithAnimation() async {
+    if (_activePartnerId == null || _isClosingActiveConversation) {
+      return;
+    }
+    _isClosingActiveConversation = true;
+    _conversationPaneController.stop();
+    _setBackGestureInProgress(false);
+    await _conversationPaneController.animateBack(0);
+    if (!mounted) {
+      return;
+    }
     if (_typingSignalSent) {
       _sendTypingSignal(false);
       _typingSignalSent = false;
     }
+    _typingIdleTimer?.cancel();
     setState(() => _activePartnerId = null);
     widget.onPartnerChanged(null);
+    _isClosingActiveConversation = false;
   }
 
-  Widget _buildChatPaneTransition(Widget child, Animation<double> animation) {
-    final pane = child.key == _conversationDetailPaneKey
-        ? ChatPaneKind.conversation
-        : ChatPaneKind.list;
-    final curvedAnimation = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeOutCubic,
-    );
-    return ClipRect(
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: chatPaneTransitionBeginOffset(pane),
-          end: Offset.zero,
-        ).animate(curvedAnimation),
-        child: child,
-      ),
-    );
+  void _handleBackGestureStart() {
+    if (_activePartnerId == null) {
+      return;
+    }
+    _conversationPaneController.stop();
   }
 
-  Widget _buildChatPaneLayout(
-    Widget? currentChild,
-    List<Widget> previousChildren,
-  ) {
-    final currentIsConversation =
-        currentChild?.key == _conversationDetailPaneKey;
-    final currentChildWidgets = currentChild == null
-        ? const <Widget>[]
-        : <Widget>[currentChild];
-    return Stack(
-      fit: StackFit.expand,
-      alignment: Alignment.topLeft,
-      children: currentIsConversation
-          ? <Widget>[...previousChildren, ...currentChildWidgets]
-          : <Widget>[...currentChildWidgets, ...previousChildren],
+  void _handleBackGestureUpdate(DragUpdateDetails details, double paneWidth) {
+    if (_activePartnerId == null || paneWidth <= 0) {
+      return;
+    }
+    final delta = details.primaryDelta ?? 0;
+    if (!_isBackGestureInProgress) {
+      if (delta <= 0) {
+        return;
+      }
+      _setBackGestureInProgress(true);
+    }
+    final nextValue = (_conversationPaneController.value - (delta / paneWidth))
+        .clamp(0.0, 1.0);
+    _conversationPaneController.value = nextValue;
+  }
+
+  void _handleBackGestureCancel() {
+    if (_activePartnerId == null) {
+      return;
+    }
+    _setBackGestureInProgress(false);
+    _conversationPaneController.animateTo(1);
+  }
+
+  Future<void> _handleBackGestureEnd(DragEndDetails details) async {
+    if (_activePartnerId == null) {
+      return;
+    }
+    final velocity = details.primaryVelocity ?? 0;
+    final shouldClose = shouldCompleteChatBackGesture(
+      transitionProgress: _conversationPaneController.value,
+      velocity: velocity,
     );
+    if (shouldClose) {
+      await _closeActiveConversationWithAnimation();
+      return;
+    }
+    _setBackGestureInProgress(false);
+    await _conversationPaneController.animateTo(1);
   }
 
   Future<void> _clearConversation(String conversationId) async {
@@ -325,8 +364,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
       _sendTypingSignal(false);
       _typingSignalSent = false;
     }
+    final shouldAnimateIn = _activePartnerId == null;
+    _conversationPaneController.stop();
+    if (shouldAnimateIn) {
+      _conversationPaneController.value = 0;
+    }
+    _setBackGestureInProgress(false);
     setState(() => _activePartnerId = partnerId);
     widget.onPartnerChanged(partnerId);
+    if (shouldAnimateIn) {
+      _conversationPaneController.animateTo(1);
+    }
     if (!isRoomConversationId(partnerId)) {
       await _syncUserProfile(partnerId, force: true);
     }
@@ -1451,278 +1499,323 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     final messagesAsync = _activePartnerId == null
         ? null
         : ref.watch(conversationMessagesProvider(_activePartnerId!));
-    final listPane = KeyedSubtree(
-      key: _conversationListPaneKey,
-      child: SafeArea(
-        child: ConversationStarter(
-          controller: _partnerController,
-          focusNode: _partnerFocusNode,
-          unreadCounts: unreadCounts,
-          orderedConversationIds: orderedConversationIds,
-          summariesById: summariesById,
-          onQuickAction: (action) {
-            switch (action) {
-              case ChatQuickAction.newRoom:
-                _openNewRoom();
-                break;
-              case ChatQuickAction.newFriendOrChat:
-                _openNewFriendOrChat();
-                break;
-              case ChatQuickAction.scanFriendQr:
-                _scanQrAndOpen();
-                break;
-            }
-          },
-          onOpenConversation: (id) async {
-            await _openPartner(id);
-          },
-          onClearConversation: _clearConversation,
-          onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
-          onStartNewChat: _openNewFriendOrChat,
-          onAddFriend: _openNewFriendOrChat,
-        ),
-      ),
-    );
-    final conversationPane = KeyedSubtree(
-      key: _conversationDetailPaneKey,
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onHorizontalDragEnd: (details) {
-          final velocity = details.primaryVelocity ?? 0;
-          if (velocity > 450) {
-            _closeActiveConversation();
+    final listPane = SafeArea(
+      child: ConversationStarter(
+        controller: _partnerController,
+        focusNode: _partnerFocusNode,
+        unreadCounts: unreadCounts,
+        orderedConversationIds: orderedConversationIds,
+        summariesById: summariesById,
+        onQuickAction: (action) {
+          switch (action) {
+            case ChatQuickAction.newRoom:
+              _openNewRoom();
+              break;
+            case ChatQuickAction.newFriendOrChat:
+              _openNewFriendOrChat();
+              break;
+            case ChatQuickAction.scanFriendQr:
+              _scanQrAndOpen();
+              break;
           }
         },
-        child: Column(
-          children: [
-            // Messages list
-            Expanded(
-              child: messagesAsync == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : messagesAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (err, _) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text('$err', textAlign: TextAlign.center),
-                        ),
-                      ),
-                      data: (messages) {
-                        final activePartnerId = _activePartnerId;
-                        final draftMessages = activePartnerId == null
-                            ? const <OutgoingMessageDraft>[]
-                            : (_outgoingDraftsByPartner[activePartnerId] ??
-                                  const <OutgoingMessageDraft>[]);
-                        final draftById = <String, OutgoingMessageDraft>{
-                          for (final draft in draftMessages) draft.id: draft,
-                        };
-                        final displayedMessages = <LocalChatMessage>[
-                          ...draftMessages.map(
-                            (draft) => LocalChatMessage(
-                              id: draft.id,
-                              conversationId: draft.partnerId,
-                              senderId: widget.currentUserId,
-                              body: draft.body,
-                              createdAt: draft.createdAt,
-                            ),
-                          ),
-                          ...messages,
-                        ];
-                        _prefetchVisibleProfiles(
-                          displayedMessages.map((m) => m.senderId),
-                        );
-
-                        return displayedMessages.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.chat_bubble_outline,
-                                      size: 48,
-                                      color: cs.outlineVariant,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _l10n.chatNoMessagesYet,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: cs.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView.separated(
-                                reverse: true,
-                                controller: _messageScrollController,
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  8,
-                                  12,
-                                  8,
-                                ),
-                                itemCount: displayedMessages.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 6),
-                                itemBuilder: (ctx, i) {
-                                  final message = displayedMessages[i];
-                                  final draft = draftById[message.id];
-                                  final showDayDivider =
-                                      i == displayedMessages.length - 1 ||
-                                      !isSameDay(
-                                        message.createdAt,
-                                        displayedMessages[i + 1].createdAt,
-                                      );
-                                  return Column(
-                                    children: [
-                                      if (showDayDivider)
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                            0,
-                                            8,
-                                            0,
-                                            6,
-                                          ),
-                                          child: DayDivider(
-                                            label: dayLabel(
-                                              context,
-                                              message.createdAt,
-                                            ),
-                                          ),
-                                        ),
-                                      MessageBubble(
-                                        key: ValueKey(message.id),
-                                        message: message,
-                                        isMine:
-                                            message.senderId ==
-                                            widget.currentUserId,
-                                        currentUserId: widget.currentUserId,
-                                        partnerId: _activePartnerId!,
-                                        isRoomConversation:
-                                            isRoomConversationId(
-                                              _activePartnerId!,
-                                            ),
-                                        onAvatarTap:
-                                            message.senderId ==
-                                                widget.currentUserId
-                                            ? null
-                                            : () => _openUserProfile(
-                                                message.senderId,
-                                              ),
-                                        stickers: stickers,
-                                        serverUrl: widget.serverUrl,
-                                        accessToken: widget.accessToken,
-                                        deliveryState: draft?.state,
-                                        statusLabel: draft?.statusLabel,
-                                        onRetryTap: draft == null
-                                            ? null
-                                            : () => _retryOutgoingDraft(draft),
-                                        typingStyleModeEnabled:
-                                            typingStyleModeEnabled,
-                                        typingStyleSpeedMs: typingStyleSpeedMs,
-                                        animateAsDraft: draft != null,
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                      },
-                    ),
-            ),
-
-            // Typing indicator
-            if (isTargetTyping)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _l10n.chatTypingIndicator(
-                      activeDisplayName ?? _l10n.chatDefaultPartner,
-                    ),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ),
-
-            // Composer
-            SafeArea(
-              top: false,
-              child: Composer(
-                messageController: _messageController,
-                selectedMediaBytes: _selectedMediaBytes,
-                selectedMediaName: _selectedMediaName,
-                stickers: stickers,
-                onChanged: _onComposerChanged,
-                onSend: _sendMessage,
-                onPickMedia: _pickMedia,
-                onClearMedia: _clearMedia,
-                onStickerSelected: (sticker) async {
-                  if (_activePartnerId == null) return;
-                  await _sendMessageWithOptimisticBubble(
-                    '[sticker:${sticker.id}:${sticker.name}]',
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+        onOpenConversation: (id) async {
+          await _openPartner(id);
+        },
+        onClearConversation: _clearConversation,
+        onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
+        onStartNewChat: _openNewFriendOrChat,
+        onAddFriend: _openNewFriendOrChat,
       ),
     );
-    final activePane = inConversation ? conversationPane : listPane;
+    final conversationPage = Material(
+      color: bgColor,
+      child: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: kToolbarHeight,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(CupertinoIcons.back),
+                      onPressed: _closeActiveConversation,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 56),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: _activePartnerId == null
+                            ? null
+                            : isRoomConversationId(_activePartnerId!)
+                            ? _openRoomDetail
+                            : _openActivePartnerProfile,
+                        child: Text(
+                          activeDisplayName ?? _l10n.chatDefaultTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (activeUnread > 0)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: UnreadBadge(count: activeUnread),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(
+                  child: messagesAsync == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : messagesAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (err, _) => Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text('$err', textAlign: TextAlign.center),
+                            ),
+                          ),
+                          data: (messages) {
+                            final activePartnerId = _activePartnerId;
+                            final draftMessages = activePartnerId == null
+                                ? const <OutgoingMessageDraft>[]
+                                : (_outgoingDraftsByPartner[activePartnerId] ??
+                                      const <OutgoingMessageDraft>[]);
+                            final draftById = <String, OutgoingMessageDraft>{
+                              for (final draft in draftMessages)
+                                draft.id: draft,
+                            };
+                            final displayedMessages = <LocalChatMessage>[
+                              ...draftMessages.map(
+                                (draft) => LocalChatMessage(
+                                  id: draft.id,
+                                  conversationId: draft.partnerId,
+                                  senderId: widget.currentUserId,
+                                  body: draft.body,
+                                  createdAt: draft.createdAt,
+                                ),
+                              ),
+                              ...messages,
+                            ];
+                            _prefetchVisibleProfiles(
+                              displayedMessages.map((m) => m.senderId),
+                            );
+
+                            return displayedMessages.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 48,
+                                          color: cs.outlineVariant,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          _l10n.chatNoMessagesYet,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: cs.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    reverse: true,
+                                    controller: _messageScrollController,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      12,
+                                      8,
+                                      12,
+                                      8,
+                                    ),
+                                    itemCount: displayedMessages.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 6),
+                                    itemBuilder: (ctx, i) {
+                                      final message = displayedMessages[i];
+                                      final draft = draftById[message.id];
+                                      final showDayDivider =
+                                          i == displayedMessages.length - 1 ||
+                                          !isSameDay(
+                                            message.createdAt,
+                                            displayedMessages[i + 1].createdAt,
+                                          );
+                                      return Column(
+                                        children: [
+                                          if (showDayDivider)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                    0,
+                                                    8,
+                                                    0,
+                                                    6,
+                                                  ),
+                                              child: DayDivider(
+                                                label: dayLabel(
+                                                  context,
+                                                  message.createdAt,
+                                                ),
+                                              ),
+                                            ),
+                                          MessageBubble(
+                                            key: ValueKey(message.id),
+                                            message: message,
+                                            isMine:
+                                                message.senderId ==
+                                                widget.currentUserId,
+                                            currentUserId: widget.currentUserId,
+                                            partnerId: _activePartnerId!,
+                                            isRoomConversation:
+                                                isRoomConversationId(
+                                                  _activePartnerId!,
+                                                ),
+                                            onAvatarTap:
+                                                message.senderId ==
+                                                    widget.currentUserId
+                                                ? null
+                                                : () => _openUserProfile(
+                                                    message.senderId,
+                                                  ),
+                                            stickers: stickers,
+                                            serverUrl: widget.serverUrl,
+                                            accessToken: widget.accessToken,
+                                            deliveryState: draft?.state,
+                                            statusLabel: draft?.statusLabel,
+                                            onRetryTap: draft == null
+                                                ? null
+                                                : () => _retryOutgoingDraft(
+                                                    draft,
+                                                  ),
+                                            typingStyleModeEnabled:
+                                                typingStyleModeEnabled,
+                                            typingStyleSpeedMs:
+                                                typingStyleSpeedMs,
+                                            animateAsDraft: draft != null,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                          },
+                        ),
+                ),
+                if (isTargetTyping)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _l10n.chatTypingIndicator(
+                          activeDisplayName ?? _l10n.chatDefaultPartner,
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+                SafeArea(
+                  top: false,
+                  child: Composer(
+                    messageController: _messageController,
+                    selectedMediaBytes: _selectedMediaBytes,
+                    selectedMediaName: _selectedMediaName,
+                    stickers: stickers,
+                    onChanged: _onComposerChanged,
+                    onSend: _sendMessage,
+                    onPickMedia: _pickMedia,
+                    onClearMedia: _clearMedia,
+                    onStickerSelected: (sticker) async {
+                      if (_activePartnerId == null) return;
+                      await _sendMessageWithOptimisticBubble(
+                        '[sticker:${sticker.id}:${sticker.name}]',
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: inConversation
-          ? AppBar(
-              backgroundColor: AppPalette.transparent,
-              surfaceTintColor: AppPalette.transparent,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              forceMaterialTransparency: true,
-              centerTitle: true,
-              title: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: isRoomConversationId(_activePartnerId!)
-                    ? _openRoomDetail
-                    : _openActivePartnerProfile,
-                child: Text(
-                  activeDisplayName ?? _l10n.chatDefaultTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _closeActiveConversation,
-              ),
-              automaticallyImplyLeading: false,
-              actions: [
-                if (activeUnread > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: UnreadBadge(count: activeUnread),
-                  ),
-              ],
-            )
-          : null,
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: AnimatedSwitcher(
-          duration: chatPaneTransitionDuration,
-          reverseDuration: chatPaneTransitionReverseDuration,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeOutCubic,
-          transitionBuilder: _buildChatPaneTransition,
-          layoutBuilder: _buildChatPaneLayout,
-          child: activePane,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (!inConversation) {
+              return listPane;
+            }
+            return AnimatedBuilder(
+              animation: _conversationPaneController,
+              child: conversationPage,
+              builder: (context, child) {
+                final progress = _conversationPaneController.value;
+                final backgroundOffset =
+                    -constraints.maxWidth *
+                    chatPaneBackgroundParallaxProgress(
+                      progress,
+                      linearTransition: _isBackGestureInProgress,
+                    );
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Transform.translate(
+                      offset: Offset(backgroundOffset, 0),
+                      child: IgnorePointer(ignoring: true, child: listPane),
+                    ),
+                    GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onHorizontalDragStart: (_) => _handleBackGestureStart(),
+                      onHorizontalDragUpdate: (details) =>
+                          _handleBackGestureUpdate(
+                            details,
+                            constraints.maxWidth,
+                          ),
+                      onHorizontalDragCancel: _handleBackGestureCancel,
+                      onHorizontalDragEnd: (details) {
+                        unawaited(_handleBackGestureEnd(details));
+                      },
+                      child: CupertinoPageTransition(
+                        primaryRouteAnimation: _conversationPaneController.view,
+                        secondaryRouteAnimation:
+                            const AlwaysStoppedAnimation<double>(0),
+                        linearTransition: _isBackGestureInProgress,
+                        child: child!,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         ),
       ),
     );
