@@ -15,6 +15,7 @@ import '../../models/friend_qr_payload.dart';
 import 'chat_send_error_feedback.dart';
 import 'friend_qr_scanner_page.dart';
 import 'chat_target_profile_page.dart';
+import 'room_detail_page.dart';
 import '../../services/local_chat_repository.dart';
 import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
@@ -1203,6 +1204,33 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
     await _openUserProfile(partnerId);
   }
 
+  Future<void> _openRoomDetail() async {
+    final partnerId = _activePartnerId;
+    if (partnerId == null || !isRoomConversationId(partnerId)) return;
+    final roomId = tryParseRoomId(partnerId);
+    if (roomId == null) return;
+
+    final result = await Navigator.of(context).push<RoomDetailAction>(
+      MaterialPageRoute<RoomDetailAction>(
+        builder: (_) => RoomDetailPage(
+          serverUrl: widget.serverUrl,
+          roomId: roomId,
+          currentUserId: widget.currentUserId,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (result == RoomDetailAction.left || result == RoomDetailAction.deleted) {
+      _closeActiveConversation();
+      final accessToken = await _effectiveAccessToken();
+      if (!mounted) return;
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .syncRooms(baseUrl: widget.serverUrl, accessToken: accessToken);
+    }
+  }
+
   Future<int> _sentMessageCountForPartner(String partnerId) async {
     final messages = await ref
         .read(chatRepositoryProvider)
@@ -1381,7 +1409,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab> {
               title: InkWell(
                 borderRadius: BorderRadius.circular(8),
                 onTap: isRoomConversationId(_activePartnerId!)
-                    ? null
+                    ? _openRoomDetail
                     : _openActivePartnerProfile,
                 child: Text(
                   activeDisplayName ?? _l10n.chatDefaultTitle,

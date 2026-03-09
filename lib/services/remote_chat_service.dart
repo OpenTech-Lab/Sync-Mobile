@@ -355,6 +355,69 @@ class RemoteChatService {
     return count is int ? count : 0;
   }
 
+  Future<RoomDetail> getRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId');
+
+    final response = await _httpClient
+        .get(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to load room detail',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return RoomDetail.fromJson(json);
+  }
+
+  Future<void> leaveRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/leave');
+
+    final response = await _httpClient
+        .post(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 204) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to leave room',
+      );
+    }
+  }
+
+  Future<void> deleteRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId');
+
+    final response = await _httpClient
+        .delete(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 204) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to delete room',
+      );
+    }
+  }
+
   Future<int> markRoomRead({
     required String baseUrl,
     required String accessToken,

@@ -104,6 +104,75 @@ class ChatRoom {
   }
 }
 
+class RoomMemberProfile {
+  const RoomMemberProfile({
+    required this.userId,
+    required this.username,
+    required this.role,
+    required this.joinedAt,
+    this.avatarBase64,
+  });
+
+  final String userId;
+  final String username;
+  final String role;
+  final DateTime joinedAt;
+  final String? avatarBase64;
+
+  factory RoomMemberProfile.fromJson(Map<String, dynamic> json) {
+    return RoomMemberProfile(
+      userId: json['user_id'] as String,
+      username: (json['username'] as String?)?.trim() ?? '',
+      role: (json['role'] as String?) ?? 'member',
+      joinedAt: DateTime.parse(json['joined_at'] as String).toUtc(),
+      avatarBase64: json['avatar_base64'] as String?,
+    );
+  }
+}
+
+class RoomDetail {
+  const RoomDetail({
+    required this.id,
+    required this.name,
+    required this.createdBy,
+    required this.memberCount,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.members,
+  });
+
+  final String id;
+  final String name;
+  final String createdBy;
+  final int memberCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<RoomMemberProfile> members;
+
+  factory RoomDetail.fromJson(Map<String, dynamic> json) {
+    final rawMembers = json['members'] as List<dynamic>? ?? const [];
+    return RoomDetail(
+      id: json['id'] as String,
+      name: (json['name'] as String?)?.trim().isNotEmpty == true
+          ? (json['name'] as String).trim()
+          : 'Room',
+      createdBy: json['created_by'] as String,
+      memberCount: _parseInt(json['member_count']),
+      createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toUtc(),
+      members: rawMembers
+          .map((m) => RoomMemberProfile.fromJson(m as Map<String, dynamic>))
+          .toList(growable: false),
+    );
+  }
+
+  static int _parseInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return 0;
+  }
+}
+
 const String roomConversationPrefix = 'room:';
 
 String roomConversationId(String roomId) => '$roomConversationPrefix$roomId';

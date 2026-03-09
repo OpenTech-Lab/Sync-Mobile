@@ -101,6 +101,32 @@ class RoomConversationsController extends AsyncNotifier<List<ChatRoom>> {
     ref.invalidate(conversationSummariesProvider);
     state = AsyncData(await _repository.listRooms());
   }
+
+  Future<void> leaveRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    await _remoteChatService.leaveRoom(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      roomId: roomId,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+  }
+
+  Future<void> deleteRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    await _remoteChatService.deleteRoom(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      roomId: roomId,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+  }
 }
 
 class ConversationMessagesController
