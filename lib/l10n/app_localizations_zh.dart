@@ -726,7 +726,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileUsernameValidationError => 'Username must be 3-32 chars: a-zA-Z0-9._- and spaces';
+  String get profileUsernameValidationError => 'Username must be 3–32 characters and may use any language, symbols, and spaces';
 
   @override
   String get profileUsernameUpdated => 'Username updated';
@@ -753,7 +753,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUsernameDialogTitle => 'USERNAME';
 
   @override
-  String get profileUsernameHint => '3–32 chars, a-zA-Z0-9._- and spaces';
+  String get profileUsernameHint => '3–32 chars, supports any language, symbols, and spaces';
 
   @override
   String homeUnreadSummary(int count) {
@@ -1611,7 +1611,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get profileUsernameValidationError => '使用者名稱需為 3-32 字元：a-zA-Z0-9._- 與空白';
+  String get profileUsernameValidationError => '使用者名稱需為 3–32 字元，可使用任何語言、符號與空白';
 
   @override
   String get profileUsernameUpdated => '已更新使用者名稱';
@@ -1638,7 +1638,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get profileUsernameDialogTitle => '使用者名稱';
 
   @override
-  String get profileUsernameHint => '3–32 字元，a-zA-Z0-9._- 與空白';
+  String get profileUsernameHint => '3–32 字元，支援任何語言、符號與空白';
 
   @override
   String homeUnreadSummary(int count) {

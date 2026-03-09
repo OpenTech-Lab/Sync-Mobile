@@ -21,6 +21,7 @@ import '../../services/auth_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/user_profile_controller.dart';
 import 'device_login_qr_scanner_page.dart';
+import 'profile_username_validation.dart';
 
 class MyProfileScreen extends ConsumerWidget {
   const MyProfileScreen({
@@ -75,8 +76,7 @@ class MyProfileScreen extends ConsumerWidget {
         return;
       }
 
-      final usernamePattern = RegExp(r'^[a-zA-Z0-9._ -]{3,32}$');
-      if (!usernamePattern.hasMatch(result)) {
+      if (!isValidProfileUsername(result)) {
         if (!context.mounted) return;
         showAppToast(
           context,
@@ -870,10 +870,7 @@ class _MilestoneBannerState extends State<_MilestoneBanner>
         vsync: this,
         duration: const Duration(milliseconds: 350),
       );
-      _opacity = CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeIn,
-      );
+      _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
       _scale = Tween<double>(begin: 0.92, end: 1.0).animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
       );
@@ -901,14 +898,16 @@ class _MilestoneBannerState extends State<_MilestoneBanner>
       TrustMilestoneKind.levelUp => l10n.profileTrustMilestoneLevelUp,
     };
     final detail = switch (widget.notification.kind) {
-      TrustMilestoneKind.rankUp =>
-        l10n.profileTrustMilestoneRankDetail(widget.notification.newValue),
+      TrustMilestoneKind.rankUp => l10n.profileTrustMilestoneRankDetail(
+        widget.notification.newValue,
+      ),
       TrustMilestoneKind.unlockAttachmentType =>
         l10n.profileTrustMilestoneUnlockDetail(
           widget.notification.unlockedValue ?? widget.notification.newValue,
         ),
-      TrustMilestoneKind.levelUp =>
-        l10n.profileTrustMilestoneLevelDetail(widget.notification.newValue),
+      TrustMilestoneKind.levelUp => l10n.profileTrustMilestoneLevelDetail(
+        widget.notification.newValue,
+      ),
     };
 
     final banner = Container(

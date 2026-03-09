@@ -387,7 +387,7 @@
       }
     }
   },
-  "profileUsernameValidationError": "Username must be 3-32 chars: a-zA-Z0-9._- and spaces",
+  "profileUsernameValidationError": "Username must be 3–32 characters and may use any language, symbols, and spaces",
   "profileUsernameUpdated": "Username updated",
   "profileUsernameUpdateFailed": "Failed to update username",
   "profileDescriptionWordLimitError": "Description must be 100 words or less",
@@ -396,7 +396,7 @@
   "profileAvatarUploadFailed": "Failed to upload avatar",
   "profileAvatarUpdated": "Avatar updated",
   "profileUsernameDialogTitle": "USERNAME",
-  "profileUsernameHint": "3–32 chars, a-zA-Z0-9._- and spaces",
+  "profileUsernameHint": "3–32 chars, supports any language, symbols, and spaces",
   "homeUnreadSummary": "{count,plural, =1{{count} unread message} other{{count} unread messages}}",
   "@homeUnreadSummary": {
     "placeholders": {
