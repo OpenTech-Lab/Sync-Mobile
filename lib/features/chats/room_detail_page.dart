@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_room.dart';
 import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
+import '../../state/user_profile_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
@@ -59,9 +60,410 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         accessToken: token,
         roomId: widget.roomId,
       );
-      if (mounted) setState(() { _detail = detail; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _detail = detail;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<List<String>?> _promptForInviteMembers() async {
+    final detail = _detail;
+    if (detail == null) {
+      return null;
+    }
+
+    final memberIds = detail.members.map((member) => member.userId).toSet();
+    final friendIds =
+        ref.read(friendIdsProvider).value ??
+        await ref.read(friendIdsProvider.future).catchError((_) {
+          return const <String>[];
+        });
+    if (!mounted) {
+      return null;
+    }
+
+    final options =
+        friendIds
+            .where((userId) => !memberIds.contains(userId))
+            .map(
+              (userId) => _InviteMemberOption(
+                userId: userId,
+                displayName: _displayNameOrFallback(
+                  userId,
+                  ref.read(userDisplayNameProvider(userId)).value,
+                ),
+              ),
+            )
+            .toList(growable: false)
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
+
+    if (options.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No friends available to invite.')),
+        );
+      }
+      return null;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    return showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        final selectedIds = <String>{};
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: bgColor,
+              surfaceTintColor: AppPalette.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 44,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'INVITE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 2.6,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Add members to this room',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 260),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        separatorBuilder: (_, _) =>
+                            Divider(height: 1, color: ruleColor),
+                        itemBuilder: (_, index) {
+                          final option = options[index];
+                          final selected = selectedIds.contains(option.userId);
+                          return CheckboxListTile(
+                            value: selected,
+                            onChanged: (_) {
+                              setState(() {
+                                if (selected) {
+                                  selectedIds.remove(option.userId);
+                                } else {
+                                  selectedIds.add(option.userId);
+                                }
+                              });
+                            },
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text(
+                              option.displayName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: inkColor,
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'cancel',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppPalette.neutral500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          onTap: selectedIds.isEmpty
+                              ? null
+                              : () => Navigator.of(
+                                  context,
+                                ).pop(selectedIds.toList(growable: false)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'I N V I T E',
+                              style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 2.4,
+                                fontWeight: FontWeight.w500,
+                                color: selectedIds.isEmpty
+                                    ? AppPalette.neutral500.withValues(
+                                        alpha: 0.5,
+                                      )
+                                    : inkColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _inviteMembers() async {
+    final detail = _detail;
+    if (detail == null ||
+        _actionInProgress ||
+        detail.createdBy != widget.currentUserId) {
+      return;
+    }
+
+    final memberIds = await _promptForInviteMembers();
+    if (!mounted || memberIds == null || memberIds.isEmpty) {
+      return;
+    }
+
+    setState(() => _actionInProgress = true);
+    try {
+      final token = await _accessToken();
+      final updated = await ref
+          .read(roomConversationsProvider.notifier)
+          .inviteMembers(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+            roomId: widget.roomId,
+            memberIds: memberIds,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _detail = updated;
+        _actionInProgress = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            memberIds.length == 1 ? 'Member invited.' : 'Members invited.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _actionInProgress = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<bool> _confirmRemoveMember(RoomMemberProfile member) async {
+    final detail = _detail;
+    if (detail == null || member.userId == detail.createdBy) {
+      return false;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final subColor = AppPalette.neutral500;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final memberName = _displayNameOrFallback(member.userId, member.username);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: bgColor,
+          surfaceTintColor: AppPalette.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 44,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'REMOVE MEMBER',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    color: subColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Remove $memberName from this room?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'They will lose access to the room immediately.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: subColor,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Divider(height: 1, color: ruleColor),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(false),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'cancel',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: subColor,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(true),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'R E M O V E',
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.2,
+                            fontWeight: FontWeight.w500,
+                            color: AppPalette.danger700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
+  Future<void> _removeMember(RoomMemberProfile member) async {
+    final detail = _detail;
+    if (detail == null ||
+        _actionInProgress ||
+        detail.createdBy != widget.currentUserId ||
+        member.userId == detail.createdBy) {
+      return;
+    }
+
+    final confirmed = await _confirmRemoveMember(member);
+    if (!mounted || !confirmed) {
+      return;
+    }
+
+    setState(() => _actionInProgress = true);
+    try {
+      final token = await _accessToken();
+      final updated = await ref
+          .read(roomConversationsProvider.notifier)
+          .removeMember(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+            roomId: widget.roomId,
+            memberId: member.userId,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _detail = updated;
+        _actionInProgress = false;
+      });
+      final memberName = _displayNameOrFallback(member.userId, member.username);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$memberName removed.')));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _actionInProgress = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -71,14 +473,18 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       final token = await _accessToken();
       await ref
           .read(roomConversationsProvider.notifier)
-          .leaveRoom(baseUrl: widget.serverUrl, accessToken: token, roomId: widget.roomId);
+          .leaveRoom(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+            roomId: widget.roomId,
+          );
       if (mounted) Navigator.of(context).pop(RoomDetailAction.left);
     } catch (e) {
       if (mounted) {
         setState(() => _actionInProgress = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -89,14 +495,18 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       final token = await _accessToken();
       await ref
           .read(roomConversationsProvider.notifier)
-          .deleteRoom(baseUrl: widget.serverUrl, accessToken: token, roomId: widget.roomId);
+          .deleteRoom(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+            roomId: widget.roomId,
+          );
       if (mounted) Navigator.of(context).pop(RoomDetailAction.deleted);
     } catch (e) {
       if (mounted) {
         setState(() => _actionInProgress = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -121,31 +531,29 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: inkColor),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : _buildContent(
-                  context,
-                  isDark: isDark,
-                  bgColor: bgColor,
-                  inkColor: inkColor,
-                  ruleColor: ruleColor,
-                  subColor: subColor,
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: inkColor),
+                  textAlign: TextAlign.center,
                 ),
+              ),
+            )
+          : _buildContent(
+              context,
+              isDark: isDark,
+              inkColor: inkColor,
+              ruleColor: ruleColor,
+              subColor: subColor,
+            ),
     );
   }
 
   Widget _buildContent(
     BuildContext context, {
     required bool isDark,
-    required Color bgColor,
     required Color inkColor,
     required Color ruleColor,
     required Color subColor,
@@ -243,44 +651,94 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         const SizedBox(height: 16),
 
         // ── members section label ──
-        Text(
-          'MEMBERS',
-          style: TextStyle(
-            fontSize: 10,
-            letterSpacing: 2.4,
-            color: subColor,
-            fontWeight: FontWeight.w400,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'MEMBERS',
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 2.4,
+                  color: subColor,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+            Tooltip(
+              message: isCreator ? 'Invite member' : 'Only owner can invite',
+              child: IconButton(
+                onPressed: isCreator && !_actionInProgress
+                    ? _inviteMembers
+                    : null,
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                iconSize: 18,
+                color: subColor,
+                disabledColor: subColor.withValues(alpha: 0.4),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
 
         // ── member list ──
-        ...detail.members.map((m) => _MemberRow(
-              member: m,
-              isDark: isDark,
-              inkColor: inkColor,
-              subColor: subColor,
-              ruleColor: ruleColor,
-            )),
+        ...detail.members.map(
+          (m) => _MemberRow(
+            member: m,
+            currentUserId: widget.currentUserId,
+            isOwnerViewing: isCreator,
+            actionInProgress: _actionInProgress,
+            onRemove: () => _removeMember(m),
+            isDark: isDark,
+            inkColor: inkColor,
+            subColor: subColor,
+          ),
+        ),
       ],
     );
   }
 }
 
+String _displayNameOrFallback(String userId, String? displayName) {
+  final normalized = (displayName ?? '').trim();
+  if (normalized.isNotEmpty) {
+    return normalized;
+  }
+  return userId.length >= 8 ? userId.substring(0, 8) : userId;
+}
+
+class _InviteMemberOption {
+  const _InviteMemberOption({required this.userId, required this.displayName});
+
+  final String userId;
+  final String displayName;
+}
+
 class _MemberRow extends StatelessWidget {
   const _MemberRow({
     required this.member,
+    required this.currentUserId,
+    required this.isOwnerViewing,
+    required this.actionInProgress,
+    required this.onRemove,
     required this.isDark,
     required this.inkColor,
     required this.subColor,
-    required this.ruleColor,
   });
 
   final RoomMemberProfile member;
+  final String currentUserId;
+  final bool isOwnerViewing;
+  final bool actionInProgress;
+  final VoidCallback onRemove;
   final bool isDark;
   final Color inkColor;
   final Color subColor;
-  final Color ruleColor;
 
   @override
   Widget build(BuildContext context) {
@@ -297,6 +755,13 @@ class _MemberRow extends StatelessWidget {
     final initials = member.username.trim().isEmpty
         ? '?'
         : member.username.trim().substring(0, 1).toUpperCase();
+    final isOwnerRow = member.role == 'owner';
+    final canRemove = isOwnerViewing && !isOwnerRow && !actionInProgress;
+    final tooltipMessage = isOwnerRow
+        ? 'Owner cannot be removed'
+        : isOwnerViewing
+        ? 'Remove member'
+        : 'Only owner can remove members';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -316,16 +781,30 @@ class _MemberRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              member.username,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-                color: inkColor,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.username,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                ),
+                if (member.userId == currentUserId)
+                  Text(
+                    'You',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w300,
+                      color: subColor,
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (member.role == 'owner' || member.role == 'admin')
+          if (member.role == 'owner' || member.role == 'admin') ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -341,6 +820,21 @@ class _MemberRow extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+          ],
+          Tooltip(
+            message: tooltipMessage,
+            child: IconButton(
+              onPressed: canRemove ? onRemove : null,
+              icon: const Icon(Icons.remove_circle_outline_rounded),
+              iconSize: 18,
+              color: AppPalette.danger700,
+              disabledColor: subColor.withValues(alpha: 0.4),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
         ],
       ),
     );

@@ -109,6 +109,21 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         state = AsyncData(current.copyWith(typingPartnerIds: nextTyping));
       }
 
+      if (event.roomMembershipChangedRoomId != null) {
+        final accessToken = await accessTokenProvider();
+        if (accessToken != null && accessToken.isNotEmpty) {
+          try {
+            await ref
+                .read(roomConversationsProvider.notifier)
+                .syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+          } catch (_) {
+            ref.invalidate(conversationSummariesProvider);
+          }
+        } else {
+          ref.invalidate(conversationSummariesProvider);
+        }
+      }
+
       if (event.message != null) {
         var message = event.message!;
         final e2eeService = ref.read(messageE2eeServiceProvider);

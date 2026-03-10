@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../state/backup_controller.dart';
 import '../../state/chat_visibility_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
+import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../home/home_page.dart';
 import '../planet/planet_page.dart';
@@ -70,6 +73,11 @@ class _MainShellState extends ConsumerState<MainShell>
           currentUserId: widget.currentUserId,
         ),
       ]);
+      unawaited(
+        ref
+            .read(stickerControllerProvider.notifier)
+            .sync(baseUrl: widget.serverUrl, accessToken: effectiveToken),
+      );
       await ref
           .read(backupControllerProvider.notifier)
           .maybeAutoBackup(
@@ -110,6 +118,11 @@ class _MainShellState extends ConsumerState<MainShell>
         await ref
             .read(notificationControllerProvider.notifier)
             .initialize(baseUrl: widget.serverUrl, accessToken: token);
+        unawaited(
+          ref
+              .read(stickerControllerProvider.notifier)
+              .sync(baseUrl: widget.serverUrl, accessToken: token),
+        );
         await ref
             .read(backupControllerProvider.notifier)
             .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: token);

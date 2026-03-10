@@ -252,6 +252,14 @@ class RealtimeSyncService {
       return RealtimeEvent.typing(partnerId: partnerId, isTyping: isTyping);
     }
 
+    if (type == 'room_membership_changed') {
+      final roomId = decoded['room_id'] as String?;
+      if (roomId == null || roomId.trim().isEmpty) {
+        return null;
+      }
+      return RealtimeEvent.roomMembershipChanged(roomId: roomId);
+    }
+
     return null;
   }
 
@@ -261,6 +269,17 @@ class RealtimeSyncService {
     required String accessToken,
   }) {
     return _wsUri(baseUrl, accessToken);
+  }
+
+  @visibleForTesting
+  RealtimeEvent? tryParseRealtimeEventForTest({
+    required dynamic payload,
+    required String currentUserId,
+  }) {
+    return _tryParseRealtimeEvent(
+      payload: payload,
+      currentUserId: currentUserId,
+    );
   }
 
   Uri _wsUri(String baseUrl, String accessToken) {

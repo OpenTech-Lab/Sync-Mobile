@@ -378,6 +378,58 @@ class RemoteChatService {
     return RoomDetail.fromJson(json);
   }
 
+  Future<RoomDetail> addRoomMembers({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required List<String> memberIds,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/members');
+
+    final response = await _httpClient
+        .post(
+          uri,
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({'member_ids': memberIds}),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to add room members',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return RoomDetail.fromJson(json);
+  }
+
+  Future<RoomDetail> removeRoomMember({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String memberId,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId/members/$memberId');
+
+    final response = await _httpClient
+        .delete(uri, headers: _authHeaders(accessToken))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to remove room member',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return RoomDetail.fromJson(json);
+  }
+
   Future<void> leaveRoom({
     required String baseUrl,
     required String accessToken,

@@ -74,6 +74,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
   final Map<String, String> _partnerServerUrlOverrides = <String, String>{};
   final Map<String, List<OutgoingMessageDraft>> _outgoingDraftsByPartner =
       <String, List<OutgoingMessageDraft>>{};
+  List<ConversationSummary> _conversationSummariesCache = const [];
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   @override
@@ -389,17 +390,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
-    if (isRoomConversationId(partnerId)) {
-      final roomId = tryParseRoomId(partnerId);
-      if (roomId != null) {
-        await ref
-            .read(roomConversationsProvider.notifier)
-            .markRoomReadLocal(roomId);
-      }
-    } else {
+    if (!isRoomConversationId(partnerId)) {
       ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
     }
-    ref.invalidate(conversationSummariesProvider);
   }
 
   Future<ChatTargetInput?> _promptForChatTarget() async {
@@ -1411,9 +1404,18 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final remoteUnreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
+    ref.listen<AsyncValue<List<ConversationSummary>>>(
+      conversationSummariesProvider,
+      (_, next) {
+        final value = next.valueOrNull;
+        if (value != null) {
+          _conversationSummariesCache = value;
+        }
+      },
+    );
     final conversationSummaries =
         ref.watch(conversationSummariesProvider).valueOrNull ??
-        const <ConversationSummary>[];
+        _conversationSummariesCache;
     final allSummariesById = <String, ConversationSummary>{
       for (final summary in conversationSummaries)
         summary.conversationId: summary,
@@ -1467,6 +1469,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
           }
           return a.compareTo(b);
         });
+    // Preload message providers for the top conversations so that opening one
+    // has data ready immediately (no AsyncLoading flash).
+    for (final id in orderedConversationIds.take(15)) {
+      ref.watch(conversationMessagesProvider(id));
+    }
+
     final rowUserIds = orderedConversationIds
         .where((id) => !isRoomConversationId(id))
         .toSet();
@@ -1582,10 +1590,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
               children: [
                 Expanded(
                   child: messagesAsync == null
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const SizedBox.expand()
                       : messagesAsync.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                          loading: () => const SizedBox.expand(),
                           error: (err, _) => Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24),

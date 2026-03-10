@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/models/realtime_event.dart';
 import 'package:mobile/services/realtime_sync_service.dart';
 
 void main() {
@@ -44,5 +45,18 @@ void main() {
     expect(uri.port, 443);
     expect(uri.path, '/ws');
     expect(uri.fragment, isEmpty);
+  });
+
+  test('parses room membership changed realtime event', () {
+    final service = RealtimeSyncService();
+
+    final event = service.tryParseRealtimeEventForTest(
+      payload: '{"type":"room_membership_changed","room_id":"room-123"}',
+      currentUserId: 'user-1',
+    );
+
+    expect(event, isNotNull);
+    expect(event, isA<RealtimeEvent>());
+    expect(event!.roomMembershipChangedRoomId, 'room-123');
   });
 }

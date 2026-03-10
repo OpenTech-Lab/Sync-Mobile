@@ -115,6 +115,38 @@ class RoomConversationsController extends AsyncNotifier<List<ChatRoom>> {
     await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
   }
 
+  Future<RoomDetail> inviteMembers({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required List<String> memberIds,
+  }) async {
+    final detail = await _remoteChatService.addRoomMembers(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      roomId: roomId,
+      memberIds: memberIds,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+    return detail;
+  }
+
+  Future<RoomDetail> removeMember({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String memberId,
+  }) async {
+    final detail = await _remoteChatService.removeRoomMember(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      roomId: roomId,
+      memberId: memberId,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+    return detail;
+  }
+
   Future<void> deleteRoom({
     required String baseUrl,
     required String accessToken,
@@ -180,11 +212,12 @@ class ConversationMessagesController
         : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
 
     await _repository.upsertMessages(toUpsert);
-    ref.invalidate(conversationSummariesProvider);
     if (_isRoomConversation) {
       await ref
           .read(roomConversationsProvider.notifier)
           .markRoomReadLocal(_roomId);
+    } else {
+      ref.invalidate(conversationSummariesProvider);
     }
     final local = await _repository.listMessages(
       conversationId: arg,

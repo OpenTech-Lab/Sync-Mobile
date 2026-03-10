@@ -14,6 +14,7 @@ import '../../../ui/components/atoms/app_toast.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 import '../../../services/chat_ui_preferences.dart';
 import '../models/outgoing_draft.dart';
+import '../utils/chat_media_cache.dart';
 import '../utils/chat_helpers.dart';
 
 class MessageBubble extends ConsumerWidget {
@@ -53,25 +54,6 @@ class MessageBubble extends ConsumerWidget {
   final bool animateAsDraft;
 
   static const double _kMaxBubbleHeight = 180;
-
-  static String? _parseStickerId(String body) {
-    final match = RegExp(
-      r'^\[sticker:([^:\]]+):[^\]]*\]$',
-    ).firstMatch(body.trim());
-    return match?.group(1);
-  }
-
-  static ({Uint8List bytes, String text})? _parseMediaData(String body) {
-    final match = RegExp(r'\[media-data:([A-Za-z0-9+/=]+)\]').firstMatch(body);
-    if (match == null) return null;
-    try {
-      final bytes = base64Decode(match.group(1)!);
-      final text = body.replaceFirst(match.group(0)!, '').trim();
-      return (bytes: bytes, text: text);
-    } catch (_) {
-      return null;
-    }
-  }
 
   void _openDetail(BuildContext context) {
     Navigator.of(context).push(
@@ -143,7 +125,7 @@ class MessageBubble extends ConsumerWidget {
     final avatarBg = palette[hash.abs() % palette.length];
 
     // ── Image/media message ──────────────────────────────────────────────────
-    final media = _parseMediaData(message.body);
+    final media = ChatMediaCache.parseInlineMedia(message);
     if (media != null) {
       return Align(
         alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -192,9 +174,10 @@ class MessageBubble extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.memory(
-                        media.bytes,
+                      Image(
+                        image: media.imageProvider,
                         fit: BoxFit.cover,
+                        gaplessPlayback: true,
                         width: maxBubbleWidth,
                       ),
                       if (media.text.isNotEmpty)
@@ -241,7 +224,7 @@ class MessageBubble extends ConsumerWidget {
     // ────────────────────────────────────────────────────────────────────────
 
     // ── Sticker message ─────────────────────────────────────────────────────
-    final stickerId = _parseStickerId(message.body);
+    final stickerId = ChatMediaCache.parseStickerId(message.body);
     if (stickerId != null) {
       Sticker? found;
       for (final s in stickers) {
@@ -250,22 +233,20 @@ class MessageBubble extends ConsumerWidget {
           break;
         }
       }
+      AsyncValue<Sticker?>? remoteSticker;
       if (found == null) {
-        final remote = ref.watch(
+        remoteSticker = ref.watch(
           stickerByIdProvider((
             id: stickerId,
             baseUrl: serverUrl,
             accessToken: accessToken,
           )),
         );
-        found = remote.valueOrNull;
+        found = remoteSticker?.valueOrNull;
       }
       if (found != null) {
-        Uint8List? stickerBytes;
-        try {
-          stickerBytes = base64Decode(found.contentBase64);
-        } catch (_) {}
-        if (stickerBytes != null) {
+        final stickerImage = ChatMediaCache.resolveStickerImage(found);
+        if (stickerImage != null) {
           return Align(
             alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
             child: Row(
@@ -304,11 +285,12 @@ class MessageBubble extends ConsumerWidget {
                     ],
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        stickerBytes,
+                      child: Image(
+                        image: stickerImage,
                         width: 128,
                         height: 128,
                         fit: BoxFit.contain,
+                        gaplessPlayback: true,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -344,6 +326,73 @@ class MessageBubble extends ConsumerWidget {
             ),
           );
         }
+      }
+      if (remoteSticker?.isLoading ?? false) {
+        return Align(
+          alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isMine) ...[
+                GestureDetector(
+                  onTap: onAvatarTap,
+                  child: MessageAvatar(
+                    userId: avatarId,
+                    avatarBase64: avatarBase64,
+                    avatarBg: avatarBg,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: isMine
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  if (senderDisplayName != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(left: 2, bottom: 4),
+                      child: Text(
+                        senderDisplayName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
+                  ],
+                  Container(
+                    width: 128,
+                    height: 128,
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timeLabel(message.createdAt),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppPalette.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+              if (isMine) ...[
+                const SizedBox(width: 6),
+                MessageAvatar(
+                  userId: avatarId,
+                  avatarBase64: avatarBase64,
+                  avatarBg: avatarBg,
+                ),
+              ],
+            ],
+          ),
+        );
       }
     }
     // ────────────────────────────────────────────────────────────────────────
@@ -650,7 +699,11 @@ class _TypingStyleMessageTextState extends State<TypingStyleMessageText> {
 }
 
 class MessageDetailScreen extends StatelessWidget {
-  const MessageDetailScreen({super.key, required this.message, required this.isMine});
+  const MessageDetailScreen({
+    super.key,
+    required this.message,
+    required this.isMine,
+  });
 
   final LocalChatMessage message;
   final bool isMine;

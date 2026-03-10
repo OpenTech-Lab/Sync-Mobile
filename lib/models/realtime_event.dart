@@ -14,6 +14,7 @@ class RealtimeEvent {
     this.error,
     this.typingPartnerId,
     this.isTyping,
+    this.roomMembershipChangedRoomId,
   });
 
   final LocalChatMessage? message;
@@ -21,6 +22,7 @@ class RealtimeEvent {
   final String? error;
   final String? typingPartnerId;
   final bool? isTyping;
+  final String? roomMembershipChangedRoomId;
 
   factory RealtimeEvent.message(LocalChatMessage message) {
     return RealtimeEvent._(message: message);
@@ -39,5 +41,9 @@ class RealtimeEvent {
     required bool isTyping,
   }) {
     return RealtimeEvent._(typingPartnerId: partnerId, isTyping: isTyping);
+  }
+
+  factory RealtimeEvent.roomMembershipChanged({required String roomId}) {
+    return RealtimeEvent._(roomMembershipChangedRoomId: roomId);
   }
 }
