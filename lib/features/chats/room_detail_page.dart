@@ -76,6 +76,161 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     }
   }
 
+  Future<String?> _promptForRoomRename() async {
+    final detail = _detail;
+    if (detail == null) {
+      return null;
+    }
+
+    final originalName = detail.name.trim();
+    final controller = TextEditingController(text: originalName);
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final nextName = controller.text.trim();
+            final canSave =
+                nextName.isNotEmpty &&
+                nextName != originalName &&
+                !_actionInProgress;
+            return Dialog(
+              backgroundColor: bgColor,
+              surfaceTintColor: AppPalette.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 44,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'EDIT ROOM',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 2.6,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Change room name',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) {
+                        if (canSave) {
+                          Navigator.of(context).pop(nextName);
+                        }
+                      },
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w300,
+                        color: inkColor,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Room name',
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppPalette.neutral500),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 11,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'cancel',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppPalette.neutral500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          onTap: canSave
+                              ? () => Navigator.of(context).pop(nextName)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'S A V E',
+                              style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 2.2,
+                                fontWeight: FontWeight.w500,
+                                color: canSave
+                                    ? inkColor
+                                    : AppPalette.neutral500.withValues(
+                                        alpha: 0.5,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    return result?.trim();
+  }
+
   Future<List<String>?> _promptForInviteMembers() async {
     final detail = _detail;
     if (detail == null) {
@@ -467,7 +622,128 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     }
   }
 
+  Future<bool> _confirmLeaveRoom() async {
+    final detail = _detail;
+    if (detail == null) {
+      return false;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final subColor = AppPalette.neutral500;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: bgColor,
+          surfaceTintColor: AppPalette.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 44,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'LEAVE ROOM',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    color: subColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Leave ${detail.name}?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You will lose access until someone invites you back.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: subColor,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Divider(height: 1, color: ruleColor),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(false),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'cancel',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: subColor,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(true),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'L E A V E',
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.2,
+                            fontWeight: FontWeight.w500,
+                            color: AppPalette.danger700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
   Future<void> _leaveRoom() async {
+    if (_actionInProgress) {
+      return;
+    }
+
+    final confirmed = await _confirmLeaveRoom();
+    if (!mounted || !confirmed) {
+      return;
+    }
+
     setState(() => _actionInProgress = true);
     try {
       final token = await _accessToken();
@@ -479,6 +755,50 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
             roomId: widget.roomId,
           );
       if (mounted) Navigator.of(context).pop(RoomDetailAction.left);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _actionInProgress = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _renameRoom() async {
+    final detail = _detail;
+    if (detail == null ||
+        _actionInProgress ||
+        detail.createdBy != widget.currentUserId) {
+      return;
+    }
+
+    final nextName = await _promptForRoomRename();
+    if (!mounted || nextName == null || nextName.isEmpty) {
+      return;
+    }
+
+    setState(() => _actionInProgress = true);
+    try {
+      final token = await _accessToken();
+      final updated = await ref
+          .read(roomConversationsProvider.notifier)
+          .renameRoom(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+            roomId: widget.roomId,
+            name: nextName,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _detail = updated;
+        _actionInProgress = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Room name updated.')));
     } catch (e) {
       if (mounted) {
         setState(() => _actionInProgress = false);
@@ -614,14 +934,44 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         const SizedBox(height: 16),
 
         // ── room name ──
-        Text(
-          detail.name,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w300,
-            color: inkColor,
+        Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 240),
+                child: Text(
+                  detail.name,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              if (isCreator)
+                Tooltip(
+                  message: 'Edit room name',
+                  child: IconButton(
+                    onPressed: _actionInProgress ? null : _renameRoom,
+                    icon: const Icon(Icons.edit_outlined),
+                    iconSize: 18,
+                    color: subColor,
+                    disabledColor: subColor.withValues(alpha: 0.4),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
           ),
-          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
         Text(

@@ -378,6 +378,34 @@ class RemoteChatService {
     return RoomDetail.fromJson(json);
   }
 
+  Future<RoomDetail> renameRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String name,
+  }) async {
+    final normalized = _normalizeBaseUrl(baseUrl);
+    final uri = Uri.parse('$normalized/api/rooms/$roomId');
+
+    final response = await _httpClient
+        .patch(
+          uri,
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({'name': name.trim()}),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to rename room',
+      );
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return RoomDetail.fromJson(json);
+  }
+
   Future<RoomDetail> addRoomMembers({
     required String baseUrl,
     required String accessToken,

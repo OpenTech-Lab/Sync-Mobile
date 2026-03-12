@@ -116,6 +116,22 @@ class RoomConversationsController extends AsyncNotifier<List<ChatRoom>> {
     await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
   }
 
+  Future<RoomDetail> renameRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+    required String name,
+  }) async {
+    final detail = await _remoteChatService.renameRoom(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      roomId: roomId,
+      name: name,
+    );
+    await syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+    return detail;
+  }
+
   Future<RoomDetail> inviteMembers({
     required String baseUrl,
     required String accessToken,
