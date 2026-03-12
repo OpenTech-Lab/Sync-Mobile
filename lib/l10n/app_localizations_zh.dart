@@ -753,6 +753,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileDescriptionUpdated => 'Description updated';
 
   @override
+  String get profileDescriptionUpdateFailed => 'Failed to update description';
+
+  @override
   String get profileAvatarTooLarge => 'Avatar too large (max 256KB). Choose a smaller image.';
 
   @override
@@ -1648,6 +1651,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get profileDescriptionUpdated => '已更新描述';
+
+  @override
+  String get profileDescriptionUpdateFailed => '更新描述失敗';
 
   @override
   String get profileAvatarTooLarge => '頭像過大（上限 256KB），請選擇較小圖片。';

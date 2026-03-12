@@ -199,6 +199,11 @@ class AppController extends AsyncNotifier<AppState> {
           currentUserId,
           profile.avatarBase64,
         );
+        await _userProfilePreferences.writeDescription(
+          serverUrl,
+          currentUserId,
+          profile.description,
+        );
         await _ensureChatPublicKeyRegistered(
           serverUrl: serverUrl,
           accessToken: accessToken,
@@ -301,7 +306,9 @@ class AppController extends AsyncNotifier<AppState> {
         ? candidateFromHealth
         : normalized;
     await _serverPreferences.writeServerUrl(resolvedServerUrl);
-    final accessToken = await _sessionStorage.readAccessToken(resolvedServerUrl);
+    final accessToken = await _sessionStorage.readAccessToken(
+      resolvedServerUrl,
+    );
     final savedUserId = await _serverPreferences.readSavedUserId(
       resolvedServerUrl,
     );
@@ -372,6 +379,11 @@ class AppController extends AsyncNotifier<AppState> {
             current.serverUrl!,
             userId,
             profile.avatarBase64,
+          );
+          await _userProfilePreferences.writeDescription(
+            current.serverUrl!,
+            userId,
+            profile.description,
           );
           await _ensureChatPublicKeyRegistered(
             serverUrl: current.serverUrl!,

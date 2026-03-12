@@ -224,6 +224,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         widget.serverUrl,
         normalized,
       );
+      final oldDescription = await prefs.readDescription(
+        widget.serverUrl,
+        normalized,
+      );
       await prefs.writeDisplayName(
         widget.serverUrl,
         normalized,
@@ -234,12 +238,21 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         normalized,
         profile.avatarBase64,
       );
+      await prefs.writeDescription(
+        widget.serverUrl,
+        normalized,
+        profile.description,
+      );
       ref.invalidate(userDisplayNameProvider(normalized));
       // Only invalidate the avatar provider when the image actually changed.
       // An unconditional invalidate causes a loading→data cycle that makes
       // every _MessageAvatar flash back to initials and then re-render.
       if (profile.avatarBase64 != oldAvatar) {
         ref.invalidate(userAvatarBase64Provider(normalized));
+      }
+      if ((profile.description?.trim() ?? '') !=
+          ((oldDescription ?? '').trim())) {
+        ref.invalidate(userDescriptionProvider(normalized));
       }
       _profileSyncedOnce.add(normalized);
     } catch (_) {
@@ -607,6 +620,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     String? description;
     int? guildLevel;
     String? guildRank;
+    final prefs = ref.read(userProfilePreferencesProvider);
     try {
       final profile = await ref
           .read(remoteUserProfileServiceProvider)
@@ -619,14 +633,23 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         displayName = profile.username.trim();
       }
       avatarBase64 = profile.avatarBase64;
+      description = (profile.description ?? '').trim().isEmpty
+          ? null
+          : profile.description!.trim();
+      await prefs.writeDescription(
+        widget.serverUrl,
+        resolved.partnerId,
+        description,
+      );
       guildLevel = profile.guild?.level;
       guildRank = profile.guild?.rank;
     } catch (_) {
       // fallback to resolved handle only
     }
-    description = await ref
-        .read(userProfilePreferencesProvider)
-        .readDescription(widget.serverUrl, resolved.partnerId);
+    description ??= await prefs.readDescription(
+      widget.serverUrl,
+      resolved.partnerId,
+    );
 
     return ResolvedTargetProfile(
       partnerId: resolved.partnerId,
@@ -1214,9 +1237,12 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       ref.read(userDisplayNameProvider(partnerId)).value,
     );
     final avatarBase64 = ref.read(userAvatarBase64Provider(partnerId)).value;
-    final description = ref.read(userDescriptionProvider(partnerId)).value;
     final sentMessageCount = await _sentMessageCountForPartner(partnerId);
     final prefs = ref.read(userProfilePreferencesProvider);
+    final description = await prefs.readDescription(
+      widget.serverUrl,
+      partnerId,
+    );
     final isFriend = (await prefs.readFriendIds(
       widget.serverUrl,
     )).contains(partnerId);

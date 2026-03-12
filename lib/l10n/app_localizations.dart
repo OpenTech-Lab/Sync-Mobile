@@ -1500,6 +1500,12 @@ abstract class AppLocalizations {
   /// **'Description updated'**
   String get profileDescriptionUpdated;
 
+  /// No description provided for @profileDescriptionUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update description'**
+  String get profileDescriptionUpdateFailed;
+
   /// No description provided for @profileAvatarTooLarge.
   ///
   /// In en, this message translates to:

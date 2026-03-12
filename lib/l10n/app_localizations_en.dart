@@ -753,6 +753,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDescriptionUpdated => 'Description updated';
 
   @override
+  String get profileDescriptionUpdateFailed => 'Failed to update description';
+
+  @override
   String get profileAvatarTooLarge => 'Avatar too large (max 256KB). Choose a smaller image.';
 
   @override

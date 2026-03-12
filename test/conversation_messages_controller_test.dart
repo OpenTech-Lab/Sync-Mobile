@@ -237,6 +237,7 @@ class _FakeRemoteUserProfileService extends RemoteUserProfileService {
       id: 'me',
       username: 'me',
       avatarBase64: null,
+      description: null,
       messagePublicKey: _publicKey,
     );
   }
@@ -251,6 +252,7 @@ class _FakeRemoteUserProfileService extends RemoteUserProfileService {
       id: userId,
       username: userId,
       avatarBase64: null,
+      description: null,
       messagePublicKey: _publicKey,
     );
   }
@@ -261,13 +263,16 @@ class _FakeRemoteUserProfileService extends RemoteUserProfileService {
     required String accessToken,
     String? username,
     String? avatarBase64,
+    String? description,
     String? messagePublicKey,
     bool clearAvatar = false,
+    bool clearDescription = false,
   }) async {
     return const UserProfile(
       id: 'me',
       username: 'me',
       avatarBase64: null,
+      description: null,
       messagePublicKey: _publicKey,
     );
   }

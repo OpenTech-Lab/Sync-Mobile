@@ -3,6 +3,7 @@ class UserProfile {
     required this.id,
     required this.username,
     required this.avatarBase64,
+    required this.description,
     required this.messagePublicKey,
     this.guild,
   });
@@ -10,6 +11,7 @@ class UserProfile {
   final String id;
   final String username;
   final String? avatarBase64;
+  final String? description;
   final String? messagePublicKey;
   final UserGuildSnapshot? guild;
 
@@ -18,6 +20,7 @@ class UserProfile {
       id: json['id'] as String,
       username: (json['username'] as String?)?.trim() ?? '',
       avatarBase64: (json['avatar_base64'] as String?)?.trim(),
+      description: (json['description'] as String?)?.trim(),
       messagePublicKey: (json['message_public_key'] as String?)?.trim(),
       guild: json['guild'] is Map<String, dynamic>
           ? UserGuildSnapshot.fromJson(json['guild'] as Map<String, dynamic>)
@@ -107,6 +110,7 @@ class UserGuildSnapshot {
   final int? dailyFriendAddLimit;
   final int dailyFriendAddsSent;
   final int? dailyFriendAddsRemaining;
+
   /// One of: "none", "challenged", "frozen".
   final String challengeState;
   final GuildMilestoneNotification? pendingMilestoneNotification;
@@ -146,16 +150,16 @@ class UserGuildSnapshot {
       dailyFriendAddsEnforced: json['daily_friend_adds_enforced'] == true,
       dailyFriendAddLimit: _readNullableInt(json['daily_friend_add_limit']),
       dailyFriendAddsSent: _readInt(json['daily_friend_adds_sent']),
-      dailyFriendAddsRemaining:
-          _readNullableInt(json['daily_friend_adds_remaining']),
+      dailyFriendAddsRemaining: _readNullableInt(
+        json['daily_friend_adds_remaining'],
+      ),
       challengeState: (json['challenge_state'] as String?)?.trim() ?? 'none',
       pendingMilestoneNotification:
           json['pending_milestone_notification'] is Map<String, dynamic>
-              ? GuildMilestoneNotification.fromJson(
-                  json['pending_milestone_notification']
-                      as Map<String, dynamic>,
-                )
-              : null,
+          ? GuildMilestoneNotification.fromJson(
+              json['pending_milestone_notification'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 

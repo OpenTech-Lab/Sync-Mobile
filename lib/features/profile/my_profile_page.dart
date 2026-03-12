@@ -141,13 +141,31 @@ class MyProfileScreen extends ConsumerWidget {
         return;
       }
 
-      await ref
-          .read(userProfilePreferencesProvider)
-          .writeDescription(
-            serverUrl,
-            currentUserId,
-            normalized.isEmpty ? null : normalized,
-          );
+      try {
+        final freshToken =
+            await ref
+                .read(appControllerProvider.notifier)
+                .ensureFreshAccessToken() ??
+            accessToken;
+        final remote = ref.read(remoteUserProfileServiceProvider);
+        final profile = await remote.updateMyProfile(
+          baseUrl: serverUrl,
+          accessToken: freshToken,
+          description: normalized.isEmpty ? null : normalized,
+          clearDescription: normalized.isEmpty,
+        );
+        await ref
+            .read(userProfilePreferencesProvider)
+            .writeDescription(serverUrl, currentUserId, profile.description);
+      } catch (_) {
+        if (!context.mounted) return;
+        showAppToast(
+          context,
+          l10n.profileDescriptionUpdateFailed,
+          variant: AppToastVariant.error,
+        );
+        return;
+      }
       ref.invalidate(userDescriptionProvider(currentUserId));
 
       if (!context.mounted) return;

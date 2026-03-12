@@ -14,23 +14,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets(
-    'home shows one-line description previews for my card and friend rows',
+    'home friend rows sync and display remote descriptions under the friend name',
     (tester) async {
       const serverUrl = 'https://example.com';
       const currentUserId = 'current-user-id';
       const friendId = 'friend-user-id';
-      const myDescription =
-          'My description is intentionally long so the home profile card must clamp it to one visible row.';
-      const friendDescription =
-          'Friend description is also long enough that the friend row must rely on ellipsis instead of wrapping.';
+      const remoteDescription = 'Remote friend status message';
       final scope = serverDomainKeyFromUrl(serverUrl);
 
       SharedPreferences.setMockInitialValues({
         'friend_ids::$scope': [friendId],
         'profile_display_name::$scope::$currentUserId': 'Current User',
-        'profile_description::$scope::$currentUserId': myDescription,
         'profile_display_name::$scope::$friendId': 'Friend User',
-        'profile_description::$scope::$friendId': friendDescription,
       });
 
       await tester.pumpWidget(
@@ -40,7 +35,7 @@ void main() {
             chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
             myGuildSnapshotProvider.overrideWith((ref) async => null),
             remoteUserProfileServiceProvider.overrideWithValue(
-              _FakeRemoteUserProfileService(),
+              _FriendDescriptionRemoteUserProfileService(),
             ),
           ],
           child: const MaterialApp(
@@ -56,28 +51,20 @@ void main() {
           ),
         ),
       );
+
       await tester.pumpAndSettle();
 
-      expect(find.text('View profile'), findsNothing);
-
-      final myDescriptionText = tester.widget<Text>(find.text(myDescription));
-      expect(myDescriptionText.maxLines, 1);
-      expect(myDescriptionText.overflow, TextOverflow.ellipsis);
-
-      final friendDescriptionText = tester.widget<Text>(
-        find.text(friendDescription),
-      );
-      expect(friendDescriptionText.maxLines, 1);
-      expect(friendDescriptionText.overflow, TextOverflow.ellipsis);
+      expect(find.text(remoteDescription), findsOneWidget);
+      final subtitle = tester.widget<Text>(find.text(remoteDescription));
+      expect(subtitle.maxLines, 1);
+      expect(subtitle.overflow, TextOverflow.ellipsis);
     },
   );
 }
 
-class _FakeRemoteUserProfileService extends RemoteUserProfileService {
-  _FakeRemoteUserProfileService();
-
-  static const _friendDescription =
-      'Friend description is also long enough that the friend row must rely on ellipsis instead of wrapping.';
+class _FriendDescriptionRemoteUserProfileService
+    extends RemoteUserProfileService {
+  _FriendDescriptionRemoteUserProfileService();
 
   @override
   Future<UserProfile> getMyProfile({
@@ -103,7 +90,7 @@ class _FakeRemoteUserProfileService extends RemoteUserProfileService {
       id: userId,
       username: 'Friend User',
       avatarBase64: null,
-      description: _friendDescription,
+      description: 'Remote friend status message',
       messagePublicKey: null,
     );
   }

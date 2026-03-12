@@ -396,6 +396,7 @@
   "profileUsernameUpdateFailed": "Failed to update username",
   "profileDescriptionWordLimitError": "Description must be 100 words or less",
   "profileDescriptionUpdated": "Description updated",
+  "profileDescriptionUpdateFailed": "Failed to update description",
   "profileAvatarTooLarge": "Avatar too large (max 256KB). Choose a smaller image.",
   "profileAvatarUploadFailed": "Failed to upload avatar",
   "profileAvatarUpdated": "Avatar updated",

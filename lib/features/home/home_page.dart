@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../constants/planet_presets.dart';
 import '../../models/chat_room.dart';
+import '../../state/app_controller.dart';
 import '../../services/server_health_service.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../chats/chat_target_profile_page.dart';
@@ -55,9 +57,6 @@ class HomeTab extends ConsumerWidget {
       instanceName: planetInfo?.instanceName,
       fallbackName: l10n.settingsPlanetUnknownName,
     );
-
-    String initials(String uuid) =>
-        uuid.isEmpty ? '?' : uuid.substring(0, 2).toUpperCase();
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -147,143 +146,15 @@ class HomeTab extends ConsumerWidget {
                 itemCount: friendIds.length,
                 itemBuilder: (ctx, i) {
                   final id = friendIds[i];
-                  final displayName = _displayNameOrFallback(
-                    id,
-                    ref.watch(userDisplayNameProvider(id)).value,
-                  );
-                  final description = _normalizedHomeDescription(
-                    ref.watch(userDescriptionProvider(id)).value,
-                  );
-                  final avatarBase64 = ref
-                      .watch(userAvatarBase64Provider(id))
-                      .value;
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(vertical: 2),
-                    leading: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: avatarBase64 != null
-                          ? Colors.transparent
-                          : _avatarToneColor(id),
-                      child: avatarBase64 == null
-                          ? Text(
-                              initials(id),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: AppPalette.white,
-                              ),
-                            )
-                          : ClipOval(
-                              child: SizedBox.expand(
-                                child: Image.memory(
-                                  base64Decode(avatarBase64),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                    ),
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            displayName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              color: inkColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          planetLabel,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppPalette.neutral500,
-                            letterSpacing: 0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    subtitle: description == null
-                        ? null
-                        : Text(
-                            description,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppPalette.neutral500,
-                              fontWeight: FontWeight.w300,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    onTap: () async {
-                      final prefs = ref.read(userProfilePreferencesProvider);
-                      final messages = await ref
-                          .read(chatRepositoryProvider)
-                          .listMessages(conversationId: id, limit: 5000);
-                      final sentMessageCount = messages
-                          .where((message) => message.senderId == currentUserId)
-                          .length;
-                      final friendAddedAt = await prefs.readFriendAddedAt(
-                        serverUrl,
-                        id,
-                      );
-                      int? guildLevel;
-                      String? guildRank;
-                      try {
-                        final profile = await ref
-                            .read(remoteUserProfileServiceProvider)
-                            .getUserProfile(
-                              baseUrl: serverUrl,
-                              accessToken: accessToken,
-                              userId: id,
-                            );
-                        guildLevel = profile.guild?.level;
-                        guildRank = profile.guild?.rank;
-                      } catch (_) {
-                        // guild data is optional
-                      }
-                      if (!context.mounted) {
-                        return;
-                      }
-                      final action = await Navigator.of(context)
-                          .push<ChatTargetProfileAction>(
-                            MaterialPageRoute<ChatTargetProfileAction>(
-                              builder: (_) => ChatTargetProfileScreen(
-                                displayName: displayName,
-                                displayHandle: id,
-                                avatarBase64: avatarBase64,
-                                isFriend: true,
-                                friendAddedAt: friendAddedAt,
-                                sentMessageCount: sentMessageCount,
-                                description: description,
-                                level: guildLevel,
-                                rank: guildRank,
-                              ),
-                            ),
-                          );
-                      if (!context.mounted || action == null) {
-                        return;
-                      }
-                      if (action == ChatTargetProfileAction.startChat) {
-                        onOpenChat?.call(id);
-                        return;
-                      }
-                      if (action != ChatTargetProfileAction.cancelFriend) {
-                        return;
-                      }
-                      await prefs.removeFriendId(serverUrl, id);
-                      ref.invalidate(friendIdsProvider);
-                      if (!context.mounted) {
-                        return;
-                      }
-                      showAppToast(context, l10n.friendRemoved);
-                    },
+                  return _HomeFriendRow(
+                    key: ValueKey(id),
+                    serverUrl: serverUrl,
+                    accessToken: accessToken,
+                    currentUserId: currentUserId,
+                    friendId: id,
+                    planetLabel: planetLabel,
+                    inkColor: inkColor,
+                    onOpenChat: onOpenChat,
                   );
                 },
               ),
@@ -291,20 +162,6 @@ class HomeTab extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Color _avatarToneColor(String id) {
-    // Warm muted tones consistent with Minimal palette
-    const palette = [
-      AppPalette.avatarTone1,
-      AppPalette.avatarTone2,
-      AppPalette.avatarTone3,
-      AppPalette.avatarTone4,
-      AppPalette.avatarTone5,
-      AppPalette.avatarTone6,
-    ];
-    final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
-    return palette[hash.abs() % palette.length];
   }
 }
 
@@ -319,6 +176,280 @@ String _displayNameOrFallback(String userId, String? displayName) {
 String? _normalizedHomeDescription(String? description) {
   final normalized = (description ?? '').trim();
   return normalized.isEmpty ? null : normalized;
+}
+
+Color _avatarToneColor(String id) {
+  const palette = [
+    AppPalette.avatarTone1,
+    AppPalette.avatarTone2,
+    AppPalette.avatarTone3,
+    AppPalette.avatarTone4,
+    AppPalette.avatarTone5,
+    AppPalette.avatarTone6,
+  ];
+  final hash = id.codeUnits.fold(0, (a, b) => a ^ b);
+  return palette[hash.abs() % palette.length];
+}
+
+class _HomeFriendRow extends ConsumerStatefulWidget {
+  const _HomeFriendRow({
+    super.key,
+    required this.serverUrl,
+    required this.accessToken,
+    required this.currentUserId,
+    required this.friendId,
+    required this.planetLabel,
+    required this.inkColor,
+    this.onOpenChat,
+  });
+
+  final String serverUrl;
+  final String accessToken;
+  final String currentUserId;
+  final String friendId;
+  final String planetLabel;
+  final Color inkColor;
+  final ValueChanged<String>? onOpenChat;
+
+  @override
+  ConsumerState<_HomeFriendRow> createState() => _HomeFriendRowState();
+}
+
+class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
+  bool _syncStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_syncProfile());
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeFriendRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.friendId != widget.friendId ||
+        oldWidget.serverUrl != widget.serverUrl) {
+      _syncStarted = false;
+      unawaited(_syncProfile());
+    }
+  }
+
+  Future<void> _syncProfile() async {
+    if (_syncStarted) {
+      return;
+    }
+    _syncStarted = true;
+
+    final userId = widget.friendId.trim();
+    if (userId.isEmpty) {
+      return;
+    }
+
+    try {
+      final accessToken =
+          await ref
+              .read(appControllerProvider.notifier)
+              .ensureFreshAccessToken() ??
+          widget.accessToken;
+      final profile = await ref
+          .read(remoteUserProfileServiceProvider)
+          .getUserProfile(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            userId: userId,
+          );
+      final prefs = ref.read(userProfilePreferencesProvider);
+      final oldDisplayName = await prefs.readDisplayName(
+        widget.serverUrl,
+        userId,
+      );
+      final oldAvatar = await prefs.readAvatarBase64(widget.serverUrl, userId);
+      final oldDescription = await prefs.readDescription(
+        widget.serverUrl,
+        userId,
+      );
+      await prefs.writeDisplayName(widget.serverUrl, userId, profile.username);
+      await prefs.writeAvatarBase64(
+        widget.serverUrl,
+        userId,
+        profile.avatarBase64,
+      );
+      await prefs.writeDescription(
+        widget.serverUrl,
+        userId,
+        profile.description,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (profile.username.trim() != (oldDisplayName ?? '').trim()) {
+        ref.invalidate(userDisplayNameProvider(userId));
+      }
+      if (profile.avatarBase64 != oldAvatar) {
+        ref.invalidate(userAvatarBase64Provider(userId));
+      }
+      if ((profile.description?.trim() ?? '') !=
+          (oldDescription ?? '').trim()) {
+        ref.invalidate(userDescriptionProvider(userId));
+      }
+    } catch (_) {
+      // Keep cached data when sync fails.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final displayName = _displayNameOrFallback(
+      widget.friendId,
+      ref.watch(userDisplayNameProvider(widget.friendId)).value,
+    );
+    final description = _normalizedHomeDescription(
+      ref.watch(userDescriptionProvider(widget.friendId)).value,
+    );
+    final avatarBase64 = ref
+        .watch(userAvatarBase64Provider(widget.friendId))
+        .value;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+      leading: CircleAvatar(
+        radius: 18,
+        backgroundColor: avatarBase64 != null
+            ? Colors.transparent
+            : _avatarToneColor(widget.friendId),
+        child: avatarBase64 == null
+            ? Text(
+                widget.friendId.isEmpty
+                    ? '?'
+                    : (widget.friendId.length >= 2
+                              ? widget.friendId.substring(0, 2)
+                              : widget.friendId)
+                          .toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: AppPalette.white,
+                ),
+              )
+            : ClipOval(
+                child: SizedBox.expand(
+                  child: Image.memory(
+                    base64Decode(avatarBase64),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+      ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              displayName,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w300,
+                color: widget.inkColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            widget.planetLabel,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppPalette.neutral500,
+              letterSpacing: 0.3,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+      subtitle: description == null
+          ? null
+          : Text(
+              description,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppPalette.neutral500,
+                fontWeight: FontWeight.w300,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+      onTap: () async {
+        final prefs = ref.read(userProfilePreferencesProvider);
+        final messages = await ref
+            .read(chatRepositoryProvider)
+            .listMessages(conversationId: widget.friendId, limit: 5000);
+        final sentMessageCount = messages
+            .where((message) => message.senderId == widget.currentUserId)
+            .length;
+        final friendAddedAt = await prefs.readFriendAddedAt(
+          widget.serverUrl,
+          widget.friendId,
+        );
+        int? guildLevel;
+        String? guildRank;
+        try {
+          final accessToken =
+              await ref
+                  .read(appControllerProvider.notifier)
+                  .ensureFreshAccessToken() ??
+              widget.accessToken;
+          final profile = await ref
+              .read(remoteUserProfileServiceProvider)
+              .getUserProfile(
+                baseUrl: widget.serverUrl,
+                accessToken: accessToken,
+                userId: widget.friendId,
+              );
+          guildLevel = profile.guild?.level;
+          guildRank = profile.guild?.rank;
+        } catch (_) {
+          // guild data is optional
+        }
+        if (!context.mounted) {
+          return;
+        }
+        final action = await Navigator.of(context)
+            .push<ChatTargetProfileAction>(
+              MaterialPageRoute<ChatTargetProfileAction>(
+                builder: (_) => ChatTargetProfileScreen(
+                  displayName: displayName,
+                  displayHandle: widget.friendId,
+                  avatarBase64: avatarBase64,
+                  isFriend: true,
+                  friendAddedAt: friendAddedAt,
+                  sentMessageCount: sentMessageCount,
+                  description: description,
+                  level: guildLevel,
+                  rank: guildRank,
+                ),
+              ),
+            );
+        if (!context.mounted || action == null) {
+          return;
+        }
+        if (action == ChatTargetProfileAction.startChat) {
+          widget.onOpenChat?.call(widget.friendId);
+          return;
+        }
+        if (action != ChatTargetProfileAction.cancelFriend) {
+          return;
+        }
+        await prefs.removeFriendId(widget.serverUrl, widget.friendId);
+        ref.invalidate(friendIdsProvider);
+        if (!context.mounted) {
+          return;
+        }
+        showAppToast(context, l10n.friendRemoved);
+      },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

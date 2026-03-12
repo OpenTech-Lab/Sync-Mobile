@@ -55,8 +55,10 @@ class RemoteUserProfileService {
     required String accessToken,
     String? username,
     String? avatarBase64,
+    String? description,
     String? messagePublicKey,
     bool clearAvatar = false,
+    bool clearDescription = false,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final uri = Uri.parse('$normalized/api/profile/me');
@@ -64,6 +66,7 @@ class RemoteUserProfileService {
     final body = <String, dynamic>{};
     final normalizedUsername = username?.trim();
     final normalizedAvatar = avatarBase64?.trim();
+    final normalizedDescription = description?.trim();
     final normalizedMessagePublicKey = messagePublicKey?.trim();
 
     if (normalizedUsername != null && normalizedUsername.isNotEmpty) {
@@ -73,6 +76,12 @@ class RemoteUserProfileService {
       body['avatar_base64'] = null;
     } else if (normalizedAvatar != null && normalizedAvatar.isNotEmpty) {
       body['avatar_base64'] = normalizedAvatar;
+    }
+    if (clearDescription) {
+      body['description'] = null;
+    } else if (normalizedDescription != null &&
+        normalizedDescription.isNotEmpty) {
+      body['description'] = normalizedDescription;
     }
     if (normalizedMessagePublicKey != null &&
         normalizedMessagePublicKey.isNotEmpty) {

@@ -351,6 +351,7 @@
   "profileUsernameUpdateFailed": "更新使用者名稱失敗",
   "profileDescriptionWordLimitError": "描述不可超過 100 個單字",
   "profileDescriptionUpdated": "已更新描述",
+  "profileDescriptionUpdateFailed": "更新描述失敗",
   "profileAvatarTooLarge": "頭像過大（上限 256KB），請選擇較小圖片。",
   "profileAvatarUploadFailed": "上傳頭像失敗",
   "profileAvatarUpdated": "已更新頭像",
