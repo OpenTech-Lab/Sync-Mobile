@@ -12,12 +12,14 @@ class ConversationSummary {
     required this.lastBody,
     required this.lastAt,
     this.title,
+    this.memberCount,
     this.unreadCount = 0,
   });
   final String conversationId;
   final String lastBody;
   final DateTime lastAt;
   final String? title;
+  final int? memberCount;
   final int unreadCount;
 
   bool get isRoom => isRoomConversationId(conversationId);
@@ -143,6 +145,7 @@ class InMemoryChatRepository implements ChatRepository {
         lastBody: sorted.first.body,
         lastAt: sorted.first.createdAt,
         title: room?.name,
+        memberCount: room?.memberCount,
         unreadCount: room?.unreadCount ?? 0,
       );
     }
@@ -155,6 +158,7 @@ class InMemoryChatRepository implements ChatRepository {
           lastBody: room.lastMessagePreview ?? '',
           lastAt: room.lastMessageAt ?? room.updatedAt,
           title: room.name,
+          memberCount: room.memberCount,
           unreadCount: room.unreadCount,
         ),
       );
@@ -334,6 +338,7 @@ class LocalChatRepository implements ChatRepository {
         lastBody: map['body'] as String,
         lastAt: DateTime.parse(map['created_at'] as String).toUtc(),
         title: room?.name,
+        memberCount: room?.memberCount,
         unreadCount: room?.unreadCount ?? 0,
       );
     }
@@ -351,6 +356,7 @@ class LocalChatRepository implements ChatRepository {
           lastBody: room.lastMessagePreview ?? '',
           lastAt: room.lastMessageAt ?? room.updatedAt,
           title: room.name,
+          memberCount: room.memberCount,
           unreadCount: room.unreadCount,
         ),
       );

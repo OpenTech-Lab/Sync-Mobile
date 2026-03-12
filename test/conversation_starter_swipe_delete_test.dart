@@ -8,6 +8,49 @@ import 'package:mobile/state/app_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('room rows show member count in the title', (tester) async {
+    const roomConversationId = 'room:room-1';
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ConversationStarter(
+              controller: controller,
+              focusNode: focusNode,
+              unreadCounts: const <String, int>{},
+              orderedConversationIds: const <String>[roomConversationId],
+              summariesById: <String, ConversationSummary>{
+                roomConversationId: ConversationSummary(
+                  conversationId: roomConversationId,
+                  title: 'My Room',
+                  memberCount: 12,
+                  lastBody: 'last message',
+                  lastAt: DateTime.utc(2026, 3, 12, 10, 0),
+                ),
+              },
+              onQuickAction: (_) {},
+              onOpenConversation: (_) {},
+              onClearConversation: (_) async {},
+              onMarkAllRead: () async {},
+              onStartNewChat: () {},
+              onAddFriend: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Room (12)'), findsOneWidget);
+  });
+
   testWidgets('swiping a chat row reveals Delete and clears on tap', (
     tester,
   ) async {

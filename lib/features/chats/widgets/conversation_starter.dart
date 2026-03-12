@@ -213,6 +213,17 @@ class ConversationStarter extends ConsumerWidget {
     return body;
   }
 
+  String _formatConversationTitle(
+    String baseTitle, {
+    required bool isRoom,
+    int? memberCount,
+  }) {
+    if (!isRoom || memberCount == null) {
+      return baseTitle;
+    }
+    return '$baseTitle ($memberCount)';
+  }
+
   Widget _buildConversationRow(
     BuildContext context,
     WidgetRef ref,
@@ -232,9 +243,13 @@ class ConversationStarter extends ConsumerWidget {
         ? null
         : ref.watch(userAvatarBase64Provider(userId));
     final displayName = isRoom
-        ? ((summary?.title?.trim().isNotEmpty ?? false)
-              ? summary!.title!.trim()
-              : l10n.chatDefaultRoom)
+        ? _formatConversationTitle(
+            (summary?.title?.trim().isNotEmpty ?? false)
+                ? summary!.title!.trim()
+                : l10n.chatDefaultRoom,
+            isRoom: true,
+            memberCount: summary?.memberCount,
+          )
         : displayNameOrFallback(userId, displayNameAsync?.value);
 
     // avatar warm palette
