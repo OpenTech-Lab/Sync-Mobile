@@ -8,6 +8,7 @@ class BackupPreferences {
   static const _lastBackedMessageCountPrefix = 'backup_last_message_count';
   static const _autoBackupMessageThresholdPrefix = 'backup_auto_threshold';
   static const _chatClearedAtPrefix = 'chat_cleared_at';
+  static const _conversationClearedAtPrefix = 'conversation_cleared_at';
   static const int defaultAutoBackupMessageThreshold = 20;
 
   String _enabledKey(String serverUrl) =>
@@ -24,6 +25,13 @@ class BackupPreferences {
 
   String _chatClearedAtKey(String serverUrl) =>
       scopedStorageKey(_chatClearedAtPrefix, serverUrl);
+
+  String _conversationClearedAtKey(String serverUrl, String conversationId) =>
+      scopedStorageKey(
+        _conversationClearedAtPrefix,
+        serverUrl,
+        suffix: conversationId,
+      );
 
   Future<bool> readEnabled(String serverUrl) async {
     final prefs = await SharedPreferences.getInstance();
@@ -100,7 +108,10 @@ class BackupPreferences {
     return value.clamp(1, 1000);
   }
 
-  Future<void> writeAutoBackupMessageThreshold(String serverUrl, int value) async {
+  Future<void> writeAutoBackupMessageThreshold(
+    String serverUrl,
+    int value,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
       _autoBackupMessageThresholdKey(serverUrl),
@@ -127,6 +138,32 @@ class BackupPreferences {
       clearedAt.toUtc().toIso8601String(),
     );
     await prefs.remove(_chatClearedAtPrefix);
+  }
+
+  Future<DateTime?> readConversationClearedAt(
+    String serverUrl,
+    String conversationId,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(
+      _conversationClearedAtKey(serverUrl, conversationId),
+    );
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(raw)?.toUtc();
+  }
+
+  Future<void> writeConversationClearedAt({
+    required String serverUrl,
+    required String conversationId,
+    required DateTime clearedAt,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _conversationClearedAtKey(serverUrl, conversationId),
+      clearedAt.toUtc().toIso8601String(),
+    );
   }
 
   Future<String?> _readString({

@@ -10,6 +10,7 @@ import '../services/local_chat_repository.dart';
 import '../services/message_e2ee_service.dart';
 import '../services/remote_chat_service.dart';
 import '../services/remote_user_profile_service.dart';
+import 'hidden_conversation_ids_controller.dart';
 import 'user_profile_controller.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
@@ -185,6 +186,31 @@ class ConversationMessagesController
   bool get _isRoomConversation => isRoomConversationId(arg);
   String get _roomId => tryParseRoomId(arg)!;
 
+  Future<DateTime?> _latestClearedAt(String baseUrl) async {
+    final preferences = BackupPreferences();
+    final globalClearedAt = await preferences.readChatClearedAt(baseUrl);
+    final conversationClearedAt = await preferences.readConversationClearedAt(
+      baseUrl,
+      arg,
+    );
+    if (globalClearedAt == null) {
+      return conversationClearedAt;
+    }
+    if (conversationClearedAt == null) {
+      return globalClearedAt;
+    }
+    return globalClearedAt.isAfter(conversationClearedAt)
+        ? globalClearedAt
+        : conversationClearedAt;
+  }
+
+  Future<void> _unhideConversationIfNeeded() async {
+    if (_isRoomConversation) {
+      return;
+    }
+    await ref.read(hiddenConversationIdsProvider.notifier).unhide(arg);
+  }
+
   Future<void> syncLatest({
     required String baseUrl,
     required String accessToken,
@@ -206,12 +232,15 @@ class ConversationMessagesController
           );
 
     // Don't restore messages that pre-date a local-data deletion.
-    final clearedAt = await BackupPreferences().readChatClearedAt(baseUrl);
+    final clearedAt = await _latestClearedAt(baseUrl);
     final toUpsert = clearedAt == null
         ? latest
         : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
 
     await _repository.upsertMessages(toUpsert);
+    if (toUpsert.isNotEmpty) {
+      await _unhideConversationIfNeeded();
+    }
     if (_isRoomConversation) {
       await ref
           .read(roomConversationsProvider.notifier)
@@ -242,6 +271,7 @@ class ConversationMessagesController
     }
 
     final before = current.last.id;
+    final clearedAt = await _latestClearedAt(baseUrl);
     final older = _isRoomConversation
         ? await _remoteChatService.getRoomMessages(
             baseUrl: baseUrl,
@@ -259,7 +289,13 @@ class ConversationMessagesController
             limit: 30,
           );
 
-    await _repository.upsertMessages(older);
+    final toUpsert = clearedAt == null
+        ? older
+        : older.where((m) => m.createdAt.isAfter(clearedAt)).toList();
+    await _repository.upsertMessages(toUpsert);
+    if (toUpsert.isNotEmpty) {
+      await _unhideConversationIfNeeded();
+    }
     ref.invalidate(conversationSummariesProvider);
     final local = await _repository.listMessages(
       conversationId: arg,
@@ -307,6 +343,7 @@ class ConversationMessagesController
           })();
 
     await _repository.upsertMessages([sent]);
+    await _unhideConversationIfNeeded();
     ref.invalidate(conversationSummariesProvider);
     if (_isRoomConversation) {
       await _remoteChatService.markRoomRead(

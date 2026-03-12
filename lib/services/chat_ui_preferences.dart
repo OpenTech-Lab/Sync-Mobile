@@ -34,7 +34,10 @@ class ChatUiPreferences {
     return false;
   }
 
-  Future<void> writeTypingStyleModeEnabled(String serverUrl, bool enabled) async {
+  Future<void> writeTypingStyleModeEnabled(
+    String serverUrl,
+    bool enabled,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_typingStyleModeEnabledKey(serverUrl), enabled);
     await prefs.remove(_typingStyleModeEnabledPrefix);
@@ -83,11 +86,23 @@ class ChatUiPreferences {
 
   Future<void> addHiddenConversationId(String serverUrl, String id) async {
     final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList(_hiddenConversationIdsKey(serverUrl)) ?? [];
+    final list =
+        prefs.getStringList(_hiddenConversationIdsKey(serverUrl)) ?? [];
     if (!list.contains(id)) {
       list.add(id);
       await prefs.setStringList(_hiddenConversationIdsKey(serverUrl), list);
     }
+    await prefs.remove(_hiddenConversationIdsPrefix);
+  }
+
+  Future<void> removeHiddenConversationId(String serverUrl, String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list =
+        prefs.getStringList(_hiddenConversationIdsKey(serverUrl)) ?? [];
+    if (!list.remove(id)) {
+      return;
+    }
+    await prefs.setStringList(_hiddenConversationIdsKey(serverUrl), list);
     await prefs.remove(_hiddenConversationIdsPrefix);
   }
 }

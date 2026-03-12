@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/chat_room.dart';
 import 'package:mobile/models/local_chat_message.dart';
 import 'package:mobile/models/user_profile.dart';
+import 'package:mobile/services/backup_preferences.dart';
 import 'package:mobile/services/local_chat_repository.dart';
 import 'package:mobile/services/message_e2ee_service.dart';
 import 'package:mobile/services/remote_chat_service.dart';
@@ -390,6 +391,81 @@ void main() {
     expect(messages, hasLength(2));
     expect(messages.map((message) => message.id), containsAll(['r1', 'r2']));
   });
+
+  test(
+    'per-conversation clear timestamp prevents old messages from coming back',
+    () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
+      final repo = _InMemoryChatRepository();
+      final remote = _FakeRemoteChatService({
+        partnerId: [
+          [
+            LocalChatMessage(
+              id: 'r2',
+              conversationId: partnerId,
+              senderId: 'other',
+              body: 'new after clear',
+              createdAt: DateTime.utc(2026, 3, 2, 12, 5),
+            ),
+            LocalChatMessage(
+              id: 'r1',
+              conversationId: partnerId,
+              senderId: 'other',
+              body: 'old before clear',
+              createdAt: DateTime.utc(2026, 3, 2, 12, 0),
+            ),
+          ],
+          [
+            LocalChatMessage(
+              id: 'r1',
+              conversationId: partnerId,
+              senderId: 'other',
+              body: 'old before clear',
+              createdAt: DateTime.utc(2026, 3, 2, 12, 0),
+            ),
+          ],
+        ],
+      });
+
+      await BackupPreferences().writeConversationClearedAt(
+        serverUrl: baseUrl,
+        conversationId: partnerId,
+        clearedAt: DateTime.utc(2026, 3, 2, 12, 3),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .syncLatest(
+            baseUrl: baseUrl,
+            accessToken: 'token',
+            currentUserId: 'me',
+          );
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .loadMore(
+            baseUrl: baseUrl,
+            accessToken: 'token',
+            currentUserId: 'me',
+          );
+
+      final messages = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      expect(messages, hasLength(1));
+      expect(messages.first.id, 'r2');
+      expect(messages.first.body, 'new after clear');
+    },
+  );
 
   test('sendMessage persists server-created message locally', () async {
     final repo = _InMemoryChatRepository();

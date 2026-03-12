@@ -347,7 +347,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatChatsHeader => 'CHATS';
 
   @override
-  String get chatRowDelete => 'delete';
+  String get chatRowDelete => 'Delete';
 
   @override
   String get chatRowHide => 'hide';

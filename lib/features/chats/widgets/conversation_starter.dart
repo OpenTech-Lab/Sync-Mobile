@@ -369,35 +369,179 @@ class ConversationStarter extends ConsumerWidget {
 
     if (isRoom) return rowContent;
 
-    return Dismissible(
+    return _SwipeRevealConversationRow(
       key: ValueKey('convo_$userId'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: AppPalette.danger700.withValues(alpha: 0.85),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.delete_outline, color: AppPalette.white, size: 20),
-            const SizedBox(height: 2),
-            Text(
-              l10n.chatClearHistory,
-              style: const TextStyle(
-                color: AppPalette.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
+      actionLabel: l10n.chatRowDelete,
+      onDelete: () => onClearConversation(userId),
+      child: rowContent,
+    );
+  }
+}
+
+class _SwipeRevealConversationRow extends StatefulWidget {
+  const _SwipeRevealConversationRow({
+    super.key,
+    required this.child,
+    required this.actionLabel,
+    required this.onDelete,
+  });
+
+  final Widget child;
+  final String actionLabel;
+  final Future<void> Function() onDelete;
+
+  @override
+  State<_SwipeRevealConversationRow> createState() =>
+      _SwipeRevealConversationRowState();
+}
+
+class _SwipeRevealConversationRowState
+    extends State<_SwipeRevealConversationRow> {
+  static const _actionWidth = 96.0;
+  static const _settleDuration = Duration(milliseconds: 180);
+
+  double _offsetX = 0;
+  bool _isDragging = false;
+  bool _isDeleting = false;
+
+  bool get _isOpen => _offsetX <= -(_actionWidth - 1);
+
+  void _closeAction() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isDragging = false;
+      _offsetX = 0;
+    });
+  }
+
+  void _handleDragStart(DragStartDetails details) {
+    if (_isDeleting) {
+      return;
+    }
+    setState(() => _isDragging = true);
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (_isDeleting) {
+      return;
+    }
+    final delta = details.primaryDelta ?? 0;
+    final nextOffset = (_offsetX + delta).clamp(-_actionWidth, 0.0);
+    if (nextOffset == _offsetX) {
+      return;
+    }
+    setState(() => _offsetX = nextOffset);
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_isDeleting) {
+      return;
+    }
+    final velocity = details.primaryVelocity ?? 0;
+    final shouldOpen = velocity < -160 || _offsetX.abs() > _actionWidth / 2;
+    setState(() {
+      _isDragging = false;
+      _offsetX = shouldOpen ? -_actionWidth : 0;
+    });
+  }
+
+  void _handleDragCancel() {
+    if (_isDeleting) {
+      return;
+    }
+    setState(() {
+      _isDragging = false;
+      _offsetX = _offsetX.abs() > _actionWidth / 2 ? -_actionWidth : 0;
+    });
+  }
+
+  Future<void> _handleDelete() async {
+    if (_isDeleting) {
+      return;
+    }
+    setState(() => _isDeleting = true);
+    try {
+      await widget.onDelete();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+          _isDragging = false;
+          _offsetX = 0;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: _actionWidth,
+                child: Material(
+                  color: AppPalette.danger700.withValues(alpha: 0.92),
+                  child: InkWell(
+                    onTap: _isDeleting ? null : _handleDelete,
+                    child: Center(
+                      child: _isDeleting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppPalette.white,
+                                ),
+                              ),
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.delete_outline,
+                                  color: AppPalette.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.actionLabel,
+                                  style: const TextStyle(
+                                    color: AppPalette.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          AnimatedContainer(
+            duration: _isDragging ? Duration.zero : _settleDuration,
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(_offsetX, 0, 0),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: _handleDragStart,
+              onHorizontalDragUpdate: _handleDragUpdate,
+              onHorizontalDragEnd: _handleDragEnd,
+              onHorizontalDragCancel: _handleDragCancel,
+              onTap: _isOpen ? _closeAction : null,
+              child: IgnorePointer(ignoring: _isOpen, child: widget.child),
+            ),
+          ),
+        ],
       ),
-      confirmDismiss: (_) async {
-        await onClearConversation(userId);
-        return true;
-      },
-      onDismissed: (_) {},
-      child: rowContent,
     );
   }
 }

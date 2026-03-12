@@ -17,11 +17,13 @@ import 'chat_send_error_feedback.dart';
 import 'friend_qr_scanner_page.dart';
 import 'chat_target_profile_page.dart';
 import 'room_detail_page.dart';
+import '../../services/backup_preferences.dart';
 import '../../services/local_chat_repository.dart';
 import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
+import '../../state/hidden_conversation_ids_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
@@ -357,8 +359,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     if (_activePartnerId == conversationId) {
       _closeActiveConversation();
     }
+    final clearedAt = DateTime.now().toUtc();
     final repository = ref.read(chatRepositoryProvider);
+    await BackupPreferences().writeConversationClearedAt(
+      serverUrl: widget.serverUrl,
+      conversationId: conversationId,
+      clearedAt: clearedAt,
+    );
     await repository.clearConversation(conversationId);
+    await ref.read(hiddenConversationIdsProvider.notifier).hide(conversationId);
+    ref.read(unreadCountsProvider.notifier).clearForPartner(conversationId);
+    ref.invalidate(conversationMessagesProvider(conversationId));
     ref.invalidate(conversationSummariesProvider);
   }
 
@@ -1430,6 +1441,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final remoteUnreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
+    final hiddenConversationIds =
+        ref.watch(hiddenConversationIdsProvider).value ?? const <String>{};
     ref.listen<AsyncValue<List<ConversationSummary>>>(
       conversationSummariesProvider,
       (_, next) {
@@ -1473,28 +1486,35 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     };
     final orderedConversationIds =
         <String>{
-          ...unreadCounts.keys,
-          ...filteredSummaries.map((summary) => summary.conversationId),
-        }.toList(growable: false)..sort((a, b) {
-          final aHasUnread = (unreadCounts[a] ?? 0) > 0;
-          final bHasUnread = (unreadCounts[b] ?? 0) > 0;
-          if (aHasUnread != bHasUnread) {
-            return aHasUnread ? -1 : 1;
-          }
+              ...unreadCounts.keys,
+              ...filteredSummaries.map((summary) => summary.conversationId),
+            }
+            .where(
+              (id) =>
+                  isRoomConversationId(id) ||
+                  !hiddenConversationIds.contains(id),
+            )
+            .toList(growable: false)
+          ..sort((a, b) {
+            final aHasUnread = (unreadCounts[a] ?? 0) > 0;
+            final bHasUnread = (unreadCounts[b] ?? 0) > 0;
+            if (aHasUnread != bHasUnread) {
+              return aHasUnread ? -1 : 1;
+            }
 
-          final aLastAt = summariesById[a]?.lastAt;
-          final bLastAt = summariesById[b]?.lastAt;
-          if (aLastAt != null && bLastAt != null) {
-            return bLastAt.compareTo(aLastAt);
-          }
-          if (aLastAt != null) {
-            return -1;
-          }
-          if (bLastAt != null) {
-            return 1;
-          }
-          return a.compareTo(b);
-        });
+            final aLastAt = summariesById[a]?.lastAt;
+            final bLastAt = summariesById[b]?.lastAt;
+            if (aLastAt != null && bLastAt != null) {
+              return bLastAt.compareTo(aLastAt);
+            }
+            if (aLastAt != null) {
+              return -1;
+            }
+            if (bLastAt != null) {
+              return 1;
+            }
+            return a.compareTo(b);
+          });
     // Preload message providers for the top conversations so that opening one
     // has data ready immediately (no AsyncLoading flash).
     for (final id in orderedConversationIds.take(15)) {

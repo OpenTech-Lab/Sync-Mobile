@@ -747,7 +747,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatRowDelete.
   ///
   /// In en, this message translates to:
-  /// **'delete'**
+  /// **'Delete'**
   String get chatRowDelete;
 
   /// No description provided for @chatRowHide.
