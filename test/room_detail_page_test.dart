@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/room_detail_page.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 import 'package:mobile/models/chat_room.dart';
 import 'package:mobile/services/local_chat_repository.dart';
 import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
+import 'package:mobile/state/user_profile_controller.dart';
 
 class _FakeAppController extends AppController {
   @override
@@ -129,7 +131,9 @@ void main() {
           appControllerProvider.overrideWith(_FakeAppController.new),
           remoteChatServiceProvider.overrideWithValue(remote),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: RoomDetailPage(
             serverUrl: 'https://example.com',
             roomId: 'room-1',
@@ -172,6 +176,8 @@ void main() {
           remoteChatServiceProvider.overrideWithValue(remote),
         ],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
               return Scaffold(
@@ -225,6 +231,44 @@ void main() {
     expect(find.byType(RoomDetailPage), findsNothing);
   });
 
+  testWidgets('invite button shows app dialog when no friends can be invited', (
+    tester,
+  ) async {
+    final remote = _FakeRemoteChatService(_buildRoomDetail());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appControllerProvider.overrideWith(_FakeAppController.new),
+          remoteChatServiceProvider.overrideWithValue(remote),
+          friendIdsProvider.overrideWith((ref) async => const <String>[]),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: RoomDetailPage(
+            serverUrl: 'https://example.com',
+            roomId: 'room-1',
+            currentUserId: 'owner-id',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.person_add_alt_1_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('INVITE'), findsOneWidget);
+    expect(find.text('No friends available to invite.'), findsOneWidget);
+
+    await tester.tap(find.text('close'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RoomDetailPage), findsOneWidget);
+    expect(find.text('No friends available to invite.'), findsNothing);
+  });
+
   testWidgets('owner can rename room from the detail page', (tester) async {
     final remote = _FakeRemoteChatService(_buildRoomDetail());
 
@@ -235,7 +279,9 @@ void main() {
           chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
           remoteChatServiceProvider.overrideWithValue(remote),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: RoomDetailPage(
             serverUrl: 'https://example.com',
             roomId: 'room-1',

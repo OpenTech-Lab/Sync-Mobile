@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/app_toast.dart';
+import '../../ui/components/molecules/app_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -437,7 +438,6 @@ class SettingsTab extends ConsumerWidget {
                           title: l10n.settingsDeleteBackupTitle,
                           message: l10n.settingsDeleteBackupMessage,
                           confirmLabel: l10n.settingsDeleteBackupConfirm,
-                          isDark: isDark,
                         ),
                       );
                       if (confirmed != true) {
@@ -706,7 +706,6 @@ class DangerousActionsPage extends ConsumerWidget {
                     title: l10n.settingsSignOut,
                     message: l10n.settingsSignOutMessage,
                     confirmLabel: l10n.settingsSignOutConfirm,
-                    isDark: isDark,
                   ),
                 );
                 if (confirmed == true) {
@@ -1347,97 +1346,39 @@ class _ConfirmDialog extends StatelessWidget {
     required this.title,
     required this.message,
     required this.confirmLabel,
-    required this.isDark,
   });
 
   final String title;
   final String message;
   final String confirmLabel;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final dialogColors = AppDialogColors.of(context);
 
-    return Dialog(
-      backgroundColor: bgColor,
-      surfaceTintColor: AppPalette.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    return AppDialog(
+      title: title,
+      message: message,
+      showDividerAboveActions: true,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w300,
-                color: inkColor,
-                letterSpacing: -0.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w300,
-                color: AppPalette.neutral500,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Divider(height: 1, thickness: 1, color: ruleColor),
-            const SizedBox(height: 16),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 28,
-              runSpacing: 10,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(false),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.actionCancel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppPalette.neutral500,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(true),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      confirmLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 2.2,
-                        fontWeight: FontWeight.w500,
-                        color: AppPalette.danger700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      contentPadding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+      actions: AppDialogActions(
+        spacing: 28,
+        children: [
+          AppDialogTextAction(
+            label: AppLocalizations.of(context)!.actionCancel,
+            color: dialogColors.muted,
+            onTap: () => Navigator.of(context).pop(false),
+          ),
+          AppDialogTextAction(
+            label: confirmLabel,
+            color: AppPalette.danger700,
+            onTap: () => Navigator.of(context).pop(true),
+            fontSize: 11,
+            letterSpacing: 2.2,
+            fontWeight: FontWeight.w500,
+          ),
+        ],
       ),
     );
   }

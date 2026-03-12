@@ -1176,6 +1176,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
               controller: _ctrl,
               autofocus: true,
               maxLines: 5,
+              cursorColor: AppPalette.neutral500,
               style: TextStyle(
                 fontSize: 14,
                 height: 1.8,
@@ -1365,6 +1366,7 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
             TextField(
               controller: _ctrl,
               autofocus: true,
+              cursorColor: AppPalette.neutral500,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w300,

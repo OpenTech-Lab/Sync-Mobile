@@ -108,7 +108,7 @@ void main() {
         find.descendant(of: workChip, matching: find.byIcon(Icons.close)),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Delete'));
+      await tester.tap(find.text('D E L E T E'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('S A V E'));
       await tester.pumpAndSettle();

@@ -863,6 +863,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       controller: nameController,
                       autofocus: true,
                       onChanged: (_) => setState(() {}),
+                      cursorColor: AppPalette.neutral500,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w300,
@@ -870,6 +871,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       ),
                       decoration: InputDecoration(
                         labelText: _l10n.chatCreateRoomNameLabel,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          color: AppPalette.neutral500.withValues(alpha: 0.75),
+                          fontWeight: FontWeight.w300,
+                        ),
+                        floatingLabelStyle: const TextStyle(
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
                         hintText: _l10n.chatCreateRoomNameHint,
                         border: UnderlineInputBorder(
                           borderSide: BorderSide(color: ruleColor),

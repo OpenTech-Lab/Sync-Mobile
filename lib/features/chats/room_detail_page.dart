@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/chat_room.dart';
 import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/user_profile_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
+import '../../ui/components/molecules/app_dialog.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
 enum RoomDetailAction { left, deleted, startChat }
@@ -89,10 +91,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       extentOffset: controller.text.length,
     );
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final l10n = AppLocalizations.of(context)!;
 
     final result = await showDialog<String>(
       context: context,
@@ -104,123 +103,70 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
                 nextName.isNotEmpty &&
                 nextName != originalName &&
                 !_actionInProgress;
-            return Dialog(
-              backgroundColor: bgColor,
-              surfaceTintColor: AppPalette.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              insetPadding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 44,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'EDIT ROOM',
-                      style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 2.6,
-                        color: AppPalette.neutral500,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Change room name',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                        color: inkColor,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      onChanged: (_) => setState(() {}),
-                      onSubmitted: (_) {
-                        if (canSave) {
-                          Navigator.of(context).pop(nextName);
-                        }
-                      },
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w300,
-                        color: inkColor,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Room name',
-                        border: UnderlineInputBorder(
-                          borderSide: BorderSide(color: ruleColor),
-                        ),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: ruleColor),
-                        ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: AppPalette.neutral500),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 11,
-                        ),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'cancel',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppPalette.neutral500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        GestureDetector(
-                          onTap: canSave
-                              ? () => Navigator.of(context).pop(nextName)
-                              : null,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'S A V E',
-                              style: TextStyle(
-                                fontSize: 11,
-                                letterSpacing: 2.2,
-                                fontWeight: FontWeight.w500,
-                                color: canSave
-                                    ? inkColor
-                                    : AppPalette.neutral500.withValues(
-                                        alpha: 0.5,
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            final dialogColors = AppDialogColors.of(context);
+            return AppDialog(
+              eyebrow: 'EDIT ROOM',
+              title: 'Change room name',
+              bodySpacing: 20,
+              body: TextField(
+                controller: controller,
+                autofocus: true,
+                cursorColor: AppPalette.neutral500,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) {
+                  if (canSave) {
+                    Navigator.of(context).pop(nextName);
+                  }
+                },
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w300,
+                  color: dialogColors.ink,
                 ),
+                decoration: InputDecoration(
+                  labelText: 'Room name',
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.neutral500.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w300,
+                  ),
+                  floatingLabelStyle: const TextStyle(
+                    color: AppPalette.neutral500,
+                    fontWeight: FontWeight.w300,
+                  ),
+                  border: UnderlineInputBorder(
+                    borderSide: BorderSide(color: dialogColors.rule),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: dialogColors.rule),
+                  ),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppPalette.neutral500),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                  isDense: true,
+                ),
+              ),
+              actions: AppDialogActions(
+                children: [
+                  AppDialogTextAction(
+                    label: l10n.actionCancel,
+                    color: dialogColors.muted,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  AppDialogTextAction(
+                    label: 'S A V E',
+                    color: canSave
+                        ? dialogColors.ink
+                        : AppPalette.neutral500.withValues(alpha: 0.5),
+                    onTap: canSave
+                        ? () => Navigator.of(context).pop(nextName)
+                        : null,
+                    fontSize: 11,
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
               ),
             );
           },
@@ -236,6 +182,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     if (detail == null) {
       return null;
     }
+    final l10n = AppLocalizations.of(context)!;
 
     final memberIds = detail.members.map((member) => member.userId).toSet();
     final friendIds =
@@ -263,18 +210,28 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
     if (options.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No friends available to invite.')),
-        );
-      }
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          final dialogColors = AppDialogColors.of(context);
+          return AppDialog(
+            eyebrow: 'INVITE',
+            title: 'No friends available to invite.',
+            actions: AppDialogActions(
+              spacing: 0,
+              children: [
+                AppDialogTextAction(
+                  label: l10n.actionClose,
+                  color: dialogColors.muted,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        },
+      );
       return null;
     }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
     return showDialog<List<String>>(
       context: context,
@@ -282,131 +239,71 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         final selectedIds = <String>{};
         return StatefulBuilder(
           builder: (context, setState) {
-            return Dialog(
-              backgroundColor: bgColor,
-              surfaceTintColor: AppPalette.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              insetPadding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 44,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'INVITE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 2.6,
-                        color: AppPalette.neutral500,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Add members to this room',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                        color: inkColor,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 260),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: options.length,
-                        separatorBuilder: (_, _) =>
-                            Divider(height: 1, color: ruleColor),
-                        itemBuilder: (_, index) {
-                          final option = options[index];
-                          final selected = selectedIds.contains(option.userId);
-                          return CheckboxListTile(
-                            value: selected,
-                            onChanged: (_) {
-                              setState(() {
-                                if (selected) {
-                                  selectedIds.remove(option.userId);
-                                } else {
-                                  selectedIds.add(option.userId);
-                                }
-                              });
-                            },
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                            title: Text(
-                              option.displayName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: inkColor,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'cancel',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppPalette.neutral500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
+            final dialogColors = AppDialogColors.of(context);
+            return AppDialog(
+              eyebrow: 'INVITE',
+              title: 'Add members to this room',
+              body: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: dialogColors.rule),
+                  itemBuilder: (_, index) {
+                    final option = options[index];
+                    final selected = selectedIds.contains(option.userId);
+                    return CheckboxListTile(
+                      value: selected,
+                      onChanged: (_) {
+                        setState(() {
+                          if (selected) {
+                            selectedIds.remove(option.userId);
+                          } else {
+                            selectedIds.add(option.userId);
+                          }
+                        });
+                      },
+                      activeColor: dialogColors.ink,
+                      checkColor: dialogColors.background,
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                        option.displayName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: dialogColors.ink,
+                          fontWeight: FontWeight.w300,
                         ),
-                        const SizedBox(width: 24),
-                        GestureDetector(
-                          onTap: selectedIds.isEmpty
-                              ? null
-                              : () => Navigator.of(
-                                  context,
-                                ).pop(selectedIds.toList(growable: false)),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'I N V I T E',
-                              style: TextStyle(
-                                fontSize: 11,
-                                letterSpacing: 2.4,
-                                fontWeight: FontWeight.w500,
-                                color: selectedIds.isEmpty
-                                    ? AppPalette.neutral500.withValues(
-                                        alpha: 0.5,
-                                      )
-                                    : inkColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    );
+                  },
                 ),
+              ),
+              actions: AppDialogActions(
+                children: [
+                  AppDialogTextAction(
+                    label: l10n.actionCancel,
+                    color: dialogColors.muted,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  AppDialogTextAction(
+                    label: 'I N V I T E',
+                    color: selectedIds.isEmpty
+                        ? AppPalette.neutral500.withValues(alpha: 0.5)
+                        : dialogColors.ink,
+                    onTap: selectedIds.isEmpty
+                        ? null
+                        : () => Navigator.of(
+                            context,
+                          ).pop(selectedIds.toList(growable: false)),
+                    fontSize: 11,
+                    letterSpacing: 2.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
               ),
             );
           },
@@ -469,105 +366,34 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       return false;
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final subColor = AppPalette.neutral500;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final l10n = AppLocalizations.of(context)!;
     final memberName = _displayNameOrFallback(member.userId, member.username);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: bgColor,
-          surfaceTintColor: AppPalette.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 44,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'REMOVE MEMBER',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 2.4,
-                    color: subColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Remove $memberName from this room?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'They will lose access to the room immediately.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                    color: subColor,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Divider(height: 1, color: ruleColor),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(false),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          'cancel',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: subColor,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(true),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          'R E M O V E',
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2.2,
-                            fontWeight: FontWeight.w500,
-                            color: AppPalette.danger700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        final dialogColors = AppDialogColors.of(context);
+        return AppDialog(
+          eyebrow: 'REMOVE MEMBER',
+          title: 'Remove $memberName from this room?',
+          message: 'They will lose access to the room immediately.',
+          showDividerAboveActions: true,
+          actions: AppDialogActions(
+            children: [
+              AppDialogTextAction(
+                label: l10n.actionCancel,
+                color: dialogColors.muted,
+                onTap: () => Navigator.of(context).pop(false),
+              ),
+              AppDialogTextAction(
+                label: 'R E M O V E',
+                color: AppPalette.danger700,
+                onTap: () => Navigator.of(context).pop(true),
+                fontSize: 11,
+                letterSpacing: 2.2,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
           ),
         );
       },
@@ -628,104 +454,33 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       return false;
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final subColor = AppPalette.neutral500;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final l10n = AppLocalizations.of(context)!;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return Dialog(
-          backgroundColor: bgColor,
-          surfaceTintColor: AppPalette.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 44,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'LEAVE ROOM',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 2.4,
-                    color: subColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Leave ${detail.name}?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'You will lose access until someone invites you back.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                    color: subColor,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Divider(height: 1, color: ruleColor),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(false),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          'cancel',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: subColor,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(true),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          'L E A V E',
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2.2,
-                            fontWeight: FontWeight.w500,
-                            color: AppPalette.danger700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        final dialogColors = AppDialogColors.of(context);
+        return AppDialog(
+          eyebrow: 'LEAVE ROOM',
+          title: 'Leave ${detail.name}?',
+          message: 'You will lose access until someone invites you back.',
+          showDividerAboveActions: true,
+          actions: AppDialogActions(
+            children: [
+              AppDialogTextAction(
+                label: l10n.actionCancel,
+                color: dialogColors.muted,
+                onTap: () => Navigator.of(context).pop(false),
+              ),
+              AppDialogTextAction(
+                label: 'L E A V E',
+                color: AppPalette.danger700,
+                onTap: () => Navigator.of(context).pop(true),
+                fontSize: 11,
+                letterSpacing: 2.2,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
           ),
         );
       },
