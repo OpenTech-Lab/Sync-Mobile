@@ -2,12 +2,99 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'server_scope.dart';
 
+const int friendTagMaxLength = 24;
+
+String? normalizeFriendTagLabel(String raw) {
+  final normalized = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (normalized.isEmpty) {
+    return null;
+  }
+  if (normalized.length <= friendTagMaxLength) {
+    return normalized;
+  }
+  return normalized.substring(0, friendTagMaxLength).trimRight();
+}
+
+List<String> normalizeFriendTagLabels(
+  Iterable<String> rawTags, {
+  Iterable<String> preferredCasing = const <String>[],
+}) {
+  final canonicalByLower = <String, String>{};
+
+  for (final raw in preferredCasing) {
+    final normalized = normalizeFriendTagLabel(raw);
+    if (normalized == null) {
+      continue;
+    }
+    canonicalByLower.putIfAbsent(normalized.toLowerCase(), () => normalized);
+  }
+
+  for (final raw in rawTags) {
+    final normalized = normalizeFriendTagLabel(raw);
+    if (normalized == null) {
+      continue;
+    }
+    canonicalByLower.putIfAbsent(normalized.toLowerCase(), () => normalized);
+  }
+
+  final tags = canonicalByLower.values.toList(growable: false)
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return tags;
+}
+
+List<String> canonicalizeFriendTagLabels(
+  Iterable<String> rawTags, {
+  Iterable<String> preferredCasing = const <String>[],
+}) {
+  final preferredByLower = <String, String>{};
+  for (final raw in preferredCasing) {
+    final normalized = normalizeFriendTagLabel(raw);
+    if (normalized == null) {
+      continue;
+    }
+    preferredByLower.putIfAbsent(normalized.toLowerCase(), () => normalized);
+  }
+
+  final canonicalByLower = <String, String>{};
+  for (final raw in rawTags) {
+    final normalized = normalizeFriendTagLabel(raw);
+    if (normalized == null) {
+      continue;
+    }
+    final lower = normalized.toLowerCase();
+    canonicalByLower.putIfAbsent(
+      lower,
+      () => preferredByLower[lower] ?? normalized,
+    );
+  }
+
+  final tags = canonicalByLower.values.toList(growable: false)
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return tags;
+}
+
+String? canonicalizeFriendTagLabel(String raw, Iterable<String> existingTags) {
+  final normalized = normalizeFriendTagLabel(raw);
+  if (normalized == null) {
+    return null;
+  }
+  final lower = normalized.toLowerCase();
+  for (final tag in existingTags) {
+    if (tag.toLowerCase() == lower) {
+      return tag;
+    }
+  }
+  return normalized;
+}
+
 class UserProfilePreferences {
   static const String _displayNamePrefix = 'profile_display_name';
   static const String _avatarPrefix = 'profile_avatar_base64';
   static const String _descriptionPrefix = 'profile_description';
   static const String _friendAddedAtPrefix = 'friend_added_at';
   static const String _friendIdsPrefix = 'friend_ids';
+  static const String _friendTagsPrefix = 'friend_tags';
+  static const String _friendTagCatalogPrefix = 'friend_tag_catalog';
 
   String _displayNameKey(String serverUrl, String userId) =>
       scopedStorageKey(_displayNamePrefix, serverUrl, suffix: userId);
@@ -23,6 +110,12 @@ class UserProfilePreferences {
 
   String _friendIdsKey(String serverUrl) =>
       scopedStorageKey(_friendIdsPrefix, serverUrl);
+
+  String _friendTagsKey(String serverUrl, String userId) =>
+      scopedStorageKey(_friendTagsPrefix, serverUrl, suffix: userId);
+
+  String _friendTagCatalogKey(String serverUrl) =>
+      scopedStorageKey(_friendTagCatalogPrefix, serverUrl);
 
   String _legacyDisplayNameKey(String userId) => 'profile_display_name_$userId';
   String _legacyAvatarKey(String userId) => 'profile_avatar_base64_$userId';
@@ -186,7 +279,64 @@ class UserProfilePreferences {
         .toList(growable: false);
     await prefs.setStringList(_friendIdsKey(serverUrl), next);
     await prefs.remove(_friendAddedAtKey(serverUrl, normalized));
+    await prefs.remove(_friendTagsKey(serverUrl, normalized));
     await prefs.remove(_legacyFriendAddedAtKey(normalized));
+  }
+
+  Future<List<String>> readFriendTags(String serverUrl, String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw =
+        prefs.getStringList(_friendTagsKey(serverUrl, userId)) ??
+        const <String>[];
+    final normalized = normalizeFriendTagLabels(raw);
+    if (normalized.isEmpty) {
+      await prefs.remove(_friendTagsKey(serverUrl, userId));
+      return const <String>[];
+    }
+    await prefs.setStringList(_friendTagsKey(serverUrl, userId), normalized);
+    return normalized;
+  }
+
+  Future<void> writeFriendTags(
+    String serverUrl,
+    String userId,
+    Iterable<String> tags,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingCatalog = await readFriendTagCatalog(serverUrl);
+    final normalized = canonicalizeFriendTagLabels(
+      tags,
+      preferredCasing: existingCatalog,
+    );
+    if (normalized.isEmpty) {
+      await prefs.remove(_friendTagsKey(serverUrl, userId));
+    } else {
+      await prefs.setStringList(_friendTagsKey(serverUrl, userId), normalized);
+    }
+
+    final nextCatalog = normalizeFriendTagLabels([
+      ...existingCatalog,
+      ...normalized,
+    ], preferredCasing: existingCatalog);
+    if (nextCatalog.isEmpty) {
+      await prefs.remove(_friendTagCatalogKey(serverUrl));
+      return;
+    }
+    await prefs.setStringList(_friendTagCatalogKey(serverUrl), nextCatalog);
+  }
+
+  Future<List<String>> readFriendTagCatalog(String serverUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw =
+        prefs.getStringList(_friendTagCatalogKey(serverUrl)) ??
+        const <String>[];
+    final normalized = normalizeFriendTagLabels(raw);
+    if (normalized.isEmpty) {
+      await prefs.remove(_friendTagCatalogKey(serverUrl));
+      return const <String>[];
+    }
+    await prefs.setStringList(_friendTagCatalogKey(serverUrl), normalized);
+    return normalized;
   }
 
   Future<String?> _readScopedString({

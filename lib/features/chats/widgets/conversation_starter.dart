@@ -26,6 +26,9 @@ class ConversationStarter extends ConsumerWidget {
     required this.onMarkAllRead,
     required this.onStartNewChat,
     required this.onAddFriend,
+    this.availableFriendTags = const <String>[],
+    this.selectedFriendTag,
+    this.onSelectedFriendTag,
   });
 
   final TextEditingController controller;
@@ -39,6 +42,9 @@ class ConversationStarter extends ConsumerWidget {
   final Future<void> Function() onMarkAllRead;
   final VoidCallback onStartNewChat;
   final VoidCallback onAddFriend;
+  final List<String> availableFriendTags;
+  final String? selectedFriendTag;
+  final ValueChanged<String?>? onSelectedFriendTag;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -120,6 +126,49 @@ class ConversationStarter extends ConsumerWidget {
             ),
           ],
         ),
+        if (availableFriendTags.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: availableFriendTags.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, index) {
+                final tag = index == 0 ? null : availableFriendTags[index - 1];
+                final selected = tag == null
+                    ? selectedFriendTag == null
+                    : tag == selectedFriendTag;
+                return ChoiceChip(
+                  key: ValueKey('friend_tag_filter_${tag ?? 'all'}'),
+                  label: Text(tag ?? 'All'),
+                  selected: selected,
+                  onSelected: onSelectedFriendTag == null
+                      ? null
+                      : (_) => onSelectedFriendTag!(tag),
+                  backgroundColor: isDark
+                      ? AppPalette.neutral800
+                      : AppPalette.neutral100,
+                  selectedColor: isDark
+                      ? AppPalette.neutral700
+                      : AppPalette.neutral300,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: selected ? AppPalette.neutral500 : ruleColor,
+                    ),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                );
+              },
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
 
         // ── unread section ──

@@ -56,6 +56,47 @@ final friendIdsProvider = FutureProvider<List<String>>((ref) {
   return ref.read(userProfilePreferencesProvider).readFriendIds(serverUrl);
 });
 
+final friendTagsProvider = FutureProvider.family<List<String>, String>((
+  ref,
+  userId,
+) {
+  final serverUrl = ref.watch(activeServerUrlProvider);
+  if (serverUrl == null) {
+    return Future.value(const <String>[]);
+  }
+  return ref
+      .read(userProfilePreferencesProvider)
+      .readFriendTags(serverUrl, userId);
+});
+
+final friendTagCatalogProvider = FutureProvider<List<String>>((ref) {
+  final serverUrl = ref.watch(activeServerUrlProvider);
+  if (serverUrl == null) {
+    return Future.value(const <String>[]);
+  }
+  return ref
+      .read(userProfilePreferencesProvider)
+      .readFriendTagCatalog(serverUrl);
+});
+
+final friendTagMapProvider = FutureProvider<Map<String, List<String>>>((
+  ref,
+) async {
+  final serverUrl = ref.watch(activeServerUrlProvider);
+  if (serverUrl == null) {
+    return const <String, List<String>>{};
+  }
+  final friendIds = await ref.watch(friendIdsProvider.future);
+  final preferences = ref.read(userProfilePreferencesProvider);
+  final entries = await Future.wait(
+    friendIds.map((userId) async {
+      final tags = await preferences.readFriendTags(serverUrl, userId);
+      return MapEntry(userId, tags);
+    }),
+  );
+  return Map<String, List<String>>.fromEntries(entries);
+});
+
 final friendAddedAtProvider = FutureProvider.family<DateTime?, String>((
   ref,
   userId,

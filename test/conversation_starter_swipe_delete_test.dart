@@ -8,6 +8,63 @@ import 'package:mobile/state/app_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('tag filters render and report selection changes', (
+    tester,
+  ) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    String? selectedTag = 'Work';
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ConversationStarter(
+              controller: controller,
+              focusNode: focusNode,
+              unreadCounts: const <String, int>{},
+              orderedConversationIds: const <String>[],
+              summariesById: const <String, ConversationSummary>{},
+              availableFriendTags: const <String>['Family', 'Work'],
+              selectedFriendTag: selectedTag,
+              onSelectedFriendTag: (tag) => selectedTag = tag,
+              onQuickAction: (_) {},
+              onOpenConversation: (_) {},
+              onClearConversation: (_) async {},
+              onMarkAllRead: () async {},
+              onStartNewChat: () {},
+              onAddFriend: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('friend_tag_filter_all')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('friend_tag_filter_Family')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('friend_tag_filter_Work')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('friend_tag_filter_Family')));
+    await tester.pumpAndSettle();
+    expect(selectedTag, 'Family');
+
+    await tester.tap(find.byKey(const ValueKey('friend_tag_filter_all')));
+    await tester.pumpAndSettle();
+    expect(selectedTag, isNull);
+  });
+
   testWidgets('room rows show member count in the title', (tester) async {
     const roomConversationId = 'room:room-1';
     final controller = TextEditingController();

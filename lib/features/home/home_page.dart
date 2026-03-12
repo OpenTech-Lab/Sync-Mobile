@@ -419,6 +419,8 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
             .push<ChatTargetProfileAction>(
               MaterialPageRoute<ChatTargetProfileAction>(
                 builder: (_) => ChatTargetProfileScreen(
+                  serverUrl: widget.serverUrl,
+                  userId: widget.friendId,
                   displayName: displayName,
                   displayHandle: widget.friendId,
                   avatarBase64: avatarBase64,
@@ -432,8 +434,14 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
               ),
             );
         if (!context.mounted || action == null) {
+          ref.invalidate(friendTagCatalogProvider);
+          ref.invalidate(friendTagMapProvider);
+          ref.invalidate(friendTagsProvider(widget.friendId));
           return;
         }
+        ref.invalidate(friendTagCatalogProvider);
+        ref.invalidate(friendTagMapProvider);
+        ref.invalidate(friendTagsProvider(widget.friendId));
         if (action == ChatTargetProfileAction.startChat) {
           widget.onOpenChat?.call(widget.friendId);
           return;

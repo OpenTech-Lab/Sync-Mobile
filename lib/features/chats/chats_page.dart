@@ -65,6 +65,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
   final _messageScrollController = ScrollController();
   late final AnimationController _conversationPaneController;
   String? _activePartnerId;
+  String? _selectedFriendTag;
   bool _typingSignalSent = false;
   bool _isBackGestureInProgress = false;
   bool _isClosingActiveConversation = false;
@@ -697,6 +698,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       final action = await Navigator.of(context).push<ChatTargetProfileAction>(
         MaterialPageRoute<ChatTargetProfileAction>(
           builder: (_) => ChatTargetProfileScreen(
+            serverUrl: widget.serverUrl,
+            userId: resolved.partnerId,
             displayName: resolved.displayName,
             displayHandle: resolved.displayHandle,
             avatarBase64: resolved.avatarBase64,
@@ -710,8 +713,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         ),
       );
       if (!mounted || action == null) {
+        ref.invalidate(friendTagCatalogProvider);
+        ref.invalidate(friendTagMapProvider);
+        ref.invalidate(friendTagsProvider(resolved.partnerId));
         return;
       }
+      ref.invalidate(friendTagCatalogProvider);
+      ref.invalidate(friendTagMapProvider);
+      ref.invalidate(friendTagsProvider(resolved.partnerId));
 
       if (action == ChatTargetProfileAction.cancelFriend) {
         await prefs.removeFriendId(widget.serverUrl, resolved.partnerId);
@@ -761,6 +770,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         await ref.read(friendIdsProvider.future).catchError((_) {
           return const <String>[];
         });
+    final friendTagCatalog =
+        ref.read(friendTagCatalogProvider).value ??
+        await ref.read(friendTagCatalogProvider.future).catchError((_) {
+          return const <String>[];
+        });
+    final friendTagMap =
+        ref.read(friendTagMapProvider).value ??
+        await ref.read(friendTagMapProvider.future).catchError((_) {
+          return const <String, List<String>>{};
+        });
     if (!mounted) {
       return null;
     }
@@ -773,6 +792,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                   userId,
                   ref.read(userDisplayNameProvider(userId)).value,
                 ),
+                tags: friendTagMap[userId] ?? const <String>[],
               ),
             )
             .toList(growable: false)
@@ -787,9 +807,22 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       context: context,
       builder: (context) {
         final selectedIds = <String>{};
+        String? selectedTag = friendTagCatalog.contains(_selectedFriendTag)
+            ? _selectedFriendTag
+            : null;
         return StatefulBuilder(
           builder: (context, setState) {
             final hasName = nameController.text.trim().isNotEmpty;
+            final visibleMemberOptions = selectedTag == null
+                ? memberOptions
+                : memberOptions
+                      .where(
+                        (option) => friendMatchesSelectedTag(
+                          friendTags: option.tags,
+                          selectedFriendTag: selectedTag,
+                        ),
+                      )
+                      .toList(growable: false);
             return Dialog(
               backgroundColor: bgColor,
               surfaceTintColor: AppPalette.transparent,
@@ -862,10 +895,66 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                         letterSpacing: 0.2,
                       ),
                     ),
+                    if (friendTagCatalog.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 34,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: friendTagCatalog.length + 1,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (_, index) {
+                            final tag = index == 0
+                                ? null
+                                : friendTagCatalog[index - 1];
+                            final selected = tag == null
+                                ? selectedTag == null
+                                : tag == selectedTag;
+                            return ChoiceChip(
+                              label: Text(tag ?? 'All'),
+                              selected: selected,
+                              onSelected: (_) {
+                                setState(() => selectedTag = tag);
+                              },
+                              backgroundColor: isDark
+                                  ? AppPalette.neutral800
+                                  : AppPalette.neutral100,
+                              selectedColor: isDark
+                                  ? AppPalette.neutral700
+                                  : AppPalette.neutral300,
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w300,
+                                color: inkColor,
+                              ),
+                              shape: StadiumBorder(
+                                side: BorderSide(
+                                  color: selected
+                                      ? AppPalette.neutral500
+                                      : ruleColor,
+                                ),
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     if (memberOptions.isEmpty)
                       Text(
                         _l10n.chatCreateRoomNoFriends,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.neutral500,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      )
+                    else if (visibleMemberOptions.isEmpty)
+                      Text(
+                        'No friends match this tag.',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppPalette.neutral500,
@@ -877,11 +966,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                         constraints: const BoxConstraints(maxHeight: 220),
                         child: ListView.separated(
                           shrinkWrap: true,
-                          itemCount: memberOptions.length,
+                          itemCount: visibleMemberOptions.length,
                           separatorBuilder: (_, _) =>
                               Divider(height: 1, color: ruleColor),
                           itemBuilder: (_, index) {
-                            final option = memberOptions[index];
+                            final option = visibleMemberOptions[index];
                             final selected = selectedIds.contains(
                               option.userId,
                             );
@@ -1282,6 +1371,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     final action = await Navigator.of(context).push<ChatTargetProfileAction>(
       MaterialPageRoute<ChatTargetProfileAction>(
         builder: (_) => ChatTargetProfileScreen(
+          serverUrl: widget.serverUrl,
+          userId: partnerId,
           displayName: displayName,
           displayHandle: partnerId,
           avatarBase64: avatarBase64,
@@ -1295,8 +1386,14 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       ),
     );
     if (!mounted || action == null) {
+      ref.invalidate(friendTagCatalogProvider);
+      ref.invalidate(friendTagMapProvider);
+      ref.invalidate(friendTagsProvider(partnerId));
       return;
     }
+    ref.invalidate(friendTagCatalogProvider);
+    ref.invalidate(friendTagMapProvider);
+    ref.invalidate(friendTagsProvider(partnerId));
     if (action == ChatTargetProfileAction.addFriend) {
       await ref
           .read(userProfilePreferencesProvider)
@@ -1443,6 +1540,21 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final hiddenConversationIds =
         ref.watch(hiddenConversationIdsProvider).value ?? const <String>{};
+    final friendTagCatalog =
+        ref.watch(friendTagCatalogProvider).value ?? const <String>[];
+    final friendTagMap =
+        ref.watch(friendTagMapProvider).value ?? const <String, List<String>>{};
+    final selectedFriendTag = friendTagCatalog.contains(_selectedFriendTag)
+        ? _selectedFriendTag
+        : null;
+    if (_selectedFriendTag != null && selectedFriendTag == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _selectedFriendTag = null);
+      });
+    }
     ref.listen<AsyncValue<List<ConversationSummary>>>(
       conversationSummariesProvider,
       (_, next) {
@@ -1468,10 +1580,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                   summary.unreadCount),
     };
     final searchQuery = _partnerController.text.trim().toLowerCase();
-    final filteredSummaries = searchQuery.isEmpty
+    final filteredSummaries = searchQuery.isEmpty && selectedFriendTag == null
         ? conversationSummaries
         : conversationSummaries
               .where((summary) {
+                if (!conversationMatchesSelectedFriendTag(
+                  conversationId: summary.conversationId,
+                  selectedFriendTag: selectedFriendTag,
+                  friendTagsById: friendTagMap,
+                )) {
+                  return false;
+                }
                 return (summary.title ?? summary.conversationId)
                         .toLowerCase()
                         .contains(searchQuery) ||
@@ -1489,7 +1608,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
               ...unreadCounts.keys,
               ...filteredSummaries.map((summary) => summary.conversationId),
             }
-            .where((id) => !hiddenConversationIds.contains(id))
+            .where(
+              (id) =>
+                  !hiddenConversationIds.contains(id) &&
+                  conversationMatchesSelectedFriendTag(
+                    conversationId: id,
+                    selectedFriendTag: selectedFriendTag,
+                    friendTagsById: friendTagMap,
+                  ),
+            )
             .toList(growable: false)
           ..sort((a, b) {
             final aHasUnread = (unreadCounts[a] ?? 0) > 0;
@@ -1576,6 +1703,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         onMarkAllRead: () => _markAllUnreadAsRead(unreadCounts),
         onStartNewChat: _openNewFriendOrChat,
         onAddFriend: _openNewFriendOrChat,
+        availableFriendTags: friendTagCatalog,
+        selectedFriendTag: selectedFriendTag,
+        onSelectedFriendTag: (tag) {
+          setState(() => _selectedFriendTag = tag);
+        },
       ),
     );
     final conversationPage = Material(

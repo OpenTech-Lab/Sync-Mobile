@@ -17,17 +17,52 @@ void main() {
     await preferences.addFriendId(serverA, 'friend-a');
     await preferences.addFriendId(serverB, 'friend-b');
 
-    expect(
-      await preferences.readDisplayName(serverA, userId),
-      'Planet A User',
-    );
-    expect(
-      await preferences.readDisplayName(serverB, userId),
-      'Planet B User',
-    );
+    expect(await preferences.readDisplayName(serverA, userId), 'Planet A User');
+    expect(await preferences.readDisplayName(serverB, userId), 'Planet B User');
     expect(await preferences.readAvatarBase64(serverA, userId), 'avatar-a');
     expect(await preferences.readAvatarBase64(serverB, userId), 'avatar-b');
     expect(await preferences.readFriendIds(serverA), ['friend-a']);
     expect(await preferences.readFriendIds(serverB), ['friend-b']);
   });
+
+  test(
+    'friend tags stay reusable across friends while assignments stay local',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = UserProfilePreferences();
+      const serverUrl = 'https://planet-a.example';
+
+      await preferences.writeFriendTags(serverUrl, 'friend-a', [
+        'Work',
+        ' VIP ',
+      ]);
+      await preferences.writeFriendTags(serverUrl, 'friend-b', [
+        'work',
+        'Family',
+      ]);
+
+      expect(await preferences.readFriendTags(serverUrl, 'friend-a'), [
+        'VIP',
+        'Work',
+      ]);
+      expect(await preferences.readFriendTags(serverUrl, 'friend-b'), [
+        'Family',
+        'Work',
+      ]);
+      expect(await preferences.readFriendTagCatalog(serverUrl), [
+        'Family',
+        'VIP',
+        'Work',
+      ]);
+
+      await preferences.removeFriendId(serverUrl, 'friend-b');
+
+      expect(await preferences.readFriendTags(serverUrl, 'friend-b'), isEmpty);
+      expect(await preferences.readFriendTagCatalog(serverUrl), [
+        'Family',
+        'VIP',
+        'Work',
+      ]);
+    },
+  );
 }

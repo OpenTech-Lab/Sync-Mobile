@@ -1,16 +1,20 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+import 'package:mobile/services/user_profile_preferences.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 
 enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
 
-class ChatTargetProfileScreen extends StatelessWidget {
+class ChatTargetProfileScreen extends StatefulWidget {
   const ChatTargetProfileScreen({
     super.key,
+    required this.serverUrl,
+    required this.userId,
     required this.displayName,
     required this.displayHandle,
     required this.avatarBase64,
@@ -22,6 +26,8 @@ class ChatTargetProfileScreen extends StatelessWidget {
     this.rank,
   });
 
+  final String serverUrl;
+  final String userId;
   final String displayName;
   final String displayHandle;
   final String? avatarBase64;
@@ -31,6 +37,344 @@ class ChatTargetProfileScreen extends StatelessWidget {
   final String? description;
   final int? level;
   final String? rank;
+
+  @override
+  State<ChatTargetProfileScreen> createState() =>
+      _ChatTargetProfileScreenState();
+}
+
+class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
+  final _preferences = UserProfilePreferences();
+  List<String> _friendTags = const <String>[];
+  bool _loadingTags = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadingTags = widget.isFriend;
+    if (widget.isFriend) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadFriendTags();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatTargetProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.serverUrl == widget.serverUrl &&
+        oldWidget.userId == widget.userId &&
+        oldWidget.isFriend == widget.isFriend) {
+      return;
+    }
+    if (!widget.isFriend) {
+      setState(() {
+        _loadingTags = false;
+        _friendTags = const <String>[];
+      });
+      return;
+    }
+    setState(() => _loadingTags = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFriendTags();
+    });
+  }
+
+  Future<void> _loadFriendTags() async {
+    if (!widget.isFriend) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingTags = false;
+        _friendTags = const <String>[];
+      });
+      return;
+    }
+    final tags = await _preferences.readFriendTags(
+      widget.serverUrl,
+      widget.userId,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _loadingTags = false;
+      _friendTags = tags;
+    });
+  }
+
+  Future<void> _editFriendTags() async {
+    final catalog = await _preferences.readFriendTagCatalog(widget.serverUrl);
+    if (!mounted) {
+      return;
+    }
+    final nextTags = await _showTagEditorDialog(existingCatalog: catalog);
+    if (!mounted || nextTags == null) {
+      return;
+    }
+    await _preferences.writeFriendTags(
+      widget.serverUrl,
+      widget.userId,
+      nextTags,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _friendTags = nextTags);
+  }
+
+  Future<List<String>?> _showTagEditorDialog({
+    required List<String> existingCatalog,
+  }) async {
+    final controller = TextEditingController();
+    var availableTags = normalizeFriendTagLabels(
+      existingCatalog,
+      preferredCasing: existingCatalog,
+    );
+    final selectedTags = <String>{..._friendTags};
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final subColor = AppPalette.neutral500;
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void addDraftTag() {
+              final canonical = canonicalizeFriendTagLabel(
+                controller.text,
+                availableTags,
+              );
+              if (canonical == null) {
+                return;
+              }
+              setDialogState(() {
+                availableTags = normalizeFriendTagLabels([
+                  ...availableTags,
+                  canonical,
+                ], preferredCasing: availableTags);
+                selectedTags.add(canonical);
+                controller.clear();
+              });
+            }
+
+            return Dialog(
+              backgroundColor: bgColor,
+              surfaceTintColor: AppPalette.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 44,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 420),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'TAGS',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 2.4,
+                            color: subColor,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Group this friend with reusable labels',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => addDraftTag(),
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(
+                                    friendTagMaxLength,
+                                  ),
+                                ],
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w300,
+                                  color: inkColor,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Tag name',
+                                  border: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: ruleColor),
+                                  ),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: ruleColor),
+                                  ),
+                                  focusedBorder: const UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AppPalette.neutral500,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            GestureDetector(
+                              onTap: addDraftTag,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  'CREATE',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    letterSpacing: 1.8,
+                                    fontWeight: FontWeight.w500,
+                                    color: inkColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (availableTags.isEmpty)
+                          Text(
+                            'Create your first tag to reuse it on other friends.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w300,
+                              color: subColor,
+                              height: 1.45,
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: availableTags
+                                .map((tag) {
+                                  final selected = selectedTags.contains(tag);
+                                  return ChoiceChip(
+                                    label: Text(tag),
+                                    selected: selected,
+                                    onSelected: (_) {
+                                      setDialogState(() {
+                                        if (selected) {
+                                          selectedTags.remove(tag);
+                                        } else {
+                                          selectedTags.add(tag);
+                                        }
+                                      });
+                                    },
+                                    backgroundColor: isDark
+                                        ? AppPalette.neutral800
+                                        : AppPalette.neutral100,
+                                    selectedColor: isDark
+                                        ? AppPalette.neutral700
+                                        : AppPalette.neutral300,
+                                    labelStyle: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w300,
+                                      color: inkColor,
+                                    ),
+                                    shape: StadiumBorder(
+                                      side: BorderSide(
+                                        color: selected
+                                            ? AppPalette.neutral500
+                                            : ruleColor,
+                                      ),
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  );
+                                })
+                                .toList(growable: false),
+                          ),
+                        const SizedBox(height: 18),
+                        Divider(height: 1, color: ruleColor),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.of(context).pop(),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  'cancel',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: subColor,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            GestureDetector(
+                              onTap: () => Navigator.of(context).pop(
+                                canonicalizeFriendTagLabels(
+                                  selectedTags,
+                                  preferredCasing: availableTags,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  'S A V E',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    letterSpacing: 2.2,
+                                    fontWeight: FontWeight.w500,
+                                    color: inkColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    return result;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,12 +392,12 @@ class ChatTargetProfileScreen extends StatelessWidget {
       AppPalette.avatarTone5,
       AppPalette.avatarTone6,
     ];
-    final hash = displayHandle.codeUnits.fold(0, (a, b) => a ^ b);
+    final hash = widget.displayHandle.codeUnits.fold(0, (a, b) => a ^ b);
     final avatarBg = palette[hash.abs() % palette.length];
 
-    final initials = displayName.trim().isEmpty
+    final initials = widget.displayName.trim().isEmpty
         ? '?'
-        : displayName.trim().substring(0, 1).toUpperCase();
+        : widget.displayName.trim().substring(0, 1).toUpperCase();
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -64,7 +408,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: AppPalette.neutral500),
         actions: [
-          if (isFriend)
+          if (widget.isFriend)
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: OutlineActionButton(
@@ -73,8 +417,9 @@ class ChatTargetProfileScreen extends StatelessWidget {
                 textColor: AppPalette.danger700,
                 variant: OutlineActionVariant.danger,
                 compact: true,
-                onTap: () => Navigator.of(context)
-                    .pop(ChatTargetProfileAction.cancelFriend),
+                onTap: () => Navigator.of(
+                  context,
+                ).pop(ChatTargetProfileAction.cancelFriend),
               ),
             ),
         ],
@@ -86,10 +431,10 @@ class ChatTargetProfileScreen extends StatelessWidget {
           Center(
             child: CircleAvatar(
               radius: 36,
-              backgroundColor: avatarBase64 != null
+              backgroundColor: widget.avatarBase64 != null
                   ? Colors.transparent
                   : avatarBg,
-              child: avatarBase64 == null
+              child: widget.avatarBase64 == null
                   ? Text(
                       initials,
                       style: const TextStyle(
@@ -101,7 +446,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   : ClipOval(
                       child: SizedBox.expand(
                         child: Image.memory(
-                          base64Decode(avatarBase64!),
+                          base64Decode(widget.avatarBase64!),
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Text(
                             initials,
@@ -118,7 +463,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            displayName,
+            widget.displayName,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w300,
@@ -126,21 +471,24 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          if (level != null || (rank != null && rank!.isNotEmpty)) ...[
+          if (widget.level != null ||
+              (widget.rank != null && widget.rank!.isNotEmpty)) ...[
             const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (level != null)
-                  _guildBadge('Lv $level', isDark),
-                if (level != null && rank != null && rank!.isNotEmpty)
+                if (widget.level != null)
+                  _guildBadge('Lv ${widget.level}', isDark),
+                if (widget.level != null &&
+                    widget.rank != null &&
+                    widget.rank!.isNotEmpty)
                   const SizedBox(width: 6),
-                if (rank != null && rank!.isNotEmpty)
-                  _guildBadge(rank!, isDark),
+                if (widget.rank != null && widget.rank!.isNotEmpty)
+                  _guildBadge(widget.rank!, isDark),
               ],
             ),
           ],
-          if (isFriend) ...[
+          if (widget.isFriend) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -174,9 +522,10 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   label: l10n.chatTargetAddFriend,
                   borderColor: ruleColor,
                   textColor: inkColor,
-                  disabled: isFriend,
-                  onTap: () => Navigator.of(context)
-                      .pop(ChatTargetProfileAction.addFriend),
+                  disabled: widget.isFriend,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(ChatTargetProfileAction.addFriend),
                 ),
               ),
               const SizedBox(width: 12),
@@ -185,15 +534,69 @@ class ChatTargetProfileScreen extends StatelessWidget {
                   label: l10n.chatTargetStartChat,
                   borderColor: ruleColor,
                   textColor: inkColor,
-                  onTap: () => Navigator.of(context)
-                      .pop(ChatTargetProfileAction.startChat),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(ChatTargetProfileAction.startChat),
                 ),
               ),
             ],
           ),
 
+          if (widget.isFriend) ...[
+            const SizedBox(height: 28),
+            Divider(height: 1, color: ruleColor),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'TAGS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 2.4,
+                      color: AppPalette.neutral500,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                OutlineActionButton(
+                  label: _friendTags.isEmpty ? 'Add tags' : 'Edit tags',
+                  borderColor: ruleColor,
+                  textColor: inkColor,
+                  compact: true,
+                  disabled: _loadingTags,
+                  onTap: _loadingTags ? null : _editFriendTags,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loadingTags)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (_friendTags.isEmpty)
+              Text(
+                'No tags yet',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w300,
+                  color: AppPalette.neutral500,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _friendTags
+                    .map((tag) => _FriendTagPill(label: tag, isDark: isDark))
+                    .toList(growable: false),
+              ),
+          ],
+
           // ── friend since ──
-          if (isFriend && friendAddedAt != null) ...[
+          if (widget.isFriend && widget.friendAddedAt != null) ...[
             const SizedBox(height: 28),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
@@ -208,7 +611,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              _friendSinceLabel(friendAddedAt!),
+              _friendSinceLabel(widget.friendAddedAt!),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
@@ -218,7 +621,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
           ],
 
           // ── messages sent ──
-          if (isFriend && sentMessageCount != null) ...[
+          if (widget.isFriend && widget.sentMessageCount != null) ...[
             const SizedBox(height: 20),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
@@ -233,7 +636,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '$sentMessageCount',
+              '${widget.sentMessageCount}',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
@@ -243,7 +646,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
           ],
 
           // ── description ──
-          if ((description ?? '').trim().isNotEmpty) ...[
+          if ((widget.description ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 20),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
@@ -258,7 +661,7 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              description!.trim(),
+              widget.description!.trim(),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w300,
@@ -268,6 +671,35 @@ class ChatTargetProfileScreen extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _FriendTagPill extends StatelessWidget {
+  const _FriendTagPill({required this.label, required this.isDark});
+
+  final String label;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? AppPalette.neutral800 : AppPalette.neutral100,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isDark ? AppPalette.neutral700 : AppPalette.neutral300,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w300,
+          color: isDark ? AppPalette.neutral100 : AppPalette.neutral700,
+        ),
       ),
     );
   }
@@ -298,76 +730,4 @@ String _friendSinceLabel(DateTime value) {
   final hh = value.hour.toString().padLeft(2, '0');
   final mm = value.minute.toString().padLeft(2, '0');
   return '$y-$m-$d $hh:$mm';
-}
-
-enum _ProfileActionVariant { normal, danger }
-
-/// Bordered spaced-caps action button used on the target profile page.
-/// Handles normal (neutral border) and danger (red border + tint) variants.
-/// Set [disabled] to grey it out without removing it from the layout.
-/// Set [compact] for AppBar-sized padding; otherwise uses row padding.
-class _ProfileActionButton extends StatelessWidget {
-  const _ProfileActionButton({
-    required this.label,
-    required this.borderColor,
-    required this.textColor,
-    required this.onTap,
-    this.variant = _ProfileActionVariant.normal,
-    this.disabled = false,
-    this.compact = false,
-  });
-
-  final String label;
-  final Color borderColor;
-  final Color textColor;
-  final VoidCallback? onTap;
-  final _ProfileActionVariant variant;
-  final bool disabled;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDanger = variant == _ProfileActionVariant.danger;
-    final effectiveBorder =
-        disabled ? borderColor.withValues(alpha: 0.3) : borderColor;
-    final effectiveText =
-        disabled ? textColor.withValues(alpha: 0.35) : textColor;
-    final bgColor =
-        isDanger ? AppPalette.danger700.withValues(alpha: 0.06) : null;
-    final splashColor =
-        isDanger ? AppPalette.danger700.withValues(alpha: 0.12) : null;
-    final radius = compact ? 8.0 : 10.0;
-    final padding = compact
-        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
-        : const EdgeInsets.symmetric(vertical: 14);
-
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: BoxDecoration(
-          color: bgColor,
-          border: Border.all(color: effectiveBorder, width: 1),
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        child: InkWell(
-          onTap: disabled ? null : onTap,
-          borderRadius: BorderRadius.circular(radius),
-          splashColor: splashColor,
-          child: Padding(
-            padding: padding,
-            child: Text(
-              label.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.2,
-                fontWeight: FontWeight.w500,
-                color: effectiveText,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

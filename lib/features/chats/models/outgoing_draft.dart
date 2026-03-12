@@ -11,9 +11,14 @@ class CreateRoomInput {
 }
 
 class RoomMemberOption {
-  const RoomMemberOption({required this.userId, required this.displayName});
+  const RoomMemberOption({
+    required this.userId,
+    required this.displayName,
+    this.tags = const <String>[],
+  });
   final String userId;
   final String displayName;
+  final List<String> tags;
 }
 
 class ResolvedTargetProfile {

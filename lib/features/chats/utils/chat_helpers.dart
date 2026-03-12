@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
+import '../../../models/chat_room.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 
 const Duration chatPaneTransitionDuration = Duration(milliseconds: 260);
@@ -60,6 +61,40 @@ String timeLabel(DateTime dt) {
   final h = local.hour.toString().padLeft(2, '0');
   final m = local.minute.toString().padLeft(2, '0');
   return '$h:$m';
+}
+
+bool friendMatchesSelectedTag({
+  required Iterable<String> friendTags,
+  required String? selectedFriendTag,
+}) {
+  final normalizedTag = selectedFriendTag?.trim().toLowerCase();
+  if (normalizedTag == null || normalizedTag.isEmpty) {
+    return true;
+  }
+  for (final tag in friendTags) {
+    if (tag.trim().toLowerCase() == normalizedTag) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool conversationMatchesSelectedFriendTag({
+  required String conversationId,
+  required String? selectedFriendTag,
+  required Map<String, List<String>> friendTagsById,
+}) {
+  final normalizedTag = selectedFriendTag?.trim();
+  if (normalizedTag == null || normalizedTag.isEmpty) {
+    return true;
+  }
+  if (isRoomConversationId(conversationId)) {
+    return false;
+  }
+  return friendMatchesSelectedTag(
+    friendTags: friendTagsById[conversationId] ?? const <String>[],
+    selectedFriendTag: normalizedTag,
+  );
 }
 
 class DayDivider extends StatelessWidget {
