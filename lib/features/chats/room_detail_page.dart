@@ -518,6 +518,9 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final subColor = AppPalette.neutral500;
+    final detail = _detail;
+    final showDeleteAction =
+        detail != null && detail.createdBy == widget.currentUserId;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -527,6 +530,21 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: AppPalette.neutral500),
+        actions: [
+          if (showDeleteAction)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: OutlineActionButton(
+                label: 'Remove this room',
+                borderColor: AppPalette.danger700.withValues(alpha: 0.45),
+                textColor: AppPalette.danger700,
+                variant: OutlineActionVariant.danger,
+                compact: true,
+                disabled: _actionInProgress,
+                onTap: _deleteRoom,
+              ),
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -620,32 +638,30 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         const SizedBox(height: 20),
 
         // ── actions ──
-        OutlineActionButton(
-          label: 'Open chat',
-          borderColor: ruleColor,
-          textColor: inkColor,
-          disabled: _actionInProgress,
-          onTap: () => Navigator.of(context).pop(RoomDetailAction.startChat),
+        Row(
+          children: [
+            Expanded(
+              child: OutlineActionButton(
+                label: 'Open chat',
+                borderColor: ruleColor,
+                textColor: inkColor,
+                disabled: _actionInProgress,
+                onTap: () =>
+                    Navigator.of(context).pop(RoomDetailAction.startChat),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlineActionButton(
+                label: 'Leave this room',
+                borderColor: ruleColor,
+                textColor: inkColor,
+                disabled: _actionInProgress,
+                onTap: _leaveRoom,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        OutlineActionButton(
-          label: 'Leave this room',
-          borderColor: ruleColor,
-          textColor: inkColor,
-          disabled: _actionInProgress,
-          onTap: _leaveRoom,
-        ),
-        if (isCreator) ...[
-          const SizedBox(height: 12),
-          OutlineActionButton(
-            label: 'Remove this room',
-            borderColor: AppPalette.danger700.withValues(alpha: 0.45),
-            textColor: AppPalette.danger700,
-            variant: OutlineActionVariant.danger,
-            disabled: _actionInProgress,
-            onTap: _deleteRoom,
-          ),
-        ],
         const SizedBox(height: 28),
         Divider(height: 1, color: ruleColor),
         const SizedBox(height: 16),
