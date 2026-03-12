@@ -303,6 +303,15 @@
   "settingsDeleteAccountConfirm": "D E L E T E   A C C O U N T",
   "settingsDangerousActions": "Dangerous actions",
   "settingsDangerousActionsHint": "delete local chats, clear app data, or sign out",
+  "settingsDeletionCountdown": "Deletion executes in {countdown}.",
+  "@settingsDeletionCountdown": {
+    "placeholders": {
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDeletionExecuting": "Deletion is executing now.",
   "settingsPlanetUnknownName": "Unknown planet",
   "settingsPlanetNoDescription": "No planet description available yet.",
   "settingsOnline": "online",

@@ -11,6 +11,7 @@ import 'features/shell/main_shell.dart';
 import 'services/altcha_service.dart';
 import 'state/app_controller.dart';
 import 'state/app_locale_controller.dart';
+import 'state/deferred_deletion_controller.dart';
 import 'state/theme_mode_controller.dart';
 
 class SyncMobileApp extends ConsumerWidget {
@@ -20,6 +21,7 @@ class SyncMobileApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appStateAsync = ref.watch(appControllerProvider);
     final selectedLocale = ref.watch(appLocaleProvider).toLocale();
+    ref.read(deferredDeletionControllerProvider);
 
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
@@ -95,7 +97,9 @@ class SyncMobileApp extends ConsumerWidget {
                 currentUsername: state.currentUsername,
                 planetInfo: state.planetInfo,
                 onSignOut: ref.read(appControllerProvider.notifier).logout,
-                onDeleteAccount: ref.read(appControllerProvider.notifier).deleteAccount,
+                onDeleteAccount: ref
+                    .read(appControllerProvider.notifier)
+                    .deleteAccount,
               );
           }
         },

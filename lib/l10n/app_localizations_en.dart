@@ -606,6 +606,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
 
   @override
+  String settingsDeletionCountdown(String countdown) {
+    return 'Deletion executes in $countdown.';
+  }
+
+  @override
+  String get settingsDeletionExecuting => 'Deletion is executing now.';
+
+  @override
   String get settingsPlanetUnknownName => 'Unknown planet';
 
   @override

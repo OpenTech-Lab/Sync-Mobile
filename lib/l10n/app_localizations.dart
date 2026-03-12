@@ -1230,6 +1230,18 @@ abstract class AppLocalizations {
   /// **'delete local chats, clear app data, or sign out'**
   String get settingsDangerousActionsHint;
 
+  /// No description provided for @settingsDeletionCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion executes in {countdown}.'**
+  String settingsDeletionCountdown(String countdown);
+
+  /// No description provided for @settingsDeletionExecuting.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion is executing now.'**
+  String get settingsDeletionExecuting;
+
   /// No description provided for @settingsPlanetUnknownName.
   ///
   /// In en, this message translates to:

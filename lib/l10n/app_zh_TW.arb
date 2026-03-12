@@ -265,6 +265,15 @@
   "settingsDeleteAccountConfirm": "刪 除 帳 號",
   "settingsDangerousActions": "危險操作",
   "settingsDangerousActionsHint": "刪除本機聊天、清除應用程式資料或登出",
+  "settingsDeletionCountdown": "刪除將在 {countdown} 後執行。",
+  "@settingsDeletionCountdown": {
+    "placeholders": {
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDeletionExecuting": "刪除程序正在執行。",
   "settingsPlanetUnknownName": "未知 Planet",
   "settingsPlanetNoDescription": "目前尚無 Planet 描述。",
   "settingsOnline": "上線",

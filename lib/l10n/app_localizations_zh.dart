@@ -606,6 +606,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
 
   @override
+  String settingsDeletionCountdown(String countdown) {
+    return 'Deletion executes in $countdown.';
+  }
+
+  @override
+  String get settingsDeletionExecuting => 'Deletion is executing now.';
+
+  @override
   String get settingsPlanetUnknownName => 'Unknown planet';
 
   @override
@@ -1500,10 +1508,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteAccountConfirm => '刪 除 帳 號';
 
   @override
-  String get settingsDangerousActions => '危険操作';
+  String get settingsDangerousActions => '危險操作';
 
   @override
   String get settingsDangerousActionsHint => '刪除本機聊天、清除應用程式資料或登出';
+
+  @override
+  String settingsDeletionCountdown(String countdown) {
+    return '刪除將在 $countdown 後執行。';
+  }
+
+  @override
+  String get settingsDeletionExecuting => '刪除程序正在執行。';
 
   @override
   String get settingsPlanetUnknownName => '未知 Planet';
@@ -1512,7 +1528,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsPlanetNoDescription => '目前尚無 Planet 描述。';
 
   @override
-  String get settingsOnline => '在線';
+  String get settingsOnline => '上線';
 
   @override
   String get settingsOffline => '離線';

@@ -13,13 +13,13 @@ import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
+import '../../state/deferred_deletion_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
-import '../../state/user_profile_controller.dart';
 import '../../ui/components/molecules/language_picker.dart';
 
 class SettingsTab extends ConsumerWidget {
@@ -65,7 +65,9 @@ class SettingsTab extends ConsumerWidget {
       planetInfo: planetInfo,
       l10n: l10n,
     );
-    final serverCreatedDate = _serverCreatedDateFromData(planetInfo: planetInfo);
+    final serverCreatedDate = _serverCreatedDateFromData(
+      planetInfo: planetInfo,
+    );
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -422,7 +424,9 @@ class SettingsTab extends ConsumerWidget {
                   const SizedBox(height: 10),
                   OutlineActionButton(
                     label: l10n.settingsDeleteBackupData,
-                    borderColor: AppPalette.danger700.withValues(alpha: isDark ? 0.55 : 0.45),
+                    borderColor: AppPalette.danger700.withValues(
+                      alpha: isDark ? 0.55 : 0.45,
+                    ),
                     textColor: AppPalette.danger700,
                     variant: OutlineActionVariant.danger,
                     disabled: backupState?.isBusy == true,
@@ -492,7 +496,11 @@ class SettingsTab extends ConsumerWidget {
                                         20) -
                                     1,
                               ),
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedMinusSign, color: AppPalette.neutral500, size: 16),
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedMinusSign,
+                      color: AppPalette.neutral500,
+                      size: 16,
+                    ),
                     tooltip: l10n.settingsAutoBackupDecreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
@@ -523,7 +531,11 @@ class SettingsTab extends ConsumerWidget {
                                         20) +
                                     1,
                               ),
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedPlusSign, color: AppPalette.neutral500, size: 16),
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedPlusSign,
+                      color: AppPalette.neutral500,
+                      size: 16,
+                    ),
                     tooltip: l10n.settingsAutoBackupIncreaseTooltip,
                     color: AppPalette.neutral500,
                     visualDensity: VisualDensity.compact,
@@ -555,7 +567,7 @@ class SettingsTab extends ConsumerWidget {
               inkColor: inkColor,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => _DangerousActionsPage(
+                  builder: (_) => DangerousActionsPage(
                     serverUrl: serverUrl,
                     activePartnerId: activePartnerId,
                     onSignOut: onSignOut,
@@ -573,8 +585,9 @@ class SettingsTab extends ConsumerWidget {
 
 // ── Dangerous Actions Page ────────────────────────────────────────────────────
 
-class _DangerousActionsPage extends ConsumerWidget {
-  const _DangerousActionsPage({
+class DangerousActionsPage extends ConsumerWidget {
+  const DangerousActionsPage({
+    super.key,
     required this.serverUrl,
     required this.activePartnerId,
     required this.onSignOut,
@@ -594,16 +607,17 @@ class _DangerousActionsPage extends ConsumerWidget {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final backupState = ref.watch(backupControllerProvider).value;
-
-    Future<String?> resolveAccessToken() async {
-      final fresh = await ref
-          .read(appControllerProvider.notifier)
-          .ensureFreshAccessToken();
-      if (fresh != null && fresh.isNotEmpty) return fresh;
-      final fallback = ref.read(appControllerProvider).value?.accessToken;
-      if (fallback != null && fallback.isNotEmpty) return fallback;
-      return null;
-    }
+    final deferredDeletionAsync = ref.watch(deferredDeletionControllerProvider);
+    final deferredDeletionState =
+        deferredDeletionAsync.value ?? const DeferredDeletionState();
+    final deferredDeletionLoading = deferredDeletionAsync.isLoading;
+    final hasPendingDeletion = deferredDeletionState.hasPending;
+    final isExecutingDeletion = deferredDeletionState.isExecuting;
+    final deleteButtonsDisabled =
+        backupState?.isBusy == true ||
+        deferredDeletionLoading ||
+        hasPendingDeletion ||
+        isExecutingDeletion;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -626,42 +640,36 @@ class _DangerousActionsPage extends ConsumerWidget {
           children: [
             // ── Delete ──────────────────────────────────────────────────
             _SectionHeader(label: l10n.settingsLocalData, ruleColor: ruleColor),
+            if (hasPendingDeletion || isExecutingDeletion) ...[
+              _PendingDeletionCard(
+                title: _pendingDeletionLabel(
+                  l10n: l10n,
+                  kind: deferredDeletionState.activeKind,
+                ),
+                countdown: _formatDeferredDeletionCountdown(
+                  deferredDeletionState.remaining,
+                ),
+                isExecuting: isExecutingDeletion,
+                isDark: isDark,
+                onCancel: deferredDeletionState.canCancel
+                    ? () => ref
+                          .read(deferredDeletionControllerProvider.notifier)
+                          .cancelPendingDeletion()
+                    : null,
+              ),
+              const SizedBox(height: 10),
+            ],
             _DangerActionButton(
               label: l10n.settingsDeleteAllPlanetData,
               subtitle: l10n.settingsDeleteAllPlanetDataMessage,
               icon: HugeIcons.strokeRoundedDelete02,
-              busy: backupState?.isBusy == true,
+              busy: false,
+              disabled: deleteButtonsDisabled,
               isDark: isDark,
               onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => _ConfirmDialog(
-                    title: l10n.settingsDeleteAllPlanetData,
-                    message: l10n.settingsDeleteAllPlanetDataMessage,
-                    confirmLabel: l10n.settingsDeleteAllPlanetDataConfirm,
-                    isDark: isDark,
-                  ),
-                );
-                if (confirmed != true) return;
-                final token = await resolveAccessToken();
-                if (token != null) {
-                  await ref
-                      .read(backupControllerProvider.notifier)
-                      .deleteBackupData(
-                        baseUrl: serverUrl,
-                        accessToken: token,
-                      );
-                }
                 await ref
-                    .read(backupControllerProvider.notifier)
-                    .deleteAllLocalData();
-                ref.invalidate(conversationSummariesProvider);
-                ref.invalidate(friendIdsProvider);
-                ref.invalidate(userAvatarBase64Provider);
-                ref.invalidate(userDisplayNameProvider);
-                ref.invalidate(userDescriptionProvider);
-                ref.invalidate(friendAddedAtProvider);
-                ref.invalidate(conversationMessagesProvider);
+                    .read(deferredDeletionControllerProvider.notifier)
+                    .scheduleDeleteAllPlanetData();
               },
             ),
             const SizedBox(height: 10),
@@ -670,34 +678,12 @@ class _DangerousActionsPage extends ConsumerWidget {
               subtitle: l10n.settingsDeleteAccountMessage,
               icon: HugeIcons.strokeRoundedUserRemove02,
               busy: false,
+              disabled: deleteButtonsDisabled,
               isDark: isDark,
               onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => _ConfirmDialog(
-                    title: l10n.settingsDeleteAccount,
-                    message: l10n.settingsDeleteAccountMessage,
-                    confirmLabel: l10n.settingsDeleteAccountConfirm,
-                    isDark: isDark,
-                  ),
-                );
-                if (confirmed != true) return;
-                final token = await resolveAccessToken();
-                if (token != null) {
-                  await ref
-                      .read(backupControllerProvider.notifier)
-                      .deleteBackupData(
-                        baseUrl: serverUrl,
-                        accessToken: token,
-                      );
-                }
                 await ref
-                    .read(backupControllerProvider.notifier)
-                    .deleteAllLocalData();
-                await onDeleteAccount();
-                if (context.mounted) {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
+                    .read(deferredDeletionControllerProvider.notifier)
+                    .scheduleDeleteAccount();
               },
             ),
             // ── Sign Out ────────────────────────────────────────────────
@@ -708,6 +694,10 @@ class _DangerousActionsPage extends ConsumerWidget {
               subtitle: l10n.settingsSignOutMessage,
               icon: HugeIcons.strokeRoundedLogout02,
               busy: false,
+              disabled:
+                  deferredDeletionLoading ||
+                  hasPendingDeletion ||
+                  isExecutingDeletion,
               isDark: isDark,
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
@@ -734,6 +724,116 @@ class _DangerousActionsPage extends ConsumerWidget {
   }
 }
 
+String _pendingDeletionLabel({
+  required AppLocalizations l10n,
+  required DeferredDeletionKind? kind,
+}) {
+  switch (kind) {
+    case DeferredDeletionKind.deleteAllPlanetData:
+      return l10n.settingsDeleteAllPlanetData;
+    case DeferredDeletionKind.deleteAccount:
+      return l10n.settingsDeleteAccount;
+    case null:
+      return l10n.settingsDangerousActions;
+  }
+}
+
+String _formatDeferredDeletionCountdown(Duration remaining) {
+  final totalSeconds = remaining.inSeconds.clamp(0, 999999);
+  final hours = totalSeconds ~/ 3600;
+  final minutes = (totalSeconds % 3600) ~/ 60;
+  final seconds = totalSeconds % 60;
+  final paddedHours = hours.toString().padLeft(2, '0');
+  final paddedMinutes = minutes.toString().padLeft(2, '0');
+  final paddedSeconds = seconds.toString().padLeft(2, '0');
+  return '$paddedHours:$paddedMinutes:$paddedSeconds';
+}
+
+class _PendingDeletionCard extends StatelessWidget {
+  const _PendingDeletionCard({
+    required this.title,
+    required this.countdown,
+    required this.isExecuting,
+    required this.isDark,
+    this.onCancel,
+  });
+
+  final String title;
+  final String countdown;
+  final bool isExecuting;
+  final bool isDark;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final borderColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final bgColor = isDark ? AppPalette.neutral800 : AppPalette.neutral100;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final mutedColor = AppPalette.neutral500;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: inkColor,
+              letterSpacing: 0.1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isExecuting
+                ? l10n.settingsDeletionExecuting
+                : l10n.settingsDeletionCountdown(countdown),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w300,
+              color: mutedColor,
+              height: 1.5,
+              letterSpacing: 0.2,
+            ),
+          ),
+          if (!isExecuting && onCancel != null) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: GestureDetector(
+                onTap: onCancel,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    l10n.actionCancel,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppPalette.danger700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 // ── Danger Nav Row ────────────────────────────────────────────────────────────
 
 class _DangerNavRow extends StatelessWidget {
@@ -753,10 +853,8 @@ class _DangerNavRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isDark
-        ? AppPalette.neutral700
-        : AppPalette.neutral300;
-    
+    final borderColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
     return Material(
       color: Colors.transparent,
       child: Ink(
@@ -885,6 +983,7 @@ class _DangerActionButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.busy,
+    required this.disabled,
     required this.isDark,
     required this.onPressed,
     this.subtitle,
@@ -894,27 +993,28 @@ class _DangerActionButton extends StatelessWidget {
   final String? subtitle;
   final List<List<dynamic>> icon;
   final bool busy;
+  final bool disabled;
   final bool isDark;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final isDisabled = busy;
+    final isDisabled = busy || disabled;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final borderColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-    
+
     final effectiveBorder = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.25)
         : borderColor;
-        
+
     final bgColor = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.05)
         : Colors.transparent;
-        
+
     final textColor = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.45)
         : inkColor;
-        
+
     final iconColor = isDisabled
         ? AppPalette.neutral500.withValues(alpha: 0.45)
         : AppPalette.danger700;
@@ -940,11 +1040,7 @@ class _DangerActionButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
               child: Row(
                 children: [
-                  HugeIcon(
-                    icon: icon,
-                    size: 20,
-                    color: iconColor,
-                  ),
+                  HugeIcon(icon: icon, size: 20, color: iconColor),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
