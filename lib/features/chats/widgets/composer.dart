@@ -157,17 +157,7 @@ class Composer extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 // Send
-                GestureDetector(
-                  onTap: onSend,
-                  child: const Padding(
-                    padding: EdgeInsets.fromLTRB(8, 8, 4, 8),
-                    child: Icon(
-                      Icons.arrow_upward_rounded,
-                      size: 22,
-                      color: AppPalette.neutral500,
-                    ),
-                  ),
-                ),
+                ComposerSendButton(tooltip: l10n.actionSend, onPressed: onSend),
               ],
             ),
           ),
@@ -197,6 +187,53 @@ class ComposerIconButton extends StatelessWidget {
       color: Theme.of(context).colorScheme.onSurfaceVariant,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       constraints: const BoxConstraints(minWidth: 36, minHeight: 44),
+    );
+  }
+}
+
+class ComposerSendButton extends StatelessWidget {
+  const ComposerSendButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final buttonColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final iconColor = isDark ? AppPalette.neutral900 : AppPalette.white;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 0, 4),
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          key: const ValueKey('composer_send_button'),
+          color: buttonColor,
+          shape: const CircleBorder(),
+          child: InkResponse(
+            onTap: onPressed,
+            radius: 28,
+            containedInkWell: true,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: Icon(
+                  Icons.arrow_upward_rounded,
+                  size: 24,
+                  color: iconColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
