@@ -1449,7 +1449,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileUsernameValidationError.
   ///
   /// In en, this message translates to:
-  /// **'Username must be 3–32 characters and may use any language, symbols, and spaces'**
+  /// **'Username must be 2–32 characters and may use any language, symbols, and spaces'**
   String get profileUsernameValidationError;
 
   /// No description provided for @profileUsernameUpdated.
@@ -1503,7 +1503,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileUsernameHint.
   ///
   /// In en, this message translates to:
-  /// **'3–32 chars, supports any language, symbols, and spaces'**
+  /// **'2–32 chars, supports any language, symbols, and spaces'**
   String get profileUsernameHint;
 
   /// No description provided for @homeUnreadSummary.
@@ -1527,7 +1527,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeUsernameHint.
   ///
   /// In en, this message translates to:
-  /// **'3–32 characters, a-z A-Z 0-9 . _ -'**
+  /// **'2–32 characters, a-z A-Z 0-9 . _ -'**
   String get homeUsernameHint;
 
   /// No description provided for @chatHomeTitle.

@@ -9,7 +9,8 @@ void main() {
   });
 
   test('rejects usernames outside allowed length range', () {
-    expect(isValidProfileUsername('ab'), isFalse);
+    expect(isValidProfileUsername('ab'), isTrue);
+    expect(isValidProfileUsername('a'), isFalse);
     expect(isValidProfileUsername('a' * 33), isFalse);
   });
 

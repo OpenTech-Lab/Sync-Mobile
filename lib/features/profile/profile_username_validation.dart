@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-const int profileUsernameMinLength = 3;
+const int profileUsernameMinLength = 2;
 const int profileUsernameMaxLength = 32;
 
 bool isValidProfileUsername(String value) {

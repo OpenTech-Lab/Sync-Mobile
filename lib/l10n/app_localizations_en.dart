@@ -726,7 +726,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileUsernameValidationError => 'Username must be 3–32 characters and may use any language, symbols, and spaces';
+  String get profileUsernameValidationError => 'Username must be 2–32 characters and may use any language, symbols, and spaces';
 
   @override
   String get profileUsernameUpdated => 'Username updated';
@@ -753,7 +753,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileUsernameDialogTitle => 'USERNAME';
 
   @override
-  String get profileUsernameHint => '3–32 chars, supports any language, symbols, and spaces';
+  String get profileUsernameHint => '2–32 chars, supports any language, symbols, and spaces';
 
   @override
   String homeUnreadSummary(int count) {
@@ -773,7 +773,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeUsernameDialogTitle => 'USERNAME';
 
   @override
-  String get homeUsernameHint => '3–32 characters, a-z A-Z 0-9 . _ -';
+  String get homeUsernameHint => '2–32 characters, a-z A-Z 0-9 . _ -';
 
   @override
   String get chatHomeTitle => 'Sync Chats';

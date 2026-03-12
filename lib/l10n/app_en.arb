@@ -387,7 +387,7 @@
       }
     }
   },
-  "profileUsernameValidationError": "Username must be 3–32 characters and may use any language, symbols, and spaces",
+  "profileUsernameValidationError": "Username must be 2–32 characters and may use any language, symbols, and spaces",
   "profileUsernameUpdated": "Username updated",
   "profileUsernameUpdateFailed": "Failed to update username",
   "profileDescriptionWordLimitError": "Description must be 100 words or less",
@@ -396,7 +396,7 @@
   "profileAvatarUploadFailed": "Failed to upload avatar",
   "profileAvatarUpdated": "Avatar updated",
   "profileUsernameDialogTitle": "USERNAME",
-  "profileUsernameHint": "3–32 chars, supports any language, symbols, and spaces",
+  "profileUsernameHint": "2–32 chars, supports any language, symbols, and spaces",
   "homeUnreadSummary": "{count,plural, =1{{count} unread message} other{{count} unread messages}}",
   "@homeUnreadSummary": {
     "placeholders": {
@@ -407,7 +407,7 @@
   },
   "homeViewProfile": "View profile",
   "homeUsernameDialogTitle": "USERNAME",
-  "homeUsernameHint": "3–32 characters, a-z A-Z 0-9 . _ -",
+  "homeUsernameHint": "2–32 characters, a-z A-Z 0-9 . _ -",
   "chatHomeTitle": "Sync Chats",
   "chatHomeServerLabel": "Server: {server}",
   "@chatHomeServerLabel": {
