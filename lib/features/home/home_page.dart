@@ -151,8 +151,9 @@ class HomeTab extends ConsumerWidget {
                     id,
                     ref.watch(userDisplayNameProvider(id)).value,
                   );
-                  final description =
-                      ref.watch(userDescriptionProvider(id)).value ?? '';
+                  final description = _normalizedHomeDescription(
+                    ref.watch(userDescriptionProvider(id)).value,
+                  );
                   final avatarBase64 = ref
                       .watch(userAvatarBase64Provider(id))
                       .value;
@@ -208,16 +209,18 @@ class HomeTab extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    subtitle: Text(
-                      description.trim().isEmpty ? '' : description.trim(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppPalette.neutral500,
-                        fontWeight: FontWeight.w300,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    subtitle: description == null
+                        ? null
+                        : Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppPalette.neutral500,
+                              fontWeight: FontWeight.w300,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                     onTap: () async {
                       final prefs = ref.read(userProfilePreferencesProvider);
                       final messages = await ref
@@ -311,6 +314,11 @@ String _displayNameOrFallback(String userId, String? displayName) {
     return normalized;
   }
   return userId.length >= 8 ? userId.substring(0, 8) : userId;
+}
+
+String? _normalizedHomeDescription(String? description) {
+  final normalized = (description ?? '').trim();
+  return normalized.isEmpty ? null : normalized;
 }
 
 // ---------------------------------------------------------------------------
@@ -504,12 +512,14 @@ class _ProfileCard extends ConsumerWidget {
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
         .value;
+    final watchedUsername =
+        ref.watch(userDisplayNameProvider(currentUserId)).value ??
+        currentUsername;
+    final description = _normalizedHomeDescription(
+      ref.watch(userDescriptionProvider(currentUserId)).value,
+    );
     final guild = ref.watch(myGuildSnapshotProvider).asData?.value;
-    final displayName = (currentUsername ?? '').trim().isEmpty
-        ? (currentUserId.length >= 8
-              ? currentUserId.substring(0, 8)
-              : currentUserId)
-        : currentUsername!.trim();
+    final displayName = _displayNameOrFallback(currentUserId, watchedUsername);
 
     const palette = [
       AppPalette.avatarTone1,
@@ -536,6 +546,7 @@ class _ProfileCard extends ConsumerWidget {
         );
         ref.invalidate(userAvatarBase64Provider(currentUserId));
         ref.invalidate(userDisplayNameProvider(currentUserId));
+        ref.invalidate(userDescriptionProvider(currentUserId));
       },
       child: Row(
         children: [
@@ -599,12 +610,15 @@ class _ProfileCard extends ConsumerWidget {
                 ],
                 const SizedBox(height: 2),
                 Text(
-                  l10n.homeViewProfile,
+                  description ?? l10n.profileNoDescriptionYet,
                   style: TextStyle(
                     fontSize: 11,
                     color: mutedColor,
                     letterSpacing: 0.2,
+                    fontWeight: FontWeight.w300,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
