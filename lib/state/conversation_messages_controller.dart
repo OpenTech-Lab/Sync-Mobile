@@ -205,9 +205,6 @@ class ConversationMessagesController
   }
 
   Future<void> _unhideConversationIfNeeded() async {
-    if (_isRoomConversation) {
-      return;
-    }
     await ref.read(hiddenConversationIdsProvider.notifier).unhide(arg);
   }
 

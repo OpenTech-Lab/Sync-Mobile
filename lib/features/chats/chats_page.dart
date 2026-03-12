@@ -1489,11 +1489,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
               ...unreadCounts.keys,
               ...filteredSummaries.map((summary) => summary.conversationId),
             }
-            .where(
-              (id) =>
-                  isRoomConversationId(id) ||
-                  !hiddenConversationIds.contains(id),
-            )
+            .where((id) => !hiddenConversationIds.contains(id))
             .toList(growable: false)
           ..sort((a, b) {
             final aHasUnread = (unreadCounts[a] ?? 0) > 0;

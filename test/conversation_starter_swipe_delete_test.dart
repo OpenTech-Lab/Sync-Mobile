@@ -136,4 +136,86 @@ void main() {
     expect(deletedConversationId, friendId);
     expect(find.byKey(const ValueKey('convo_friend-user-id')), findsNothing);
   });
+
+  testWidgets('swiping a room row reveals Delete and clears on tap', (
+    tester,
+  ) async {
+    const roomConversationId = 'room:room-1';
+
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    var deletedConversationId = '';
+    var deleted = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                final orderedConversationIds = deleted
+                    ? const <String>[]
+                    : const <String>[roomConversationId];
+                final summariesById = deleted
+                    ? const <String, ConversationSummary>{}
+                    : <String, ConversationSummary>{
+                        roomConversationId: ConversationSummary(
+                          conversationId: roomConversationId,
+                          title: 'Focus Room',
+                          memberCount: 3,
+                          lastBody: 'hello room',
+                          lastAt: DateTime.utc(2026, 3, 12, 10, 0),
+                        ),
+                      };
+                return ConversationStarter(
+                  controller: controller,
+                  focusNode: focusNode,
+                  unreadCounts: const <String, int>{},
+                  orderedConversationIds: orderedConversationIds,
+                  summariesById: summariesById,
+                  onQuickAction: (_) {},
+                  onOpenConversation: (_) {},
+                  onClearConversation: (conversationId) async {
+                    deletedConversationId = conversationId;
+                    setState(() => deleted = true);
+                  },
+                  onMarkAllRead: () async {},
+                  onStartNewChat: () {},
+                  onAddFriend: () {},
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final row = find.byKey(const ValueKey('convo_room:room-1'));
+    expect(row, findsOneWidget);
+    final deleteAction = find.text('Delete');
+    expect(deleteAction, findsOneWidget);
+
+    final rowRect = tester.getRect(row);
+    final hiddenDeleteRect = tester.getRect(deleteAction);
+    expect(hiddenDeleteRect.left, greaterThanOrEqualTo(rowRect.right));
+
+    await tester.drag(row, const Offset(-160, 0));
+    await tester.pumpAndSettle();
+
+    final revealedDeleteRect = tester.getRect(deleteAction);
+    expect(revealedDeleteRect.left, lessThan(rowRect.right));
+    expect(revealedDeleteRect.right, lessThanOrEqualTo(rowRect.right));
+
+    await tester.tap(deleteAction);
+    await tester.pumpAndSettle();
+
+    expect(deletedConversationId, roomConversationId);
+    expect(find.byKey(const ValueKey('convo_room:room-1')), findsNothing);
+  });
 }

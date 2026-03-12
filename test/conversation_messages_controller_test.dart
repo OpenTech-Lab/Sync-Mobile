@@ -7,8 +7,11 @@ import 'package:mobile/services/backup_preferences.dart';
 import 'package:mobile/services/local_chat_repository.dart';
 import 'package:mobile/services/message_e2ee_service.dart';
 import 'package:mobile/services/remote_chat_service.dart';
+import 'package:mobile/services/server_scope.dart';
 import 'package:mobile/services/remote_user_profile_service.dart';
+import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
+import 'package:mobile/state/hidden_conversation_ids_controller.dart';
 import 'package:mobile/state/user_profile_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -500,4 +503,62 @@ void main() {
     expect(messages.first.id, 'sent-1');
     expect(messages.first.body, 'hi');
   });
+
+  test(
+    'syncLatest unhides room conversations when new room messages arrive',
+    () async {
+      const baseUrl = 'http://localhost:8080';
+      const roomId = 'room-1';
+      final conversationId = roomConversationId(roomId);
+
+      SharedPreferences.setMockInitialValues({
+        scopedStorageKey('chat_hidden_conversation_ids', baseUrl): <String>[
+          conversationId,
+        ],
+      });
+
+      final repo = _InMemoryChatRepository();
+      final remote = _FakeRemoteChatService({
+        conversationId: [
+          [
+            LocalChatMessage(
+              id: 'room-r1',
+              conversationId: conversationId,
+              senderId: 'other',
+              body: 'hello room',
+              createdAt: DateTime.utc(2026, 3, 12, 12, 0),
+            ),
+          ],
+        ],
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          activeServerUrlProvider.overrideWithValue(baseUrl),
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        await container.read(hiddenConversationIdsProvider.future),
+        contains(conversationId),
+      );
+
+      await container.read(conversationMessagesProvider(conversationId).future);
+      await container
+          .read(conversationMessagesProvider(conversationId).notifier)
+          .syncLatest(
+            baseUrl: baseUrl,
+            accessToken: 'token',
+            currentUserId: 'me',
+          );
+
+      expect(
+        container.read(hiddenConversationIdsProvider).value,
+        isNot(contains(conversationId)),
+      );
+    },
+  );
 }

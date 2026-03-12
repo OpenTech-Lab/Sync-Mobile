@@ -382,8 +382,6 @@ class ConversationStarter extends ConsumerWidget {
       ],
     );
 
-    if (isRoom) return rowContent;
-
     return _SwipeRevealConversationRow(
       key: ValueKey('convo_$userId'),
       actionLabel: l10n.chatRowDelete,
