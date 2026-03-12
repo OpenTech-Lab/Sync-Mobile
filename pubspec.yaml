@@ -1,7 +1,7 @@
 name: mobile
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.4.3+63
+version: 0.4.4+64
 
 # The following defines the version and build number for your application.
 environment:
