@@ -36,6 +36,7 @@ class _FakeRemoteChatService extends RemoteChatService {
 
   RoomDetail detail;
   int leaveRoomCallCount = 0;
+  int deleteRoomCallCount = 0;
   int renameRoomCallCount = 0;
 
   @override
@@ -71,6 +72,15 @@ class _FakeRemoteChatService extends RemoteChatService {
     required String roomId,
   }) async {
     leaveRoomCallCount += 1;
+  }
+
+  @override
+  Future<void> deleteRoom({
+    required String baseUrl,
+    required String accessToken,
+    required String roomId,
+  }) async {
+    deleteRoomCallCount += 1;
   }
 
   @override
@@ -228,6 +238,73 @@ void main() {
 
     expect(remote.leaveRoomCallCount, 1);
     expect(await resultFuture, RoomDetailAction.left);
+    expect(find.byType(RoomDetailPage), findsNothing);
+  });
+
+  testWidgets('remove room asks for confirmation before deleting', (
+    tester,
+  ) async {
+    final remote = _FakeRemoteChatService(_buildRoomDetail());
+    Future<RoomDetailAction?>? resultFuture;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appControllerProvider.overrideWith(_FakeAppController.new),
+          chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: TextButton(
+                  onPressed: () {
+                    resultFuture = Navigator.of(context).push<RoomDetailAction>(
+                      MaterialPageRoute(
+                        builder: (_) => const RoomDetailPage(
+                          serverUrl: 'https://example.com',
+                          roomId: 'room-1',
+                          currentUserId: 'owner-id',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('open'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('REMOVE THIS ROOM'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('REMOVE ROOM'), findsOneWidget);
+    expect(find.text('Remove Focus Room?'), findsOneWidget);
+    expect(remote.deleteRoomCallCount, 0);
+
+    await tester.tap(find.text('cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RoomDetailPage), findsOneWidget);
+    expect(find.text('REMOVE ROOM'), findsNothing);
+    expect(remote.deleteRoomCallCount, 0);
+
+    await tester.tap(find.text('REMOVE THIS ROOM'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('R E M O V E'));
+    await tester.pumpAndSettle();
+
+    expect(remote.deleteRoomCallCount, 1);
+    expect(await resultFuture, RoomDetailAction.deleted);
     expect(find.byType(RoomDetailPage), findsNothing);
   });
 

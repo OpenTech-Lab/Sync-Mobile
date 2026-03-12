@@ -564,7 +564,58 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     }
   }
 
+  Future<bool> _confirmDeleteRoom() async {
+    final detail = _detail;
+    if (detail == null) {
+      return false;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final dialogColors = AppDialogColors.of(context);
+        return AppDialog(
+          eyebrow: 'REMOVE ROOM',
+          title: 'Remove ${detail.name}?',
+          message:
+              'This will delete the room for everyone and cannot be undone.',
+          showDividerAboveActions: true,
+          actions: AppDialogActions(
+            children: [
+              AppDialogTextAction(
+                label: l10n.actionCancel,
+                color: dialogColors.muted,
+                onTap: () => Navigator.of(context).pop(false),
+              ),
+              AppDialogTextAction(
+                label: 'R E M O V E',
+                color: AppPalette.danger700,
+                onTap: () => Navigator.of(context).pop(true),
+                fontSize: 11,
+                letterSpacing: 2.2,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
   Future<void> _deleteRoom() async {
+    final detail = _detail;
+    if (detail == null || _actionInProgress) {
+      return;
+    }
+
+    final confirmed = await _confirmDeleteRoom();
+    if (!mounted || !confirmed) {
+      return;
+    }
+
     setState(() => _actionInProgress = true);
     try {
       final token = await _accessToken();
