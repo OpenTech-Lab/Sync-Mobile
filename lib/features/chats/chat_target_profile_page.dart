@@ -10,6 +10,16 @@ import '../../ui/components/atoms/outline_action_button.dart';
 
 enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
 
+class _FriendTagEditorResult {
+  const _FriendTagEditorResult({
+    required this.selectedTags,
+    required this.deletedTags,
+  });
+
+  final List<String> selectedTags;
+  final List<String> deletedTags;
+}
+
 class ChatTargetProfileScreen extends StatefulWidget {
   const ChatTargetProfileScreen({
     super.key,
@@ -109,22 +119,134 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
     if (!mounted) {
       return;
     }
-    final nextTags = await _showTagEditorDialog(existingCatalog: catalog);
-    if (!mounted || nextTags == null) {
+    final result = await _showTagEditorDialog(existingCatalog: catalog);
+    if (!mounted || result == null) {
       return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() => _loadingTags = true);
+    if (result.deletedTags.isNotEmpty) {
+      await _preferences.deleteFriendTags(widget.serverUrl, result.deletedTags);
     }
     await _preferences.writeFriendTags(
       widget.serverUrl,
       widget.userId,
-      nextTags,
+      result.selectedTags,
     );
-    if (!mounted) {
-      return;
-    }
-    setState(() => _friendTags = nextTags);
+    await _loadFriendTags();
   }
 
-  Future<List<String>?> _showTagEditorDialog({
+  Future<bool> _confirmCancelFriend() async {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final subColor = AppPalette.neutral500;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: bgColor,
+          surfaceTintColor: AppPalette.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 44,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.chatTargetCancelFriend.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    color: subColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Remove ${widget.displayName} from your friend list?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You can add this friend again later.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: subColor,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Divider(height: 1, color: ruleColor),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(false),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          'cancel',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: subColor,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(true),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          l10n.chatTargetCancelFriend.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2.2,
+                            fontWeight: FontWeight.w500,
+                            color: AppPalette.danger700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
+  Future<_FriendTagEditorResult?> _showTagEditorDialog({
     required List<String> existingCatalog,
   }) async {
     final controller = TextEditingController();
@@ -133,17 +255,23 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
       preferredCasing: existingCatalog,
     );
     final selectedTags = <String>{..._friendTags};
+    final deletedTags = <String>{};
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final subColor = AppPalette.neutral500;
 
-    final result = await showDialog<List<String>>(
+    final result = await showDialog<_FriendTagEditorResult>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            void removeDeletedTag(String tag) {
+              final lower = tag.toLowerCase();
+              deletedTags.removeWhere((value) => value.toLowerCase() == lower);
+            }
+
             void addDraftTag() {
               final canonical = canonicalizeFriendTagLabel(
                 controller.text,
@@ -152,13 +280,92 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
               if (canonical == null) {
                 return;
               }
+              FocusScope.of(context).unfocus();
               setDialogState(() {
                 availableTags = normalizeFriendTagLabels([
                   ...availableTags,
                   canonical,
                 ], preferredCasing: availableTags);
+                removeDeletedTag(canonical);
                 selectedTags.add(canonical);
                 controller.clear();
+              });
+            }
+
+            Future<void> deleteTag(String tag) async {
+              FocusScope.of(context).unfocus();
+              final confirmed =
+                  await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) {
+                      return AlertDialog(
+                        backgroundColor: bgColor,
+                        surfaceTintColor: AppPalette.transparent,
+                        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          24,
+                          0,
+                          24,
+                          20,
+                        ),
+                        actionsPadding: const EdgeInsets.fromLTRB(
+                          16,
+                          0,
+                          16,
+                          12,
+                        ),
+                        title: Text(
+                          'Delete tag?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                          ),
+                        ),
+                        content: Text(
+                          'Remove "$tag" from the reusable tag list and from every friend using it?',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w300,
+                            color: subColor,
+                            height: 1.5,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(false),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(color: subColor),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: AppPalette.danger700),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ) ??
+                  false;
+              if (!confirmed) {
+                return;
+              }
+              final lower = tag.toLowerCase();
+              setDialogState(() {
+                availableTags = availableTags
+                    .where((value) => value.toLowerCase() != lower)
+                    .toList(growable: false);
+                selectedTags.removeWhere(
+                  (value) => value.toLowerCase() == lower,
+                );
+                removeDeletedTag(tag);
+                deletedTags.add(tag);
               });
             }
 
@@ -239,25 +446,38 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                               ),
                             ),
                             const SizedBox(width: 14),
-                            GestureDetector(
-                              onTap: addDraftTag,
-                              child: Padding(
+                            TextButton(
+                              onPressed: addDraftTag,
+                              style: TextButton.styleFrom(
+                                foregroundColor: inkColor,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 4,
                                   vertical: 4,
                                 ),
-                                child: Text(
-                                  'CREATE',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    letterSpacing: 1.8,
-                                    fontWeight: FontWeight.w500,
-                                    color: inkColor,
-                                  ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'CREATE',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  letterSpacing: 1.8,
+                                  fontWeight: FontWeight.w500,
+                                  color: inkColor,
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap a tag to assign it. Tap the close icon to delete it everywhere.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w300,
+                            color: subColor,
+                            height: 1.45,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         if (availableTags.isEmpty)
@@ -277,10 +497,11 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                             children: availableTags
                                 .map((tag) {
                                   final selected = selectedTags.contains(tag);
-                                  return ChoiceChip(
+                                  return InputChip(
+                                    key: ValueKey('friend_tag_option_$tag'),
                                     label: Text(tag),
                                     selected: selected,
-                                    onSelected: (_) {
+                                    onPressed: () {
                                       setDialogState(() {
                                         if (selected) {
                                           selectedTags.remove(tag);
@@ -289,6 +510,13 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                                         }
                                       });
                                     },
+                                    onDeleted: () => deleteTag(tag),
+                                    deleteIcon: Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: subColor,
+                                    ),
+                                    deleteButtonTooltipMessage: 'Delete tag',
                                     backgroundColor: isDark
                                         ? AppPalette.neutral800
                                         : AppPalette.neutral100,
@@ -340,9 +568,15 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                             const SizedBox(width: 24),
                             GestureDetector(
                               onTap: () => Navigator.of(context).pop(
-                                canonicalizeFriendTagLabels(
-                                  selectedTags,
-                                  preferredCasing: availableTags,
+                                _FriendTagEditorResult(
+                                  selectedTags: canonicalizeFriendTagLabels(
+                                    selectedTags,
+                                    preferredCasing: availableTags,
+                                  ),
+                                  deletedTags: canonicalizeFriendTagLabels(
+                                    deletedTags,
+                                    preferredCasing: existingCatalog,
+                                  ),
                                 ),
                               ),
                               child: Padding(
@@ -417,9 +651,15 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                 textColor: AppPalette.danger700,
                 variant: OutlineActionVariant.danger,
                 compact: true,
-                onTap: () => Navigator.of(
-                  context,
-                ).pop(ChatTargetProfileAction.cancelFriend),
+                onTap: () async {
+                  final confirmed = await _confirmCancelFriend();
+                  if (!mounted || !confirmed) {
+                    return;
+                  }
+                  Navigator.of(
+                    this.context,
+                  ).pop(ChatTargetProfileAction.cancelFriend);
+                },
               ),
             ),
         ],

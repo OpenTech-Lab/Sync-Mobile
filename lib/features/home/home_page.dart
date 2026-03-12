@@ -18,6 +18,8 @@ import '../profile/my_profile_page.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 
+const _compactHomeSectionSpacing = 10.0;
+
 class HomeTab extends ConsumerWidget {
   const HomeTab({
     super.key,
@@ -111,10 +113,15 @@ class HomeTab extends ConsumerWidget {
             _SectionLabel(
               text: l10n.friendsTitle(friendIds.length),
               ruleColor: ruleColor,
+              bottomSpacing: _compactHomeSectionSpacing,
+              dividerKey: const ValueKey('home_friends_section_divider'),
             ),
             if (friendIds.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.only(
+                  top: _compactHomeSectionSpacing,
+                  bottom: 20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -177,6 +184,40 @@ String? _normalizedHomeDescription(String? description) {
   final normalized = (description ?? '').trim();
   return normalized.isEmpty ? null : normalized;
 }
+
+String _roomMemberNamesPreview(RoomDetail detail) {
+  final usernames = detail.members
+      .map((member) => member.username.trim())
+      .where((username) => username.isNotEmpty)
+      .toList(growable: false);
+  return usernames.join(', ');
+}
+
+final roomMemberNamesPreviewProvider = FutureProvider.family<String, String>((
+  ref,
+  roomId,
+) async {
+  final appState = await ref.watch(appControllerProvider.future);
+  final serverUrl = appState.serverUrl?.trim();
+  final accessToken =
+      await ref.read(appControllerProvider.notifier).ensureFreshAccessToken() ??
+      appState.accessToken?.trim();
+  if (serverUrl == null ||
+      serverUrl.isEmpty ||
+      accessToken == null ||
+      accessToken.isEmpty) {
+    return '';
+  }
+
+  try {
+    final detail = await ref
+        .read(remoteChatServiceProvider)
+        .getRoom(baseUrl: serverUrl, accessToken: accessToken, roomId: roomId);
+    return _roomMemberNamesPreview(detail);
+  } catch (_) {
+    return '';
+  }
+});
 
 Color _avatarToneColor(String id) {
   const palette = [
@@ -312,6 +353,7 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
         .value;
 
     return ListTile(
+      key: ValueKey('home_friend_row_${widget.friendId}'),
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
       leading: CircleAvatar(
         radius: 18,
@@ -487,7 +529,12 @@ class _RoomsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionLabel(text: 'Rooms', ruleColor: ruleColor),
+        _SectionLabel(
+          text: 'Rooms',
+          ruleColor: ruleColor,
+          bottomSpacing: _compactHomeSectionSpacing,
+          dividerKey: const ValueKey('home_rooms_section_divider'),
+        ),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -526,7 +573,7 @@ class _RoomsSection extends ConsumerWidget {
   }
 }
 
-class _RoomRow extends StatelessWidget {
+class _RoomRow extends ConsumerWidget {
   const _RoomRow({
     required this.room,
     required this.inkColor,
@@ -538,7 +585,7 @@ class _RoomRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const palette = [
       AppPalette.avatarTone1,
       AppPalette.avatarTone2,
@@ -552,8 +599,11 @@ class _RoomRow extends StatelessWidget {
     final initials = room.name.trim().isEmpty
         ? '#'
         : room.name.trim().substring(0, 1).toUpperCase();
+    final memberNames =
+        ref.watch(roomMemberNamesPreviewProvider(room.id)).valueOrNull ?? '';
 
     return ListTile(
+      key: ValueKey('home_room_row_${room.id}'),
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
       leading: CircleAvatar(
         radius: 18,
@@ -568,11 +618,24 @@ class _RoomRow extends StatelessWidget {
         ),
       ),
       title: Text(
-        room.name,
+        '${room.name} (${room.memberCount})',
+        key: ValueKey('home_room_title_${room.id}'),
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w300,
           color: inkColor,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        memberNames,
+        key: ValueKey('home_room_members_${room.id}'),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w300,
+          color: AppPalette.neutral500,
+          height: 1.45,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -600,14 +663,22 @@ class _RoomRow extends StatelessWidget {
 }
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.text, required this.ruleColor});
+  const _SectionLabel({
+    required this.text,
+    required this.ruleColor,
+    this.bottomSpacing = 16,
+    this.dividerKey,
+  });
+
   final String text;
   final Color ruleColor;
+  final double bottomSpacing;
+  final Key? dividerKey;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: bottomSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -621,7 +692,7 @@ class _SectionLabel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Divider(height: 1, thickness: 1, color: ruleColor),
+          Divider(key: dividerKey, height: 1, thickness: 1, color: ruleColor),
         ],
       ),
     );

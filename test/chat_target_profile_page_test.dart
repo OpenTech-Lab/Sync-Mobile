@@ -43,6 +43,11 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Work');
     await tester.tap(find.text('CREATE'));
     await tester.pumpAndSettle();
+    final createdTagFinder = find.byKey(
+      const ValueKey('friend_tag_option_Work'),
+    );
+    expect(createdTagFinder, findsOneWidget);
+    expect(tester.widget<InputChip>(createdTagFinder).selected, isTrue);
     await tester.tap(find.text('S A V E'));
     await tester.pumpAndSettle();
 
@@ -64,4 +69,120 @@ void main() {
     expect(await preferences.readFriendTags(serverUrl, 'friend-b'), ['Work']);
     expect(await preferences.readFriendTagCatalog(serverUrl), ['Work']);
   });
+
+  testWidgets(
+    'deleting a tag removes it from the reusable list for all friends',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final preferences = UserProfilePreferences();
+      const serverUrl = 'https://example.com';
+
+      await preferences.addFriendId(serverUrl, 'friend-a');
+      await preferences.addFriendId(serverUrl, 'friend-b');
+      await preferences.writeFriendTags(serverUrl, 'friend-a', ['Work', 'VIP']);
+      await preferences.writeFriendTags(serverUrl, 'friend-b', ['Work']);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ChatTargetProfileScreen(
+            serverUrl: serverUrl,
+            userId: 'friend-a',
+            displayName: 'Friend A',
+            displayHandle: 'friend-a',
+            avatarBase64: null,
+            isFriend: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('EDIT TAGS'));
+      await tester.pumpAndSettle();
+
+      final workChip = find.byKey(const ValueKey('friend_tag_option_Work'));
+      expect(workChip, findsOneWidget);
+
+      await tester.tap(
+        find.descendant(of: workChip, matching: find.byIcon(Icons.close)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('S A V E'));
+      await tester.pumpAndSettle();
+
+      expect(await preferences.readFriendTags(serverUrl, 'friend-a'), ['VIP']);
+      expect(await preferences.readFriendTags(serverUrl, 'friend-b'), isEmpty);
+      expect(await preferences.readFriendTagCatalog(serverUrl), ['VIP']);
+      expect(find.text('Work'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'cancel friend shows confirmation dialog before returning action',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final navigatorKey = GlobalKey<NavigatorState>();
+      late Future<ChatTargetProfileAction?> resultFuture;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: TextButton(
+                  onPressed: () {
+                    resultFuture = Navigator.of(context).push(
+                      MaterialPageRoute<ChatTargetProfileAction>(
+                        builder: (_) => const ChatTargetProfileScreen(
+                          serverUrl: 'https://example.com',
+                          userId: 'friend-a',
+                          displayName: 'Friend A',
+                          displayHandle: 'friend-a',
+                          avatarBase64: null,
+                          isFriend: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('OPEN'),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('OPEN'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('CANCEL FRIEND'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Remove Friend A from your friend list?'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChatTargetProfileScreen), findsOneWidget);
+
+      await tester.tap(find.text('CANCEL FRIEND'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CANCEL FRIEND').last);
+      await tester.pumpAndSettle();
+
+      await expectLater(
+        resultFuture,
+        completion(ChatTargetProfileAction.cancelFriend),
+      );
+    },
+  );
 }

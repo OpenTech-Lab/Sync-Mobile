@@ -65,4 +65,32 @@ void main() {
       ]);
     },
   );
+
+  test(
+    'deleting a reusable tag removes it from catalog and all friends',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = UserProfilePreferences();
+      const serverUrl = 'https://planet-a.example';
+
+      await preferences.addFriendId(serverUrl, 'friend-a');
+      await preferences.addFriendId(serverUrl, 'friend-b');
+      await preferences.writeFriendTags(serverUrl, 'friend-a', ['Work', 'VIP']);
+      await preferences.writeFriendTags(serverUrl, 'friend-b', [
+        'Family',
+        'work',
+      ]);
+
+      await preferences.deleteFriendTags(serverUrl, ['WORK']);
+
+      expect(await preferences.readFriendTags(serverUrl, 'friend-a'), ['VIP']);
+      expect(await preferences.readFriendTags(serverUrl, 'friend-b'), [
+        'Family',
+      ]);
+      expect(await preferences.readFriendTagCatalog(serverUrl), [
+        'Family',
+        'VIP',
+      ]);
+    },
+  );
 }

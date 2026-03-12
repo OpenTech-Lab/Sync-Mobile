@@ -339,6 +339,46 @@ class UserProfilePreferences {
     return normalized;
   }
 
+  Future<void> deleteFriendTags(String serverUrl, Iterable<String> tags) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingCatalog = await readFriendTagCatalog(serverUrl);
+    final normalizedToDelete = canonicalizeFriendTagLabels(
+      tags,
+      preferredCasing: existingCatalog,
+    );
+    if (normalizedToDelete.isEmpty) {
+      return;
+    }
+
+    final deleteLower = normalizedToDelete
+        .map((tag) => tag.toLowerCase())
+        .toSet();
+    final nextCatalog = existingCatalog
+        .where((tag) => !deleteLower.contains(tag.toLowerCase()))
+        .toList(growable: false);
+    if (nextCatalog.isEmpty) {
+      await prefs.remove(_friendTagCatalogKey(serverUrl));
+    } else {
+      await prefs.setStringList(_friendTagCatalogKey(serverUrl), nextCatalog);
+    }
+
+    final friendIds = await readFriendIds(serverUrl);
+    for (final userId in friendIds) {
+      final existingTags = await readFriendTags(serverUrl, userId);
+      final nextTags = existingTags
+          .where((tag) => !deleteLower.contains(tag.toLowerCase()))
+          .toList(growable: false);
+      if (nextTags.length == existingTags.length) {
+        continue;
+      }
+      if (nextTags.isEmpty) {
+        await prefs.remove(_friendTagsKey(serverUrl, userId));
+      } else {
+        await prefs.setStringList(_friendTagsKey(serverUrl, userId), nextTags);
+      }
+    }
+  }
+
   Future<String?> _readScopedString({
     required SharedPreferences prefs,
     required String scopedKey,
