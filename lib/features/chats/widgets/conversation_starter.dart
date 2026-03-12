@@ -495,47 +495,49 @@ class _SwipeRevealConversationRowState
     return ClipRect(
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SizedBox(
-                width: _actionWidth,
-                child: Material(
-                  color: AppPalette.danger700.withValues(alpha: 0.92),
-                  child: InkWell(
-                    onTap: _isDeleting ? null : _handleDelete,
-                    child: Center(
-                      child: _isDeleting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppPalette.white,
+          AnimatedPositioned(
+            duration: _isDragging ? Duration.zero : _settleDuration,
+            curve: Curves.easeOutCubic,
+            top: 0,
+            bottom: 0,
+            right: -_actionWidth - _offsetX,
+            child: SizedBox(
+              width: _actionWidth,
+              child: Material(
+                color: AppPalette.danger700.withValues(alpha: 0.92),
+                child: InkWell(
+                  onTap: _isDeleting ? null : _handleDelete,
+                  child: Center(
+                    child: _isDeleting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppPalette.white,
+                              ),
+                            ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.delete_outline,
+                                color: AppPalette.white,
+                                size: 20,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.actionLabel,
+                                style: const TextStyle(
+                                  color: AppPalette.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            )
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.delete_outline,
-                                  color: AppPalette.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  widget.actionLabel,
-                                  style: const TextStyle(
-                                    color: AppPalette.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
+                            ],
+                          ),
                   ),
                 ),
               ),

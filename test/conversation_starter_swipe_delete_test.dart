@@ -116,13 +116,21 @@ void main() {
 
     final row = find.byKey(const ValueKey('convo_friend-user-id'));
     expect(row, findsOneWidget);
+    final deleteAction = find.text('Delete');
+    expect(deleteAction, findsOneWidget);
+
+    final rowRect = tester.getRect(row);
+    final hiddenDeleteRect = tester.getRect(deleteAction);
+    expect(hiddenDeleteRect.left, greaterThanOrEqualTo(rowRect.right));
 
     await tester.drag(row, const Offset(-160, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete'), findsOneWidget);
+    final revealedDeleteRect = tester.getRect(deleteAction);
+    expect(revealedDeleteRect.left, lessThan(rowRect.right));
+    expect(revealedDeleteRect.right, lessThanOrEqualTo(rowRect.right));
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(deleteAction);
     await tester.pumpAndSettle();
 
     expect(deletedConversationId, friendId);
