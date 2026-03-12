@@ -390,7 +390,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
               child: Column(
                 children: [
                   if (_selectedMediaBytes != null)

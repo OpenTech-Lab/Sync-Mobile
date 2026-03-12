@@ -65,6 +65,134 @@ void main() {
     expect(selectedTag, isNull);
   });
 
+  testWidgets('overflow tags stay in a right-side horizontal scroller', (
+    tester,
+  ) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    const farRightTag = 'Neighborhood Circle';
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 260,
+                child: ConversationStarter(
+                  controller: controller,
+                  focusNode: focusNode,
+                  unreadCounts: const <String, int>{},
+                  orderedConversationIds: const <String>['friend-a'],
+                  summariesById: <String, ConversationSummary>{
+                    'friend-a': ConversationSummary(
+                      conversationId: 'friend-a',
+                      lastBody: 'hello',
+                      lastAt: DateTime.utc(2026, 3, 12, 10, 0),
+                    ),
+                  },
+                  availableFriendTags: const <String>[
+                    'Family Group',
+                    'Work Friends',
+                    'Tennis Club',
+                    farRightTag,
+                  ],
+                  onQuickAction: (_) {},
+                  onOpenConversation: (_) {},
+                  onClearConversation: (_) async {},
+                  onMarkAllRead: () async {},
+                  onStartNewChat: () {},
+                  onAddFriend: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final allRect = tester.getRect(
+      find.byKey(const ValueKey('friend_tag_filter_all')),
+    );
+    final scrollRect = tester.getRect(
+      find.byKey(const ValueKey('friend_tag_filter_scroll')),
+    );
+    final hiddenTagFinder = find.byKey(
+      ValueKey('friend_tag_filter_$farRightTag'),
+    );
+    final hiddenTagRect = tester.getRect(hiddenTagFinder);
+
+    expect(allRect.right, lessThanOrEqualTo(scrollRect.left));
+    expect(hiddenTagRect.left, greaterThanOrEqualTo(scrollRect.right));
+
+    await tester.dragUntilVisible(
+      hiddenTagFinder,
+      find.byKey(const ValueKey('friend_tag_filter_scroll')),
+      const Offset(-80, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final revealedTagRect = tester.getRect(hiddenTagFinder);
+    expect(revealedTagRect.left, lessThan(scrollRect.right));
+  });
+
+  testWidgets('tag filters sit close to CHATS when unread is empty', (
+    tester,
+  ) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    addTearDown(controller.dispose);
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ConversationStarter(
+              controller: controller,
+              focusNode: focusNode,
+              unreadCounts: const <String, int>{},
+              orderedConversationIds: const <String>['friend-a'],
+              summariesById: <String, ConversationSummary>{
+                'friend-a': ConversationSummary(
+                  conversationId: 'friend-a',
+                  lastBody: 'hello',
+                  lastAt: DateTime.utc(2026, 3, 12, 10, 0),
+                ),
+              },
+              availableFriendTags: const <String>['Work'],
+              onQuickAction: (_) {},
+              onOpenConversation: (_) {},
+              onClearConversation: (_) async {},
+              onMarkAllRead: () async {},
+              onStartNewChat: () {},
+              onAddFriend: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final filtersRect = tester.getRect(
+      find.byKey(const ValueKey('friend_tag_filters')),
+    );
+    final chatsHeaderRect = tester.getRect(
+      find.byKey(const ValueKey('chats_header')),
+    );
+
+    expect(chatsHeaderRect.top - filtersRect.bottom, closeTo(24, 0.1));
+  });
+
   testWidgets('room rows show member count in the title', (tester) async {
     const roomConversationId = 'room:room-1';
     final controller = TextEditingController();

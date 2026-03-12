@@ -362,17 +362,54 @@ class MyProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 6),
                     // username row
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(
-                            displayName,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w300,
-                              color: inkColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  key: const ValueKey(
+                                    'my_profile_header_username',
+                                  ),
+                                  displayName,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w300,
+                                    color: inkColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (guild != null) ...[
+                                const SizedBox(
+                                  key: ValueKey(
+                                    'my_profile_username_badge_gap',
+                                  ),
+                                  width: 10,
+                                ),
+                                _GuildBadge(
+                                  key: const ValueKey(
+                                    'my_profile_header_level_badge',
+                                  ),
+                                  label: l10n.profileGuildLevel(guild.level),
+                                  inkColor: inkColor,
+                                  ruleColor: ruleColor,
+                                ),
+                                if (guild.rank.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  _GuildBadge(
+                                    key: const ValueKey(
+                                      'my_profile_header_rank_badge',
+                                    ),
+                                    label: l10n.profileGuildRank(guild.rank),
+                                    inkColor: inkColor,
+                                    ruleColor: ruleColor,
+                                  ),
+                                ],
+                              ],
+                            ],
                           ),
                         ),
                         IconButton(
@@ -646,23 +683,6 @@ class _GuildSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _GuildBadge(
-                label: l10n.profileGuildLevel(guild.level),
-                inkColor: inkColor,
-                ruleColor: ruleColor,
-              ),
-              _GuildBadge(
-                label: l10n.profileGuildRank(guild.rank),
-                inkColor: inkColor,
-                ruleColor: ruleColor,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Text(
             l10n.profileTrustProgressLabel(guild.activeDays),
             style: TextStyle(
@@ -791,6 +811,7 @@ class _GuildSummaryCard extends StatelessWidget {
 
 class _GuildBadge extends StatelessWidget {
   const _GuildBadge({
+    super.key,
     required this.label,
     required this.inkColor,
     required this.ruleColor,

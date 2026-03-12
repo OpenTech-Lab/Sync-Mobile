@@ -50,6 +50,7 @@ class ConversationStarter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasTagFilters = availableFriendTags.isNotEmpty;
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -126,46 +127,60 @@ class ConversationStarter extends ConsumerWidget {
             ),
           ],
         ),
-        if (availableFriendTags.isNotEmpty) ...[
+        if (hasTagFilters) ...[
           const SizedBox(height: 16),
           SizedBox(
+            key: const ValueKey('friend_tag_filters'),
             height: 34,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: availableFriendTags.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                final tag = index == 0 ? null : availableFriendTags[index - 1];
-                final selected = tag == null
-                    ? selectedFriendTag == null
-                    : tag == selectedFriendTag;
-                return ChoiceChip(
-                  key: ValueKey('friend_tag_filter_${tag ?? 'all'}'),
-                  label: Text(tag ?? 'All'),
-                  selected: selected,
+            child: Row(
+              children: [
+                _buildTagFilterChip(
+                  label: 'All',
+                  key: const ValueKey('friend_tag_filter_all'),
+                  selected: selectedFriendTag == null,
                   onSelected: onSelectedFriendTag == null
                       ? null
-                      : (_) => onSelectedFriendTag!(tag),
-                  backgroundColor: isDark
-                      ? AppPalette.neutral800
-                      : AppPalette.neutral100,
-                  selectedColor: isDark
-                      ? AppPalette.neutral700
-                      : AppPalette.neutral300,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
-                  ),
-                  shape: StadiumBorder(
-                    side: BorderSide(
-                      color: selected ? AppPalette.neutral500 : ruleColor,
+                      : () => onSelectedFriendTag!(null),
+                  inkColor: inkColor,
+                  ruleColor: ruleColor,
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    key: const ValueKey('friend_tag_filter_scroll'),
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (
+                          var i = 0;
+                          i < availableFriendTags.length;
+                          i++
+                        ) ...[
+                          _buildTagFilterChip(
+                            label: availableFriendTags[i],
+                            key: ValueKey(
+                              'friend_tag_filter_${availableFriendTags[i]}',
+                            ),
+                            selected:
+                                availableFriendTags[i] == selectedFriendTag,
+                            onSelected: onSelectedFriendTag == null
+                                ? null
+                                : () => onSelectedFriendTag!(
+                                    availableFriendTags[i],
+                                  ),
+                            inkColor: inkColor,
+                            ruleColor: ruleColor,
+                            isDark: isDark,
+                          ),
+                          if (i != availableFriendTags.length - 1)
+                            const SizedBox(width: 8),
+                        ],
+                      ],
                     ),
                   ),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                );
-              },
+                ),
+              ],
             ),
           ),
         ],
@@ -214,8 +229,9 @@ class ConversationStarter extends ConsumerWidget {
         ],
 
         if (hasAnyRows && chatConversationIds.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          if (unreadConversationIds.isNotEmpty) const SizedBox(height: 16),
           Text(
+            key: const ValueKey('chats_header'),
             l10n.chatChatsHeader,
             style: const TextStyle(
               fontSize: 10,
@@ -260,6 +276,35 @@ class ConversationStarter extends ConsumerWidget {
     if (body.startsWith('[sticker:')) return l10n.chatSentASticker;
     if (body.startsWith('[media-data:')) return l10n.chatSentAnAttachment;
     return body;
+  }
+
+  Widget _buildTagFilterChip({
+    required String label,
+    required Key key,
+    required bool selected,
+    required VoidCallback? onSelected,
+    required Color inkColor,
+    required Color ruleColor,
+    required bool isDark,
+  }) {
+    return ChoiceChip(
+      key: key,
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected == null ? null : (_) => onSelected(),
+      backgroundColor: isDark ? AppPalette.neutral800 : AppPalette.neutral100,
+      selectedColor: isDark ? AppPalette.neutral700 : AppPalette.neutral300,
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w300,
+        color: inkColor,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(color: selected ? AppPalette.neutral500 : ruleColor),
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
   }
 
   String _formatConversationTitle(
