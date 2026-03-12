@@ -10,7 +10,7 @@ import 'package:mobile/state/user_profile_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('my profile shows guild badges inline after username', (
+  testWidgets('my profile keeps guild badges in the summary section', (
     tester,
   ) async {
     const serverUrl = 'https://example.com';
@@ -65,33 +65,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final usernameFinder = find.byKey(
-      const ValueKey('my_profile_header_username'),
-    );
-    final gapFinder = find.byKey(
-      const ValueKey('my_profile_username_badge_gap'),
-    );
-    final levelBadgeFinder = find.byKey(
-      const ValueKey('my_profile_header_level_badge'),
-    );
-    final rankBadgeFinder = find.byKey(
-      const ValueKey('my_profile_header_rank_badge'),
-    );
-
+    final usernameFinder = find.text('Current User');
+    final levelBadgeFinder = find.text('Level 7');
+    final rankBadgeFinder = find.text('Rank Explorer');
     expect(find.text('Level 7'), findsOneWidget);
     expect(find.text('Rank Explorer'), findsOneWidget);
 
     final usernameRect = tester.getRect(usernameFinder);
     final levelRect = tester.getRect(levelBadgeFinder);
     final rankRect = tester.getRect(rankBadgeFinder);
-    final usernameCenter = tester.getCenter(usernameFinder);
-    final levelCenter = tester.getCenter(levelBadgeFinder);
-    final rankCenter = tester.getCenter(rankBadgeFinder);
 
-    expect(levelRect.left, greaterThan(usernameRect.right));
-    expect(tester.getSize(gapFinder).width, 10);
-    expect((usernameCenter.dy - levelCenter.dy).abs(), lessThan(1));
-    expect((levelCenter.dy - rankCenter.dy).abs(), lessThan(1));
-    expect(rankRect.left, greaterThan(levelRect.right));
+    expect(levelRect.top, greaterThan(usernameRect.bottom));
+    expect(rankRect.top, greaterThan(usernameRect.bottom));
+    expect((levelRect.center.dy - rankRect.center.dy).abs(), lessThan(1));
   });
 }

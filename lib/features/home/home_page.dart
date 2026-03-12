@@ -719,35 +719,45 @@ class _ProfileCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  displayName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
-                    letterSpacing: -0.2,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (guild != null) ...[
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        key: const ValueKey('home_profile_username'),
+                        displayName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w300,
+                          color: inkColor,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (guild != null) ...[
+                      const SizedBox(
+                        key: ValueKey('home_profile_badge_gap'),
+                        width: 8,
+                      ),
                       _HomeGuildBadge(
+                        key: const ValueKey('home_profile_level_badge'),
                         label: 'Lv ${guild.level}',
                         mutedColor: mutedColor,
                       ),
-                      if (guild.rank.isNotEmpty)
+                      if (guild.rank.isNotEmpty) ...[
+                        const SizedBox(width: 6),
                         _HomeGuildBadge(
+                          key: const ValueKey('home_profile_rank_badge'),
                           label: guild.rank,
                           mutedColor: mutedColor,
                         ),
+                      ],
                     ],
-                  ),
-                ],
-                const SizedBox(height: 2),
+                  ],
+                ),
+                const SizedBox(height: 4),
                 Text(
                   description ?? l10n.profileNoDescriptionYet,
                   style: TextStyle(
@@ -772,7 +782,11 @@ class _ProfileCard extends ConsumerWidget {
 // Small pill badge shown on the home profile card for level / rank.
 // ---------------------------------------------------------------------------
 class _HomeGuildBadge extends StatelessWidget {
-  const _HomeGuildBadge({required this.label, required this.mutedColor});
+  const _HomeGuildBadge({
+    super.key,
+    required this.label,
+    required this.mutedColor,
+  });
   final String label;
   final Color mutedColor;
 

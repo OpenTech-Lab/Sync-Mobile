@@ -71,6 +71,94 @@ void main() {
       expect(friendDescriptionText.overflow, TextOverflow.ellipsis);
     },
   );
+
+  testWidgets(
+    'home my-profile block shows guild badges inline after username',
+    (tester) async {
+      const serverUrl = 'https://example.com';
+      const currentUserId = 'current-user-id';
+      final scope = serverDomainKeyFromUrl(serverUrl);
+
+      SharedPreferences.setMockInitialValues({
+        'profile_display_name::$scope::$currentUserId': 'Current User',
+        'profile_description::$scope::$currentUserId': 'About me',
+      });
+
+      const guild = UserGuildSnapshot(
+        activeDays: 12,
+        level: 7,
+        contributionScore: 120,
+        rank: 'Explorer',
+        nextLevelActiveDays: 20,
+        levelProgressPercent: 60,
+        dailyOutboundMessagesEnforced: true,
+        dailyOutboundMessagesLimit: 30,
+        dailyOutboundMessagesSent: 12,
+        dailyOutboundMessagesRemaining: 18,
+        dailyAttachmentSendsEnforced: true,
+        dailyAttachmentSendLimit: 5,
+        dailyAttachmentSendsSent: 1,
+        dailyAttachmentSendsRemaining: 4,
+        allowedAttachmentTypes: <String>['image'],
+        dailyFriendAddsEnforced: true,
+        dailyFriendAddLimit: 10,
+        dailyFriendAddsSent: 2,
+        dailyFriendAddsRemaining: 8,
+        challengeState: 'none',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeServerUrlProvider.overrideWithValue(serverUrl),
+            chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+            myGuildSnapshotProvider.overrideWith((ref) async => guild),
+            remoteUserProfileServiceProvider.overrideWithValue(
+              _FakeRemoteUserProfileService(),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: HomeTab(
+              serverUrl: serverUrl,
+              accessToken: 'token',
+              currentUserId: currentUserId,
+              currentUsername: 'Current User',
+              planetInfo: null,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final usernameFinder = find.byKey(
+        const ValueKey('home_profile_username'),
+      );
+      final gapFinder = find.byKey(const ValueKey('home_profile_badge_gap'));
+      final levelBadgeFinder = find.byKey(
+        const ValueKey('home_profile_level_badge'),
+      );
+      final rankBadgeFinder = find.byKey(
+        const ValueKey('home_profile_rank_badge'),
+      );
+
+      final usernameRect = tester.getRect(usernameFinder);
+      final levelRect = tester.getRect(levelBadgeFinder);
+      final rankRect = tester.getRect(rankBadgeFinder);
+      final usernameCenter = tester.getCenter(usernameFinder);
+      final levelCenter = tester.getCenter(levelBadgeFinder);
+      final rankCenter = tester.getCenter(rankBadgeFinder);
+
+      expect(find.text('Lv 7'), findsOneWidget);
+      expect(find.text('Explorer'), findsOneWidget);
+      expect(tester.getSize(gapFinder).width, 8);
+      expect(levelRect.left, greaterThan(usernameRect.right));
+      expect(rankRect.left, greaterThan(levelRect.right));
+      expect((usernameCenter.dy - levelCenter.dy).abs(), lessThan(1));
+      expect((levelCenter.dy - rankCenter.dy).abs(), lessThan(1));
+    },
+  );
 }
 
 class _FakeRemoteUserProfileService extends RemoteUserProfileService {
