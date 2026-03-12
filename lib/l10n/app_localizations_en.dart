@@ -454,6 +454,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatCopiedToClipboard => 'Copied to clipboard';
 
   @override
+  String get chatAttachmentViewerTitle => 'Attachment';
+
+  @override
+  String get chatDownloadAttachmentTooltip => 'Download attachment';
+
+  @override
+  String get chatAttachmentDownloaded => 'Attachment downloaded';
+
+  @override
+  String get chatAttachmentDownloadFailed => 'Failed to download attachment';
+
+  @override
   String get chatQuickNewHeader => 'NEW';
 
   @override

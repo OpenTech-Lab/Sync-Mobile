@@ -14,6 +14,7 @@ import '../../../ui/components/atoms/app_toast.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 import '../../../services/chat_ui_preferences.dart';
 import '../models/outgoing_draft.dart';
+import 'chat_attachment_viewer_page.dart';
 import '../utils/chat_media_cache.dart';
 import '../utils/chat_helpers.dart';
 
@@ -59,6 +60,17 @@ class MessageBubble extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MessageDetailScreen(message: message, isMine: isMine),
+      ),
+    );
+  }
+
+  void _openAttachmentDetail(BuildContext context, ParsedInlineMedia media) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatAttachmentViewerPage(
+          bytes: media.bytes,
+          suggestedFileName: media.suggestedFileName,
+        ),
       ),
     );
   }
@@ -163,29 +175,32 @@ class MessageBubble extends ConsumerWidget {
                     ),
                   ),
                 ],
-                Container(
-                  constraints: BoxConstraints(maxWidth: maxBubbleWidth),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image(
-                        image: media.imageProvider,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        width: maxBubbleWidth,
-                      ),
-                      if (media.text.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-                          child: Text(media.text, style: messageTextStyle),
+                GestureDetector(
+                  onTap: () => _openAttachmentDetail(context, media),
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image(
+                          image: media.imageProvider,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          width: maxBubbleWidth,
                         ),
-                    ],
+                        if (media.text.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+                            child: Text(media.text, style: messageTextStyle),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),

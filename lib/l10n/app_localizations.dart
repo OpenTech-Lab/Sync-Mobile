@@ -930,6 +930,30 @@ abstract class AppLocalizations {
   /// **'Copied to clipboard'**
   String get chatCopiedToClipboard;
 
+  /// No description provided for @chatAttachmentViewerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment'**
+  String get chatAttachmentViewerTitle;
+
+  /// No description provided for @chatDownloadAttachmentTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Download attachment'**
+  String get chatDownloadAttachmentTooltip;
+
+  /// No description provided for @chatAttachmentDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment downloaded'**
+  String get chatAttachmentDownloaded;
+
+  /// No description provided for @chatAttachmentDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to download attachment'**
+  String get chatAttachmentDownloadFailed;
+
   /// No description provided for @chatQuickNewHeader.
   ///
   /// In en, this message translates to:

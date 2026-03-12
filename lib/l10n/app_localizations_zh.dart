@@ -454,6 +454,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCopiedToClipboard => 'Copied to clipboard';
 
   @override
+  String get chatAttachmentViewerTitle => 'Attachment';
+
+  @override
+  String get chatDownloadAttachmentTooltip => 'Download attachment';
+
+  @override
+  String get chatAttachmentDownloaded => 'Attachment downloaded';
+
+  @override
+  String get chatAttachmentDownloadFailed => 'Failed to download attachment';
+
+  @override
   String get chatQuickNewHeader => 'NEW';
 
   @override
@@ -1337,6 +1349,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatCopiedToClipboard => '已複製到剪貼簿';
+
+  @override
+  String get chatAttachmentViewerTitle => '附件';
+
+  @override
+  String get chatDownloadAttachmentTooltip => '下載附件';
+
+  @override
+  String get chatAttachmentDownloaded => '附件已下載';
+
+  @override
+  String get chatAttachmentDownloadFailed => '下載附件失敗';
 
   @override
   String get chatQuickNewHeader => '新增';
