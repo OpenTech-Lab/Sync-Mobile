@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
@@ -204,15 +205,14 @@ class ComposerSendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final buttonColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final iconColor = isDark ? AppPalette.neutral900 : AppPalette.white;
+    final buttonColor = isDark ? AppPalette.neutral900 : AppPalette.transparent;
+    final iconColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 4, 0, 4),
       child: Tooltip(
         message: tooltip,
         child: Material(
-          key: const ValueKey('composer_send_button'),
           color: buttonColor,
           shape: const CircleBorder(),
           child: InkResponse(
@@ -221,11 +221,12 @@ class ComposerSendButton extends StatelessWidget {
             containedInkWell: true,
             customBorder: const CircleBorder(),
             child: SizedBox(
-              width: 48,
-              height: 48,
+              key: const ValueKey('composer_send_button'),
+              width: 36,
+              height: 36,
               child: Center(
                 child: Icon(
-                  Icons.arrow_upward_rounded,
+                  CupertinoIcons.arrowtriangle_up_fill,
                   size: 24,
                   color: iconColor,
                 ),

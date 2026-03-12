@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/widgets/composer.dart';
@@ -37,8 +38,10 @@ void main() {
       final sendButton = find.byKey(const ValueKey('composer_send_button'));
       expect(sendButton, findsOneWidget);
 
-      final buttonMaterial = tester.widget<Material>(sendButton);
-      expect(buttonMaterial.color, AppPalette.neutral800);
+      final buttonMaterial = tester.widget<Material>(
+        find.ancestor(of: sendButton, matching: find.byType(Material)).first,
+      );
+      expect(buttonMaterial.color, AppPalette.transparent);
 
       final rect = tester.getRect(sendButton);
       expect(rect.width, greaterThanOrEqualTo(48));
@@ -47,11 +50,11 @@ void main() {
       final icon = tester.widget<Icon>(
         find.descendant(
           of: sendButton,
-          matching: find.byIcon(Icons.arrow_upward_rounded),
+          matching: find.byIcon(CupertinoIcons.arrowtriangle_up_fill),
         ),
       );
       expect(icon.size, 24);
-      expect(icon.color, AppPalette.white);
+      expect(icon.color, AppPalette.neutral800);
 
       await tester.tapAt(Offset(rect.right - 6, rect.center.dy));
       await tester.pump();
