@@ -23,6 +23,12 @@ import '../../state/user_profile_controller.dart';
 import 'device_login_qr_scanner_page.dart';
 import 'profile_username_validation.dart';
 
+const _profileEditDialogInsetPadding = EdgeInsets.symmetric(
+  horizontal: 24,
+  vertical: 20,
+);
+const _profileEditDialogMaxWidth = 420.0;
+
 class MyProfileScreen extends ConsumerWidget {
   const MyProfileScreen({
     super.key,
@@ -444,15 +450,16 @@ class MyProfileScreen extends ConsumerWidget {
                           duration: const Duration(milliseconds: 900),
                         );
                       },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Icon(
                             Icons.link,
                             size: 13,
                             color: AppPalette.neutral500,
                           ),
-                          const SizedBox(width: 4),
                           Text(
                             l10n.profileCopyFriendLink,
                             style: TextStyle(
@@ -1125,6 +1132,7 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
     final words = _wordCount(_ctrl.text);
     final isOverLimit = words > 100;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     // ── Minimal warm-neutral palette ────────────────────────────────────────
 
@@ -1135,155 +1143,141 @@ class _DescriptionEditDialogState extends State<_DescriptionEditDialog> {
         ? AppPalette.danger700
         : AppPalette.neutral500;
 
-    return Dialog(
+    return _ProfileEditDialogShell(
       backgroundColor: bgColor,
-      surfaceTintColor: AppPalette.transparent,
-      shadowColor: AppPalette.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Eyebrow label ─────────────────────────────────────────────
-            Text(
-              l10n.profileAboutYouLabel,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 2.8,
-                color: AppPalette.neutral500,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // ── Heading ───────────────────────────────────────────────────
-            Text(
-              l10n.profileAboutYouTitle,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w300,
-                height: 1.4,
-                color: inkColor,
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Text field (underline only) ───────────────────────────────
-            TextField(
-              controller: _ctrl,
-              autofocus: true,
-              maxLines: 5,
-              cursorColor: AppPalette.neutral500,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.8,
-                color: inkColor,
-                fontWeight: FontWeight.w300,
-              ),
-              decoration: InputDecoration(
-                hintText: l10n.profileDescriptionHint,
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  height: 1.8,
-                  color: AppPalette.neutral500.withValues(alpha: 0.65),
-                  fontWeight: FontWeight.w300,
-                ),
-                filled: false,
-                border: UnderlineInputBorder(
-                  borderSide: BorderSide(color: ruleColor),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: ruleColor),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppPalette.neutral500),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Word counter ──────────────────────────────────────────────
-            Row(
-              children: [
-                if (isOverLimit)
-                  Text(
-                    l10n.profileDescriptionExceeded,
+      contentPadding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Divider(height: 1, thickness: 1, color: ruleColor),
+          SizedBox(height: isKeyboardVisible ? 14 : 20),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 20,
+            runSpacing: 10,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    l10n.actionCancel,
                     style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 0.4,
-                      color: AppPalette.danger700,
+                      fontSize: 13,
+                      color: AppPalette.neutral500,
+                      letterSpacing: 0.3,
                     ),
                   ),
-                const Spacer(),
-                Text(
-                  l10n.profileWordCount(words),
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                    color: counterColor,
+                ),
+              ),
+              GestureDetector(
+                onTap: isOverLimit
+                    ? null
+                    : () => Navigator.of(context).pop(_ctrl.text.trim()),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    l10n.actionSave,
+                    style: TextStyle(
+                      fontSize: 12,
+                      letterSpacing: 2.5,
+                      fontWeight: FontWeight.w500,
+                      color: isOverLimit
+                          ? AppPalette.neutral500.withValues(alpha: 0.35)
+                          : inkColor,
+                    ),
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      children: [
+        Text(
+          l10n.profileAboutYouLabel,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 2.8,
+            color: AppPalette.neutral500,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          l10n.profileAboutYouTitle,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            height: 1.4,
+            color: inkColor,
+          ),
+        ),
+        SizedBox(height: isKeyboardVisible ? 18 : 28),
+        TextField(
+          controller: _ctrl,
+          autofocus: true,
+          maxLines: isKeyboardVisible ? 2 : 5,
+          cursorColor: AppPalette.neutral500,
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.8,
+            color: inkColor,
+            fontWeight: FontWeight.w300,
+          ),
+          decoration: InputDecoration(
+            hintText: l10n.profileDescriptionHint,
+            hintStyle: TextStyle(
+              fontSize: 14,
+              height: 1.8,
+              color: AppPalette.neutral500.withValues(alpha: 0.65),
+              fontWeight: FontWeight.w300,
             ),
-
-            const SizedBox(height: 32),
-            Divider(height: 1, thickness: 1, color: ruleColor),
-            const SizedBox(height: 20),
-
-            // ── Actions (text only, right-aligned) ────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      l10n.actionCancel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppPalette.neutral500,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
+            filled: false,
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(color: ruleColor),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: ruleColor),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppPalette.neutral500),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            if (isOverLimit)
+              Text(
+                l10n.profileDescriptionExceeded,
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 0.4,
+                  color: AppPalette.danger700,
                 ),
-                const SizedBox(width: 28),
-                GestureDetector(
-                  onTap: isOverLimit
-                      ? null
-                      : () => Navigator.of(context).pop(_ctrl.text.trim()),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      l10n.actionSave,
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 2.5,
-                        fontWeight: FontWeight.w500,
-                        color: isOverLimit
-                            ? AppPalette.neutral500.withValues(alpha: 0.35)
-                            : inkColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
+            const Spacer(),
+            Text(
+              l10n.profileWordCount(words),
+              style: TextStyle(
+                fontSize: 11,
+                letterSpacing: 0.5,
+                color: counterColor,
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -1338,102 +1332,167 @@ class _UsernameEditDialogState extends State<_UsernameEditDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
 
-    return Dialog(
+    return _ProfileEditDialogShell(
       backgroundColor: bgColor,
-      surfaceTintColor: AppPalette.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.profileUsernameDialogTitle,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.8,
-                color: AppPalette.neutral500,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _ctrl,
-              autofocus: true,
-              cursorColor: AppPalette.neutral500,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w300,
-                color: inkColor,
-              ),
-              decoration: InputDecoration(
-                hintText: l10n.profileUsernameHint,
-                hintStyle: TextStyle(
+      contentPadding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+      footer: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 20,
+        runSpacing: 10,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                l10n.actionCancel,
+                style: TextStyle(
                   fontSize: 13,
-                  color: AppPalette.neutral500.withValues(alpha: 0.55),
-                  fontWeight: FontWeight.w300,
+                  color: AppPalette.neutral500,
+                  letterSpacing: 0.3,
                 ),
-                border: UnderlineInputBorder(
-                  borderSide: BorderSide(color: ruleColor),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: ruleColor),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppPalette.neutral500),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                isDense: true,
               ),
-              onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: Text(
-                      l10n.actionCancel,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppPalette.neutral500,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(_ctrl.text.trim()),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                l10n.actionSave,
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 2.5,
+                  fontWeight: FontWeight.w500,
+                  color: inkColor,
                 ),
-                const SizedBox(width: 28),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(_ctrl.text.trim()),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      l10n.actionSave,
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 2.5,
-                        fontWeight: FontWeight.w500,
-                        color: inkColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+      children: [
+        Text(
+          l10n.profileUsernameDialogTitle,
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 2.8,
+            color: AppPalette.neutral500,
+            fontWeight: FontWeight.w400,
+          ),
         ),
+        SizedBox(height: isKeyboardVisible ? 14 : 20),
+        TextField(
+          controller: _ctrl,
+          autofocus: true,
+          cursorColor: AppPalette.neutral500,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+          decoration: InputDecoration(
+            hintText: l10n.profileUsernameHint,
+            hintStyle: TextStyle(
+              fontSize: 13,
+              color: AppPalette.neutral500.withValues(alpha: 0.55),
+              fontWeight: FontWeight.w300,
+            ),
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(color: ruleColor),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: ruleColor),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppPalette.neutral500),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            isDense: true,
+          ),
+          onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+        ),
+        SizedBox(height: isKeyboardVisible ? 18 : 24),
+      ],
+    );
+  }
+}
+
+class _ProfileEditDialogShell extends StatelessWidget {
+  const _ProfileEditDialogShell({
+    required this.backgroundColor,
+    required this.children,
+    required this.contentPadding,
+    this.footer,
+  });
+
+  final Color backgroundColor;
+  final List<Widget> children;
+  final EdgeInsets contentPadding;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final effectiveContentPadding = isKeyboardVisible
+        ? EdgeInsets.fromLTRB(
+            contentPadding.left > 20
+                ? contentPadding.left - 8
+                : contentPadding.left,
+            contentPadding.top > 20
+                ? contentPadding.top - 12
+                : contentPadding.top,
+            contentPadding.right > 20
+                ? contentPadding.right - 8
+                : contentPadding.right,
+            contentPadding.bottom > 20
+                ? contentPadding.bottom - 8
+                : contentPadding.bottom,
+          )
+        : contentPadding;
+    return Dialog(
+      backgroundColor: backgroundColor,
+      surfaceTintColor: AppPalette.transparent,
+      shadowColor: AppPalette.black26,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      insetPadding: _profileEditDialogInsetPadding,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : MediaQuery.sizeOf(context).height;
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: _profileEditDialogMaxWidth,
+              maxHeight: maxHeight,
+            ),
+            child: Padding(
+              padding: effectiveContentPadding,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                  if (footer != null) ...[const SizedBox(height: 16), footer!],
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
