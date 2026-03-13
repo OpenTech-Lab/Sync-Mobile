@@ -8,6 +8,7 @@ import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/services/local_chat_repository.dart';
 import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/services/remote_user_profile_service.dart';
+import 'package:mobile/services/server_health_service.dart';
 import 'package:mobile/services/server_scope.dart';
 import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
@@ -73,6 +74,75 @@ void main() {
       expect(friendDescriptionText.overflow, TextOverflow.ellipsis);
     },
   );
+
+  testWidgets('home friend rows keep planet label pinned to the right side', (
+    tester,
+  ) async {
+    const serverUrl = 'https://example.com';
+    const currentUserId = 'current-user-id';
+    const friendId = 'friend-user-id';
+    final scope = serverDomainKeyFromUrl(serverUrl);
+
+    SharedPreferences.setMockInitialValues({
+      'friend_ids::$scope': [friendId],
+      'profile_display_name::$scope::$currentUserId': 'Current User',
+      'profile_description::$scope::$currentUserId': 'About me',
+      'profile_display_name::$scope::$friendId': 'Friend User',
+      'profile_description::$scope::$friendId': 'Friend description',
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activeServerUrlProvider.overrideWithValue(serverUrl),
+          chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          myGuildSnapshotProvider.overrideWith((ref) async => null),
+          remoteUserProfileServiceProvider.overrideWithValue(
+            _FakeRemoteUserProfileService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: HomeTab(
+            serverUrl: serverUrl,
+            accessToken: 'token',
+            currentUserId: currentUserId,
+            currentUsername: 'Current User',
+            planetInfo: PlanetInfo(
+              baseUrl: serverUrl,
+              host: 'example.com',
+              scheme: 'https',
+              instanceName: 'Atlas',
+              instanceDescription: null,
+              instanceImageUrl: null,
+              memberCount: 12,
+              linkedPlanets: const <String>[],
+              instanceDomain: 'example.com',
+              countryCode: 'US',
+              countryName: 'United States',
+              serverCreatedAt: null,
+              healthStatus: 'healthy',
+              latencyMs: 42,
+              checkedAt: DateTime.utc(2026, 3, 13),
+              registrationRequiresApproval: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final friendTextRect = tester.getRect(
+      find.byKey(const ValueKey('home_friend_text_friend-user-id')),
+    );
+    final friendPlanetRect = tester.getRect(
+      find.byKey(const ValueKey('home_friend_planet_friend-user-id')),
+    );
+
+    expect(find.text('Atlas'), findsOneWidget);
+    expect(friendPlanetRect.right, closeTo(friendTextRect.right, 1));
+  });
 
   testWidgets(
     'home my-profile block shows guild badges inline after username',

@@ -493,9 +493,11 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
             ),
           ),
           const SizedBox(width: 8),
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 112),
             child: Text(
               widget.planetLabel,
+              key: ValueKey('home_friend_planet_${widget.friendId}'),
               style: TextStyle(
                 fontSize: 10,
                 color: AppPalette.neutral500,
