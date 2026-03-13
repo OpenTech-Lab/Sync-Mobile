@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../services/server_health_service.dart';
+import '../../../ui/components/atoms/outline_action_button.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 
 class PlanetOverviewSection extends StatelessWidget {
@@ -12,6 +13,8 @@ class PlanetOverviewSection extends StatelessWidget {
     required this.stickerCount,
     required this.isConnected,
     required this.notificationsActive,
+    required this.isReconnecting,
+    required this.onReconnect,
     required this.inkColor,
     required this.ruleColor,
   });
@@ -20,6 +23,8 @@ class PlanetOverviewSection extends StatelessWidget {
   final int stickerCount;
   final bool isConnected;
   final bool notificationsActive;
+  final bool isReconnecting;
+  final VoidCallback? onReconnect;
   final Color inkColor;
   final Color ruleColor;
 
@@ -42,6 +47,8 @@ class PlanetOverviewSection extends StatelessWidget {
           isConnected: isConnected,
           notifActive: notificationsActive,
           serverCreatedDate: _serverCreatedDateFromData(planetInfo: planetInfo),
+          isReconnecting: isReconnecting,
+          onReconnect: onReconnect,
           inkColor: inkColor,
           mutedColor: AppPalette.neutral500,
         ),
@@ -127,6 +134,8 @@ class _PlanetCard extends StatelessWidget {
     required this.isConnected,
     required this.notifActive,
     required this.serverCreatedDate,
+    required this.isReconnecting,
+    required this.onReconnect,
     required this.inkColor,
     required this.mutedColor,
   });
@@ -138,6 +147,8 @@ class _PlanetCard extends StatelessWidget {
   final bool isConnected;
   final bool notifActive;
   final String serverCreatedDate;
+  final bool isReconnecting;
+  final VoidCallback? onReconnect;
   final Color inkColor;
   final Color mutedColor;
 
@@ -222,6 +233,24 @@ class _PlanetCard extends StatelessWidget {
               mutedColor: mutedColor,
             ),
           ],
+        ),
+        const SizedBox(height: 20),
+        Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            width: 168,
+            child: OutlineActionButton(
+              key: const ValueKey('planet_reconnect_button'),
+              label: isReconnecting
+                  ? l10n.planetReconnectInProgress
+                  : l10n.planetReconnectAction,
+              borderColor: inkColor,
+              textColor: inkColor,
+              onTap: onReconnect,
+              disabled: isReconnecting,
+              compact: true,
+            ),
+          ),
         ),
       ],
     );

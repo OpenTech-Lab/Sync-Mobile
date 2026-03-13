@@ -41,6 +41,74 @@ class PlanetInfo {
   final int latencyMs;
   final DateTime checkedAt;
   final bool registrationRequiresApproval;
+
+  factory PlanetInfo.fromMap(Map<String, dynamic> map) {
+    final baseUrl = (map['base_url'] as String? ?? '').trim();
+    final parsedBase = Uri.tryParse(baseUrl);
+    final rawLinkedPlanets = map['linked_planets'];
+    final rawServerCreatedAt = map['server_created_at'];
+    final rawCheckedAt = map['checked_at'];
+
+    return PlanetInfo(
+      baseUrl: baseUrl,
+      host: (map['host'] as String?)?.trim().isNotEmpty == true
+          ? (map['host'] as String).trim()
+          : (parsedBase?.host ?? ''),
+      scheme: (map['scheme'] as String?)?.trim().isNotEmpty == true
+          ? (map['scheme'] as String).trim()
+          : (parsedBase?.scheme.isNotEmpty == true
+                ? parsedBase!.scheme
+                : 'https'),
+      instanceName: (map['instance_name'] as String?)?.trim(),
+      instanceDescription: (map['instance_description'] as String?)?.trim(),
+      instanceImageUrl: (map['instance_image_url'] as String?)?.trim(),
+      memberCount: (map['member_count'] as num?)?.toInt(),
+      linkedPlanets: rawLinkedPlanets is List
+          ? rawLinkedPlanets
+                .whereType<String>()
+                .map((item) => item.trim())
+                .where((item) => item.isNotEmpty)
+                .toList(growable: false)
+          : const <String>[],
+      instanceDomain: (map['instance_domain'] as String?)?.trim(),
+      countryCode: (map['country_code'] as String?)?.trim(),
+      countryName: (map['country_name'] as String?)?.trim(),
+      serverCreatedAt: rawServerCreatedAt is String
+          ? DateTime.tryParse(rawServerCreatedAt)?.toUtc()
+          : null,
+      healthStatus: (map['health_status'] as String?)?.trim().isNotEmpty == true
+          ? (map['health_status'] as String).trim()
+          : 'ok',
+      latencyMs: (map['latency_ms'] as num?)?.toInt() ?? 0,
+      checkedAt: rawCheckedAt is String
+          ? DateTime.tryParse(rawCheckedAt)?.toUtc() ??
+                DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      registrationRequiresApproval:
+          (map['registration_requires_approval'] as bool?) ?? false,
+    );
+  }
+
+  Map<String, Object?> toMap() {
+    return {
+      'base_url': baseUrl,
+      'host': host,
+      'scheme': scheme,
+      'instance_name': instanceName,
+      'instance_description': instanceDescription,
+      'instance_image_url': instanceImageUrl,
+      'member_count': memberCount,
+      'linked_planets': linkedPlanets,
+      'instance_domain': instanceDomain,
+      'country_code': countryCode,
+      'country_name': countryName,
+      'server_created_at': serverCreatedAt?.toIso8601String(),
+      'health_status': healthStatus,
+      'latency_ms': latencyMs,
+      'checked_at': checkedAt.toIso8601String(),
+      'registration_requires_approval': registrationRequiresApproval,
+    };
+  }
 }
 
 class ServerHealthService {

@@ -5,15 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
+import '../../models/planet_page_data.dart';
 import '../../models/sticker.dart';
 import '../../models/realtime_event.dart';
+import '../../services/altcha_service.dart';
 import '../../services/server_health_service.dart';
 import '../../services/server_news_service.dart';
-import '../../services/sticker_service.dart';
 import '../../models/server_news.dart';
+import '../../state/app_controller.dart';
 import '../../state/notification_controller.dart';
+import '../../state/planet_page_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
+import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/simple_markdown.dart';
@@ -38,56 +42,167 @@ class PlanetTab extends ConsumerStatefulWidget {
 }
 
 class _PlanetTabState extends ConsumerState<PlanetTab> {
-  late Future<_PlanetTabData> _future;
+  bool _isReconnectInFlight = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
+  Future<String> _effectiveAccessToken() async {
+    final fresh = await ref
+        .read(appControllerProvider.notifier)
+        .ensureFreshAccessToken();
+    if (fresh != null && fresh.isNotEmpty) {
+      return fresh;
+    }
+
+    final current = ref.read(appControllerProvider).valueOrNull?.accessToken;
+    if (current != null && current.trim().isNotEmpty) {
+      return current.trim();
+    }
+
+    return widget.accessToken;
   }
 
-  Future<_PlanetTabData> _load() async {
-    final healthService = ServerHealthService();
-    final current = await healthService.validate(widget.serverUrl);
+  Future<String> _reauthenticateAccessToken() async {
+    final appController = ref.read(appControllerProvider.notifier);
+    final challenge = await appController.fetchAltchaChallenge(
+      widget.serverUrl,
+    );
+    final altchaPayload = await solveAltchaChallenge(challenge);
+    await appController.loginWithDeviceIdentity(altchaPayload: altchaPayload);
 
-    final planets = <PlanetInfo>[];
-    for (final url in current.linkedPlanets.take(20)) {
-      try {
-        final info = await healthService.validate(url);
-        planets.add(info);
-      } catch (_) {
-        // Skip offline or invalid planets.
+    final token = ref
+        .read(appControllerProvider)
+        .valueOrNull
+        ?.accessToken
+        ?.trim();
+    if (token != null && token.isNotEmpty) {
+      return token;
+    }
+
+    final authError = ref.read(appControllerProvider).valueOrNull?.authError;
+    throw StateError(authError ?? 'Reconnect authentication failed.');
+  }
+
+  Future<String> _reconnectAccessToken({
+    required bool forceReauthentication,
+  }) async {
+    if (!forceReauthentication) {
+      final token = await _effectiveAccessToken();
+      if (token.trim().isNotEmpty) {
+        return token;
       }
     }
 
-    final news = await ServerNewsService().listNews(
-      baseUrl: widget.serverUrl,
-      accessToken: widget.accessToken,
-      limit: 30,
-    );
+    return _reauthenticateAccessToken();
+  }
 
-    List<Sticker> stickers;
-    try {
-      stickers = await StickerService().syncAll(
-        baseUrl: widget.serverUrl,
-        accessToken: widget.accessToken,
-      );
-    } catch (_) {
-      stickers = const <Sticker>[];
+  Future<void> _restartPlanetSession({required String accessToken}) async {
+    final appState = ref.read(appControllerProvider).valueOrNull;
+    final currentUserId = appState?.currentUserId?.trim();
+    if (currentUserId == null || currentUserId.isEmpty) {
+      throw StateError('Missing current user id for reconnect.');
     }
 
-    return _PlanetTabData(
-      currentPlanet: current,
-      planets: planets,
-      news: news,
-      stickers: stickers,
-    );
+    final baseUrl = appState?.serverUrl?.trim().isNotEmpty == true
+        ? appState!.serverUrl!.trim()
+        : widget.serverUrl;
+
+    await Future.wait([
+      ref
+          .read(planetPageControllerProvider.notifier)
+          .refresh(baseUrl: baseUrl, accessToken: accessToken),
+      ref
+          .read(stickerControllerProvider.notifier)
+          .sync(baseUrl: baseUrl, accessToken: accessToken),
+      ref
+          .read(realtimeSyncControllerProvider.notifier)
+          .connect(
+            baseUrl: baseUrl,
+            accessTokenProvider: _effectiveAccessToken,
+            currentUserId: currentUserId,
+          ),
+      ref
+          .read(notificationControllerProvider.notifier)
+          .initialize(baseUrl: baseUrl, accessToken: accessToken),
+      Future<void>(() async {
+        try {
+          await ref
+              .read(unreadCountsProvider.notifier)
+              .refresh(baseUrl: baseUrl, accessToken: accessToken);
+        } catch (_) {
+          // A failed unread refresh should not block manual reconnect recovery.
+        }
+      }),
+    ]);
+  }
+
+  Future<void> _reconnect() async {
+    if (_isReconnectInFlight) {
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isReconnectInFlight = true);
+
+    try {
+      var accessToken = await _reconnectAccessToken(
+        forceReauthentication: false,
+      );
+      try {
+        await _restartPlanetSession(accessToken: accessToken);
+      } catch (_) {
+        accessToken = await _reconnectAccessToken(forceReauthentication: true);
+        await _restartPlanetSession(accessToken: accessToken);
+      }
+
+      if (!mounted) {
+        return;
+      }
+      showAppToast(
+        context,
+        l10n.planetReconnectSuccess,
+        variant: AppToastVariant.neutral,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final authError = ref.read(appControllerProvider).valueOrNull?.authError;
+      showAppToast(
+        context,
+        (authError != null && authError.trim().isNotEmpty)
+            ? authError.trim()
+            : l10n.planetReconnectFailed,
+        variant: AppToastVariant.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isReconnectInFlight = false);
+      }
+    }
   }
 
   Future<void> _refresh() async {
-    final next = _load();
-    setState(() => _future = next);
-    await next;
+    final l10n = AppLocalizations.of(context)!;
+    final accessToken = await _effectiveAccessToken();
+
+    try {
+      await Future.wait([
+        ref
+            .read(planetPageControllerProvider.notifier)
+            .refresh(baseUrl: widget.serverUrl, accessToken: accessToken),
+        ref
+            .read(stickerControllerProvider.notifier)
+            .sync(baseUrl: widget.serverUrl, accessToken: accessToken),
+      ]);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      showAppToast(
+        context,
+        l10n.planetLoadFailed,
+        variant: AppToastVariant.error,
+      );
+    }
   }
 
   @override
@@ -99,376 +214,343 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
     final notifState = ref.watch(notificationControllerProvider).value;
+    final planetPageState = ref.watch(planetPageControllerProvider);
     final stickerCache = ref.watch(stickerControllerProvider).value ?? const [];
     final isConnected =
         realtimeState?.status == RealtimeConnectionStatus.connected;
     final notifActive = notifState?.initialized == true;
+    final data = planetPageState.valueOrNull ?? PlanetPageData.empty;
+    final hasCachedData = planetPageState.valueOrNull != null;
+    final isLoading = planetPageState.isLoading && !hasCachedData;
+    final hasLoadError = planetPageState.hasError && !hasCachedData;
+    final currentPlanet = data.currentPlanet ?? widget.planetInfo;
+    final stickerCount = stickerCache.length;
+
+    List<Widget> buildTopSections() {
+      return [
+        PlanetOverviewSection(
+          planetInfo: currentPlanet,
+          stickerCount: stickerCount,
+          isConnected: isConnected,
+          notificationsActive: notifActive,
+          isReconnecting: _isReconnectInFlight,
+          onReconnect: _reconnect,
+          inkColor: inkColor,
+          ruleColor: ruleColor,
+        ),
+        const SizedBox(height: 32),
+      ];
+    }
+
+    Widget buildScrollableBody(List<Widget> children) {
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          key: const ValueKey('planet_page_scroll'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+          children: children,
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: FutureBuilder<_PlanetTabData>(
-          future: _future,
-          builder: (context, snapshot) {
-            final isLoading =
-                snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData;
-            final currentPlanet =
-                snapshot.data?.currentPlanet ?? widget.planetInfo;
-            final stickerCount =
-                snapshot.data?.stickers.length ?? stickerCache.length;
-
-            List<Widget> buildTopSections() {
-              return [
-                PlanetOverviewSection(
-                  planetInfo: currentPlanet,
-                  stickerCount: stickerCount,
-                  isConnected: isConnected,
-                  notificationsActive: notifActive,
-                  inkColor: inkColor,
-                  ruleColor: ruleColor,
+        child: hasLoadError
+            ? buildScrollableBody([
+                ...buildTopSections(),
+                _SectionLabel(text: l10n.planetNewsTitle, ruleColor: ruleColor),
+                const SizedBox(height: 18),
+                Text(
+                  l10n.planetLoadFailed,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppPalette.danger700,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
-                const SizedBox(height: 32),
-              ];
-            }
-
-            if (snapshot.hasError && !snapshot.hasData) {
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                children: [
-                  ...buildTopSections(),
-                  _SectionLabel(
-                    text: l10n.planetNewsTitle,
-                    ruleColor: ruleColor,
+              ])
+            : isLoading
+            ? buildScrollableBody([
+                ...buildTopSections(),
+                _SectionLabel(text: l10n.planetNewsTitle, ruleColor: ruleColor),
+                const SizedBox(height: 18),
+                Text(
+                  l10n.planetLoading,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppPalette.neutral500,
+                    fontWeight: FontWeight.w300,
                   ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.planetLoadFailed,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppPalette.danger700,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            if (isLoading) {
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                children: [
-                  ...buildTopSections(),
-                  _SectionLabel(
-                    text: l10n.planetNewsTitle,
-                    ruleColor: ruleColor,
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.planetLoading,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppPalette.neutral500,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            final data =
-                snapshot.data ??
-                const _PlanetTabData(
-                  currentPlanet: null,
-                  planets: <PlanetInfo>[],
-                  news: <ServerNewsItem>[],
-                  stickers: <Sticker>[],
-                );
-
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                children: [
-                  ...buildTopSections(),
-                  _SectionLabel(
-                    text: l10n.planetNewsTitle,
-                    ruleColor: ruleColor,
-                  ),
-                  if (data.news.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        l10n.planetNewsEmpty,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppPalette.neutral500,
-                          fontWeight: FontWeight.w300,
-                        ),
+                ),
+              ])
+            : buildScrollableBody([
+                ...buildTopSections(),
+                _SectionLabel(text: l10n.planetNewsTitle, ruleColor: ruleColor),
+                if (data.news.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      l10n.planetNewsEmpty,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w300,
                       ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: data.news.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(height: 1, color: ruleColor),
-                      itemBuilder: (ctx, index) {
-                        final item = data.news[index];
-                        final summary = (item.summary ?? '').trim();
-                        final dateText = DateFormat(
-                          'yyyy-MM-dd HH:mm',
-                        ).format(item.publishedAt.toLocal());
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: data.news.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: ruleColor),
+                    itemBuilder: (ctx, index) {
+                      final item = data.news[index];
+                      final summary = (item.summary ?? '').trim();
+                      final dateText = DateFormat(
+                        'yyyy-MM-dd HH:mm',
+                      ).format(item.publishedAt.toLocal());
 
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        title: Text(
+                          item.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
                           ),
-                          title: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              color: inkColor,
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              dateText,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppPalette.neutral500,
+                                fontWeight: FontWeight.w300,
+                              ),
                             ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
+                            const SizedBox(height: 6),
+                            if (summary.isNotEmpty)
                               Text(
-                                dateText,
+                                summary,
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: AppPalette.neutral500,
                                   fontWeight: FontWeight.w300,
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              if (summary.isNotEmpty)
-                                Text(
-                                  summary,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppPalette.neutral500,
-                                    fontWeight: FontWeight.w300,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              else
-                                SimpleMarkdownText(
-                                  markdown: item.markdownContent,
-                                  baseStyle: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppPalette.neutral500,
-                                    fontWeight: FontWeight.w300,
-                                  ),
-                                  maxParagraphs: 2,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            else
+                              SimpleMarkdownText(
+                                markdown: item.markdownContent,
+                                baseStyle: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppPalette.neutral500,
+                                  fontWeight: FontWeight.w300,
                                 ),
-                            ],
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: AppPalette.neutral500,
-                          ),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => PlanetNewsDetailPage(
-                                  serverUrl: widget.serverUrl,
-                                  accessToken: widget.accessToken,
-                                  item: item,
+                                maxParagraphs: 2,
+                              ),
+                          ],
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: AppPalette.neutral500,
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => PlanetNewsDetailPage(
+                                serverUrl: widget.serverUrl,
+                                accessToken: widget.accessToken,
+                                item: item,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                if (stickerCache.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  _SectionLabel(
+                    text: l10n.planetStickersTitle,
+                    ruleColor: ruleColor,
+                  ),
+                  Builder(
+                    builder: (ctx) {
+                      final grouped = <String, List<Sticker>>{};
+                      for (final sticker in stickerCache) {
+                        grouped
+                            .putIfAbsent(sticker.groupName, () => <Sticker>[])
+                            .add(sticker);
+                      }
+                      final groups = grouped.keys.toList(growable: false);
+                      return SizedBox(
+                        height: 118,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.zero,
+                          itemCount: groups.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (_, i) {
+                            final groupName = groups[i];
+                            final groupStickers = grouped[groupName]!;
+                            final tabSticker = groupStickers.firstWhere(
+                              (s) => s.name == '__tab__',
+                              orElse: () => groupStickers.first,
+                            );
+                            final contentCount = groupStickers
+                                .where((s) => s.name != '__tab__')
+                                .length;
+                            ImageProvider? tabImage;
+                            try {
+                              tabImage = MemoryImage(
+                                base64Decode(tabSticker.contentBase64),
+                              );
+                            } catch (_) {}
+                            return GestureDetector(
+                              onTap: () => Navigator.of(ctx).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => StickerGroupDetailPage(
+                                    serverUrl: widget.serverUrl,
+                                    accessToken: widget.accessToken,
+                                    groupName: groupName,
+                                    stickers: groupStickers,
+                                  ),
+                                ),
+                              ),
+                              child: SizedBox(
+                                width: 90,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 90,
+                                      height: 90,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: ruleColor,
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          15.2,
+                                        ),
+                                        child: tabImage == null
+                                            ? Center(
+                                                child: Icon(
+                                                  Icons.image_outlined,
+                                                  size: 28,
+                                                  color: AppPalette.neutral500,
+                                                ),
+                                              )
+                                            : Image(
+                                                image: tabImage,
+                                                fit: BoxFit.cover,
+                                                width: 90,
+                                                height: 90,
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 7),
+                                    Text(
+                                      '$groupName($contentCount)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w400,
+                                        color: inkColor,
+                                        letterSpacing: 0.1,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
                           },
-                        );
-                      },
-                    ),
-                  if (data.stickers.isNotEmpty) ...[
-                    const SizedBox(height: 32),
-                    _SectionLabel(
-                      text: l10n.planetStickersTitle,
-                      ruleColor: ruleColor,
-                    ),
-                    Builder(
-                      builder: (ctx) {
-                        final grouped = <String, List<Sticker>>{};
-                        for (final s in data.stickers) {
-                          grouped.putIfAbsent(s.groupName, () => []).add(s);
-                        }
-                        final groups = grouped.keys.toList(growable: false);
-                        return SizedBox(
-                          height: 118,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.zero,
-                            itemCount: groups.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (_, i) {
-                              final groupName = groups[i];
-                              final groupStickers = grouped[groupName]!;
-                              final tabSticker = groupStickers.firstWhere(
-                                (s) => s.name == '__tab__',
-                                orElse: () => groupStickers.first,
-                              );
-                              final contentCount = groupStickers
-                                  .where((s) => s.name != '__tab__')
-                                  .length;
-                              ImageProvider? tabImage;
-                              try {
-                                tabImage = MemoryImage(
-                                  base64Decode(tabSticker.contentBase64),
-                                );
-                              } catch (_) {}
-                              return GestureDetector(
-                                onTap: () => Navigator.of(ctx).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => StickerGroupDetailPage(
-                                      serverUrl: widget.serverUrl,
-                                      accessToken: widget.accessToken,
-                                      groupName: groupName,
-                                      stickers: groupStickers,
-                                    ),
-                                  ),
-                                ),
-                                child: SizedBox(
-                                  width: 90,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 90,
-                                        height: 90,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          border: Border.all(
-                                            color: ruleColor,
-                                            width: 0.8,
-                                          ),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            15.2,
-                                          ),
-                                          child: tabImage == null
-                                              ? Center(
-                                                  child: Icon(
-                                                    Icons.image_outlined,
-                                                    size: 28,
-                                                    color:
-                                                        AppPalette.neutral500,
-                                                  ),
-                                                )
-                                              : Image(
-                                                  image: tabImage,
-                                                  fit: BoxFit.cover,
-                                                  width: 90,
-                                                  height: 90,
-                                                ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 7),
-                                      Text(
-                                        '$groupName($contentCount)',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w400,
-                                          color: inkColor,
-                                          letterSpacing: 0.1,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                  _SectionLabel(
-                    text: l10n.planetOtherPlanetsTitle,
-                    ruleColor: ruleColor,
-                  ),
-                  if (data.planets.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        l10n.homeConnectedPlanetsEmpty,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppPalette.neutral500,
-                          fontWeight: FontWeight.w300,
                         ),
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: data.planets.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(height: 1, color: ruleColor),
-                      itemBuilder: (ctx, index) {
-                        final item = data.planets[index];
-                        final title =
-                            (item.instanceName ?? item.host).trim().isEmpty
-                            ? item.host
-                            : (item.instanceName ?? item.host).trim();
-                        final subtitle =
-                            item.countryName?.trim().isNotEmpty == true
-                            ? item.countryName!.trim()
-                            : item.host;
-                        final members = item.memberCount ?? 0;
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                          ),
-                          title: Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w300,
-                              color: inkColor,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '$subtitle · ${l10n.homePlanetMembers(members)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppPalette.neutral500,
-                              fontWeight: FontWeight.w300,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: AppPalette.neutral500,
-                          ),
-                          onTap: () => _showPlanetInfoDialog(context, item),
-                        );
-                      },
-                    ),
+                      );
+                    },
+                  ),
                 ],
-              ),
-            );
-          },
-        ),
+                const SizedBox(height: 32),
+                _SectionLabel(
+                  text: l10n.planetOtherPlanetsTitle,
+                  ruleColor: ruleColor,
+                ),
+                if (data.planets.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      l10n.homeConnectedPlanetsEmpty,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppPalette.neutral500,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: data.planets.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: ruleColor),
+                    itemBuilder: (ctx, index) {
+                      final item = data.planets[index];
+                      final title =
+                          (item.instanceName ?? item.host).trim().isEmpty
+                          ? item.host
+                          : (item.instanceName ?? item.host).trim();
+                      final subtitle =
+                          item.countryName?.trim().isNotEmpty == true
+                          ? item.countryName!.trim()
+                          : item.host;
+                      final members = item.memberCount ?? 0;
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                        title: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            color: inkColor,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$subtitle · ${l10n.homePlanetMembers(members)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppPalette.neutral500,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: AppPalette.neutral500,
+                        ),
+                        onTap: () => _showPlanetInfoDialog(context, item),
+                      );
+                    },
+                  ),
+              ]),
       ),
     );
   }
@@ -871,20 +953,6 @@ String _stickerResourceName({
     return fallbackName;
   }
   return 'Sticker';
-}
-
-class _PlanetTabData {
-  const _PlanetTabData({
-    required this.currentPlanet,
-    required this.planets,
-    required this.news,
-    required this.stickers,
-  });
-
-  final PlanetInfo? currentPlanet;
-  final List<PlanetInfo> planets;
-  final List<ServerNewsItem> news;
-  final List<Sticker> stickers;
 }
 
 class _SectionLabel extends StatelessWidget {

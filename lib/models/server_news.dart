@@ -16,15 +16,30 @@ class ServerNewsItem {
   final DateTime? updatedAt;
 
   factory ServerNewsItem.fromJson(Map<String, dynamic> json) {
+    return ServerNewsItem.fromMap(json);
+  }
+
+  factory ServerNewsItem.fromMap(Map<String, dynamic> map) {
     return ServerNewsItem(
-      id: json['id'] as String,
-      title: json['title'] as String? ?? '',
-      summary: (json['summary'] as String?)?.trim(),
-      markdownContent: json['markdown_content'] as String? ?? '',
+      id: map['id'] as String,
+      title: map['title'] as String? ?? '',
+      summary: (map['summary'] as String?)?.trim(),
+      markdownContent: map['markdown_content'] as String? ?? '',
       publishedAt:
-          DateTime.tryParse(json['published_at'] as String? ?? '') ??
+          DateTime.tryParse(map['published_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
+      updatedAt: DateTime.tryParse(map['updated_at'] as String? ?? ''),
     );
+  }
+
+  Map<String, Object?> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'summary': summary,
+      'markdown_content': markdownContent,
+      'published_at': publishedAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
   }
 }
