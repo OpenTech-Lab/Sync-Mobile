@@ -14,6 +14,7 @@ import '../../models/server_news.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
+import '../../state/user_profile_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/simple_markdown.dart';
 import '../../ui/components/atoms/app_toast.dart';
@@ -329,6 +330,8 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                                 onTap: () => Navigator.of(ctx).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => StickerGroupDetailPage(
+                                      serverUrl: widget.serverUrl,
+                                      accessToken: widget.accessToken,
                                       groupName: groupName,
                                       stickers: groupStickers,
                                     ),
@@ -604,10 +607,14 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
 class StickerGroupDetailPage extends ConsumerStatefulWidget {
   const StickerGroupDetailPage({
     super.key,
+    required this.serverUrl,
+    required this.accessToken,
     required this.groupName,
     required this.stickers,
   });
 
+  final String serverUrl;
+  final String accessToken;
   final String groupName;
   final List<Sticker> stickers;
 
@@ -619,6 +626,37 @@ class StickerGroupDetailPage extends ConsumerStatefulWidget {
 class _StickerGroupDetailPageState
     extends ConsumerState<StickerGroupDetailPage> {
   bool _isDownloading = false;
+  late Future<String?> _authorNameFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _authorNameFuture = _loadAuthorName();
+  }
+
+  Future<String?> _loadAuthorName() async {
+    final uploaderId = _tabStickerFor(widget.stickers).uploaderId?.trim();
+    if (uploaderId == null || uploaderId.isEmpty) {
+      return null;
+    }
+
+    try {
+      final profile = await ref
+          .read(remoteUserProfileServiceProvider)
+          .getUserProfile(
+            baseUrl: widget.serverUrl,
+            accessToken: widget.accessToken,
+            userId: uploaderId,
+          );
+      final username = profile.username.trim();
+      if (username.isEmpty) {
+        return null;
+      }
+      return username;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> _downloadGroup(List<Sticker> toDownload) async {
     if (_isDownloading || toDownload.isEmpty) return;
@@ -659,10 +697,7 @@ class _StickerGroupDetailPageState
         ref.watch(stickerControllerProvider).value ?? const <Sticker>[];
     final localIds = localStickers.map((s) => s.id).toSet();
 
-    final tabSticker = widget.stickers.firstWhere(
-      (s) => s.name == '__tab__',
-      orElse: () => widget.stickers.first,
-    );
+    final tabSticker = _tabStickerFor(widget.stickers);
     final contentStickers = widget.stickers
         .where((s) => s.name != '__tab__')
         .toList();
@@ -670,6 +705,10 @@ class _StickerGroupDetailPageState
         .where((s) => !localIds.contains(s.id))
         .toList();
     final allDownloaded = pending.isEmpty;
+    final resourceName = _stickerResourceName(
+      groupName: widget.groupName,
+      tabSticker: tabSticker,
+    );
 
     ImageProvider? tabImage;
     try {
@@ -702,14 +741,44 @@ class _StickerGroupDetailPageState
                 ),
               ),
             const SizedBox(height: 12),
-            Text(
-              widget.groupName,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: inkColor,
-              ),
+            FutureBuilder<String?>(
+              future: _authorNameFuture,
+              builder: (context, snapshot) {
+                final authorName = snapshot.data?.trim();
+                final headerLabel =
+                    (authorName != null && authorName.isNotEmpty)
+                    ? authorName
+                    : resourceName;
+                final showResourceTitle =
+                    headerLabel.isNotEmpty && headerLabel != resourceName;
+
+                return Column(
+                  children: [
+                    Text(
+                      headerLabel,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
+                        color: AppPalette.neutral500,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    if (showResourceTitle) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        resourceName,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: inkColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             OutlineActionButton(
@@ -776,6 +845,32 @@ class _StickerGroupDetailPageState
       ),
     );
   }
+}
+
+Sticker _tabStickerFor(List<Sticker> stickers) {
+  return stickers.firstWhere(
+    (s) => s.name == '__tab__',
+    orElse: () => stickers.first,
+  );
+}
+
+String _stickerResourceName({
+  required String groupName,
+  required Sticker tabSticker,
+}) {
+  final normalizedGroup = groupName.trim();
+  if (normalizedGroup.isNotEmpty) {
+    return normalizedGroup;
+  }
+  final fallbackGroup = tabSticker.groupName.trim();
+  if (fallbackGroup.isNotEmpty) {
+    return fallbackGroup;
+  }
+  final fallbackName = tabSticker.name.trim();
+  if (fallbackName.isNotEmpty && fallbackName != '__tab__') {
+    return fallbackName;
+  }
+  return 'Sticker';
 }
 
 class _PlanetTabData {

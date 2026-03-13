@@ -7,9 +7,11 @@ class Sticker {
     required this.contentBase64,
     required this.status,
     required this.createdAt,
+    this.uploaderId,
   });
 
   final String id;
+  final String? uploaderId;
   final String groupName;
   final String name;
   final String mimeType;
@@ -20,6 +22,7 @@ class Sticker {
   factory Sticker.fromDetailJson(Map<String, dynamic> json) {
     return Sticker(
       id: json['id'] as String,
+      uploaderId: (json['uploader_id'] as String?)?.trim(),
       groupName: (json['group_name'] as String?) ?? 'General',
       name: json['name'] as String,
       mimeType: json['mime_type'] as String,
@@ -32,6 +35,7 @@ class Sticker {
   factory Sticker.fromMap(Map<String, dynamic> map) {
     return Sticker(
       id: map['id'] as String,
+      uploaderId: (map['uploader_id'] as String?)?.trim(),
       groupName: (map['group_name'] as String?) ?? 'General',
       name: map['name'] as String,
       mimeType: map['mime_type'] as String,
@@ -44,6 +48,7 @@ class Sticker {
   Map<String, Object?> toMap() {
     return {
       'id': id,
+      'uploader_id': uploaderId,
       'group_name': groupName,
       'name': name,
       'mime_type': mimeType,
