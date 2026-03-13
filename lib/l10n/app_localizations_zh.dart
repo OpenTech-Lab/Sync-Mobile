@@ -119,10 +119,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resetPasswordTitle => 'Reset password';
 
   @override
-  String get resetPasswordSentHint => 'If that email is registered, a reset link was sent.';
+  String get resetPasswordSentHint =>
+      'If that email is registered, a reset link was sent.';
 
   @override
-  String get resetPasswordEnterEmailHint => 'Enter your email and we\'ll send a reset link.';
+  String get resetPasswordEnterEmailHint =>
+      'Enter your email and we\'ll send a reset link.';
 
   @override
   String get emailLabel => 'Email';
@@ -155,7 +157,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authQrTitle => 'Sign in with QR';
 
   @override
-  String get authQrHint => 'Open Sync on your phone and scan this code from My Profile.';
+  String get authQrHint =>
+      'Open Sync on your phone and scan this code from My Profile.';
 
   @override
   String get authQrWaitingForScan => 'waiting for phone approval…';
@@ -205,7 +208,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeConnectedPlanetsLoading => 'Loading connected planets…';
 
   @override
-  String get homeConnectedPlanetsLoadFailed => 'Failed to load connected planets';
+  String get homeConnectedPlanetsLoadFailed =>
+      'Failed to load connected planets';
 
   @override
   String homePlanetMembers(int count) {
@@ -225,7 +229,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planetLoadFailed => 'Failed to load planet data.';
 
   @override
-  String get planetNewsTitle => 'MY PLAENT';
+  String get planetNewsTitle => 'News';
 
   @override
   String get planetNewsEmpty => 'No server news yet';
@@ -276,7 +280,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTypingStyleMode => 'Typing style mode';
 
   @override
-  String get settingsTypingStyleModeHint => 'Show messages with a typing animation';
+  String get settingsTypingStyleModeHint =>
+      'Show messages with a typing animation';
 
   @override
   String get settingsTypingStyleSpeed => 'Typing speed';
@@ -323,10 +328,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDeleteAllPlanetData => 'Delete all data from this planet';
 
   @override
-  String get settingsDeleteAllPlanetDataMessage => 'This permanently deletes all local data (chats, friends, preferences) and any encrypted backup on the server. This cannot be undone.';
+  String get settingsDeleteAllPlanetDataMessage =>
+      'This permanently deletes all local data (chats, friends, preferences) and any encrypted backup on the server. This cannot be undone.';
 
   @override
-  String get settingsDeleteAllPlanetDataConfirm => 'D E L E T E   A L L   D A T A';
+  String get settingsDeleteAllPlanetDataConfirm =>
+      'D E L E T E   A L L   D A T A';
 
   @override
   String get settingsDeleteAllLocalChats => 'Delete all local chat data';
@@ -403,7 +410,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatAddFriendTitle => 'Paste a friend link or user ID';
 
   @override
-  String get chatAddFriendFormatHint => 'Supported format: https://server.tld/<user-id>';
+  String get chatAddFriendFormatHint =>
+      'Supported format: https://server.tld/<user-id>';
 
   @override
   String get chatAddFriendInputHint => 'friend link or user ID';
@@ -493,7 +501,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCreateRoomMembersLabel => 'Members';
 
   @override
-  String get chatCreateRoomNoFriends => 'Add friends first, or create a room and invite them later.';
+  String get chatCreateRoomNoFriends =>
+      'Add friends first, or create a room and invite them later.';
 
   @override
   String get chatCreateRoomAction => 'C R E A T E';
@@ -508,7 +517,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatDefaultRoom => 'Room';
 
   @override
-  String get chatScanFriendQrInstruction => 'point camera at a friend\'s qr code';
+  String get chatScanFriendQrInstruction =>
+      'point camera at a friend\'s qr code';
 
   @override
   String get chatTargetCancelFriend => 'cancel friend';
@@ -532,22 +542,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTargetAbout => 'ABOUT';
 
   @override
-  String get settingsMissingAccessTokenBackup => 'Missing access token for backup.';
+  String get settingsMissingAccessTokenBackup =>
+      'Missing access token for backup.';
 
   @override
-  String get settingsMissingAccessTokenRestore => 'Missing access token for restore.';
+  String get settingsMissingAccessTokenRestore =>
+      'Missing access token for restore.';
 
   @override
   String get settingsDeleteBackupTitle => 'Delete backup data';
 
   @override
-  String get settingsDeleteBackupMessage => 'This removes the encrypted backup file from this device.\nThis cannot be undone.';
+  String get settingsDeleteBackupMessage =>
+      'This removes the encrypted backup file from this device.\nThis cannot be undone.';
 
   @override
   String get settingsDeleteBackupConfirm => 'D E L E T E   B A C K U P';
 
   @override
-  String get settingsMissingAccessTokenBackupDelete => 'Missing access token for backup delete.';
+  String get settingsMissingAccessTokenBackupDelete =>
+      'Missing access token for backup delete.';
 
   @override
   String settingsAutoBackupSchedule(int threshold) {
@@ -570,22 +584,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDeleteLocalChatsTitle => 'Delete local chat data';
 
   @override
-  String get settingsDeleteLocalChatsMessage => 'This deletes all chat history stored on this device.\nServer-side data is not changed.';
+  String get settingsDeleteLocalChatsMessage =>
+      'This deletes all chat history stored on this device.\nServer-side data is not changed.';
 
   @override
-  String get settingsDeleteLocalChatsConfirm => 'D E L E T E   L O C A L   C H A T S';
+  String get settingsDeleteLocalChatsConfirm =>
+      'D E L E T E   L O C A L   C H A T S';
 
   @override
   String get settingsDeleteAllAppDataTitle => 'Delete all app data';
 
   @override
-  String get settingsDeleteAllAppDataMessage => 'This permanently deletes all local data including chat history, preferences, and cached data.\nServer-side data is not changed.';
+  String get settingsDeleteAllAppDataMessage =>
+      'This permanently deletes all local data including chat history, preferences, and cached data.\nServer-side data is not changed.';
 
   @override
   String get settingsDeleteAllAppDataConfirm => 'D E L E T E   A L L   D A T A';
 
   @override
-  String get settingsSignOutMessage => 'You will be signed out of this account.\nLocal messages remain on device.';
+  String get settingsSignOutMessage =>
+      'You will be signed out of this account.\nLocal messages remain on device.';
 
   @override
   String get settingsSignOutConfirm => 'S I G N   O U T';
@@ -594,7 +612,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDeleteAccount => 'Delete this account from this planet';
 
   @override
-  String get settingsDeleteAccountMessage => 'Your account will be permanently deleted from this planet. All local data and any server backup will be removed. This cannot be undone.';
+  String get settingsDeleteAccountMessage =>
+      'Your account will be permanently deleted from this planet. All local data and any server backup will be removed. This cannot be undone.';
 
   @override
   String get settingsDeleteAccountConfirm => 'D E L E T E   A C C O U N T';
@@ -603,7 +622,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDangerousActions => 'Dangerous actions';
 
   @override
-  String get settingsDangerousActionsHint => 'delete local chats, clear app data, or sign out';
+  String get settingsDangerousActionsHint =>
+      'delete local chats, clear app data, or sign out';
 
   @override
   String settingsDeletionCountdown(String countdown) {
@@ -617,7 +637,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPlanetUnknownName => 'Unknown planet';
 
   @override
-  String get settingsPlanetNoDescription => 'No planet description available yet.';
+  String get settingsPlanetNoDescription =>
+      'No planet description available yet.';
 
   @override
   String get settingsOnline => 'online';
@@ -717,10 +738,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileDeviceLoginAction => 'Approve Login on Another Device';
 
   @override
-  String get profileDeviceLoginHint => 'use your phone to approve a desktop or browser login';
+  String get profileDeviceLoginHint =>
+      'use your phone to approve a desktop or browser login';
 
   @override
-  String get profileDeviceLoginScanHint => 'Point camera at the QR code shown on your desktop or browser';
+  String get profileDeviceLoginScanHint =>
+      'Point camera at the QR code shown on your desktop or browser';
 
   @override
   String get profileDeviceLoginApproved => 'Login approved';
@@ -746,7 +769,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileUsernameValidationError => 'Username must be 2–32 characters and may use any language, symbols, and spaces';
+  String get profileUsernameValidationError =>
+      'Username must be 2–32 characters and may use any language, symbols, and spaces';
 
   @override
   String get profileUsernameUpdated => 'Username updated';
@@ -755,7 +779,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUsernameUpdateFailed => 'Failed to update username';
 
   @override
-  String get profileDescriptionWordLimitError => 'Description must be 100 words or less';
+  String get profileDescriptionWordLimitError =>
+      'Description must be 100 words or less';
 
   @override
   String get profileDescriptionUpdated => 'Description updated';
@@ -764,7 +789,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileDescriptionUpdateFailed => 'Failed to update description';
 
   @override
-  String get profileAvatarTooLarge => 'Avatar too large (max 256KB). Choose a smaller image.';
+  String get profileAvatarTooLarge =>
+      'Avatar too large (max 256KB). Choose a smaller image.';
 
   @override
   String get profileAvatarUploadFailed => 'Failed to upload avatar';
@@ -776,7 +802,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUsernameDialogTitle => 'USERNAME';
 
   @override
-  String get profileUsernameHint => '2–32 chars, supports any language, symbols, and spaces';
+  String get profileUsernameHint =>
+      '2–32 chars, supports any language, symbols, and spaces';
 
   @override
   String homeUnreadSummary(int count) {
@@ -835,7 +862,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatHomeEnterPartnerPrompt => 'Enter a partner UUID to load conversation.';
+  String get chatHomeEnterPartnerPrompt =>
+      'Enter a partner UUID to load conversation.';
 
   @override
   String chatHomeFailedToLoadMessages(String error) {
@@ -882,16 +910,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileTrustFriendAddsLabel => 'friend adds today';
 
   @override
-  String get profileTrustChallengeStateFrozen => 'Your account is frozen. Contact support to restore access.';
+  String get profileTrustChallengeStateFrozen =>
+      'Your account is frozen. Contact support to restore access.';
 
   @override
-  String get profileTrustChallengeStateChallenged => 'Your account is under review. Some actions may be limited.';
+  String get profileTrustChallengeStateChallenged =>
+      'Your account is under review. Some actions may be limited.';
 
   @override
   String get profileTrustMilestoneRankUp => 'Rank up!';
 
   @override
-  String get profileTrustMilestoneUnlockAttachmentType => 'New attachment type unlocked!';
+  String get profileTrustMilestoneUnlockAttachmentType =>
+      'New attachment type unlocked!';
 
   @override
   String get profileTrustMilestoneLevelUp => 'Level up!';
@@ -914,7 +945,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
 class AppLocalizationsZhTw extends AppLocalizationsZh {
-  AppLocalizationsZhTw(): super('zh_TW');
+  AppLocalizationsZhTw() : super('zh_TW');
 
   @override
   String get appTitle => 'Sync';
@@ -1231,7 +1262,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteAllPlanetData => '刪除此星球的所有資料';
 
   @override
-  String get settingsDeleteAllPlanetDataMessage => '這將永久刪除所有本機資料（聊天、好友、偏好設定）以及伺服器上的加密備份。此操作無法復原。';
+  String get settingsDeleteAllPlanetDataMessage =>
+      '這將永久刪除所有本機資料（聊天、好友、偏好設定）以及伺服器上的加密備份。此操作無法復原。';
 
   @override
   String get settingsDeleteAllPlanetDataConfirm => '刪 除 所 有 資 料';
@@ -1478,7 +1510,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteLocalChatsTitle => '刪除本機聊天資料';
 
   @override
-  String get settingsDeleteLocalChatsMessage => '這會刪除此裝置上儲存的所有聊天紀錄。\n不會影響伺服器端資料。';
+  String get settingsDeleteLocalChatsMessage =>
+      '這會刪除此裝置上儲存的所有聊天紀錄。\n不會影響伺服器端資料。';
 
   @override
   String get settingsDeleteLocalChatsConfirm => '刪 除 本 機 聊 天';
@@ -1487,7 +1520,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteAllAppDataTitle => '刪除所有應用程式資料';
 
   @override
-  String get settingsDeleteAllAppDataMessage => '這將永久刪除包括聊天紀錄、偏好設定及快取資料在內的所有本機資料。\n不會影響伺服器端資料。';
+  String get settingsDeleteAllAppDataMessage =>
+      '這將永久刪除包括聊天紀錄、偏好設定及快取資料在內的所有本機資料。\n不會影響伺服器端資料。';
 
   @override
   String get settingsDeleteAllAppDataConfirm => '刪 除 所 有 資 料';
@@ -1502,7 +1536,8 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsDeleteAccount => '從此星球刪除此帳號';
 
   @override
-  String get settingsDeleteAccountMessage => '你的帳號將從此星球永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
+  String get settingsDeleteAccountMessage =>
+      '你的帳號將從此星球永久刪除。本機所有資料及伺服器備份都將一併移除，此操作無法復原。';
 
   @override
   String get settingsDeleteAccountConfirm => '刪 除 帳 號';
