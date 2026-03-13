@@ -185,4 +185,32 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'description is shown under username and about section is removed',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ChatTargetProfileScreen(
+            serverUrl: 'https://example.com',
+            userId: 'friend-a',
+            displayName: 'Friend A',
+            displayHandle: 'friend-a',
+            avatarBase64: null,
+            description: 'Quiet observer from another planet.',
+            isFriend: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Friend A'), findsOneWidget);
+      expect(find.text('Quiet observer from another planet.'), findsOneWidget);
+      expect(find.text('ABOUT'), findsNothing);
+    },
+  );
 }

@@ -562,6 +562,19 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
             ),
             textAlign: TextAlign.center,
           ),
+          if ((widget.description ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              widget.description!.trim(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w300,
+                color: inkColor,
+                height: 1.7,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
           if (widget.level != null ||
               (widget.rank != null && widget.rank!.isNotEmpty)) ...[
             const SizedBox(height: 6),
@@ -732,32 +745,6 @@ class _ChatTargetProfileScreenState extends State<ChatTargetProfileScreen> {
                 fontSize: 13,
                 fontWeight: FontWeight.w300,
                 color: inkColor,
-              ),
-            ),
-          ],
-
-          // ── description ──
-          if ((widget.description ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Divider(height: 1, color: ruleColor),
-            const SizedBox(height: 16),
-            Text(
-              l10n.chatTargetAbout,
-              style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 2.4,
-                color: AppPalette.neutral500,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.description!.trim(),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-                color: inkColor,
-                height: 1.7,
               ),
             ),
           ],
