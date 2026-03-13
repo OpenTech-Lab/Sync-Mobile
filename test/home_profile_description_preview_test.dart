@@ -305,8 +305,104 @@ void main() {
         find.byKey(const ValueKey('home_friend_row_friend-user-id')),
       );
 
-      expect(roomRowRect.top - roomsDividerRect.bottom, closeTo(10, 0.1));
-      expect(friendRowRect.top - friendsDividerRect.bottom, closeTo(10, 0.1));
+      expect(roomRowRect.top - roomsDividerRect.bottom, closeTo(5, 0.1));
+      expect(friendRowRect.top - friendsDividerRect.bottom, closeTo(5, 0.1));
+    },
+  );
+
+  testWidgets(
+    'home room and friend rows keep avatar and text aligned in compact layout',
+    (tester) async {
+      const serverUrl = 'https://example.com';
+      const currentUserId = 'current-user-id';
+      const friendId = 'friend-user-id';
+      final scope = serverDomainKeyFromUrl(serverUrl);
+      final repo = InMemoryChatRepository();
+      await repo.replaceRooms([
+        ChatRoom(
+          id: 'room-1',
+          name: 'Focus Room',
+          memberCount: 3,
+          unreadCount: 0,
+          createdAt: DateTime.utc(2026, 3, 12, 10, 0),
+          updatedAt: DateTime.utc(2026, 3, 12, 10, 0),
+        ),
+      ]);
+
+      SharedPreferences.setMockInitialValues({
+        'friend_ids::$scope': [friendId],
+        'profile_display_name::$scope::$currentUserId': 'Current User',
+        'profile_description::$scope::$currentUserId': 'About me',
+        'profile_display_name::$scope::$friendId': 'Friend User',
+        'profile_description::$scope::$friendId': 'Friend description',
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeServerUrlProvider.overrideWithValue(serverUrl),
+            appControllerProvider.overrideWith(_FakeAppController.new),
+            chatRepositoryProvider.overrideWithValue(repo),
+            myGuildSnapshotProvider.overrideWith((ref) async => null),
+            remoteChatServiceProvider.overrideWithValue(
+              _FakeHomeRemoteChatService(),
+            ),
+            remoteUserProfileServiceProvider.overrideWithValue(
+              _FakeRemoteUserProfileService(),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: HomeTab(
+              serverUrl: serverUrl,
+              accessToken: 'token',
+              currentUserId: currentUserId,
+              currentUsername: 'Current User',
+              planetInfo: null,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final roomRowRect = tester.getRect(
+        find.byKey(const ValueKey('home_room_row_room-1')),
+      );
+      final roomAvatarRect = tester.getRect(
+        find.byKey(const ValueKey('home_room_avatar_room-1')),
+      );
+      final roomTextRect = tester.getRect(
+        find.byKey(const ValueKey('home_room_text_room-1')),
+      );
+      final friendRowRect = tester.getRect(
+        find.byKey(const ValueKey('home_friend_row_friend-user-id')),
+      );
+      final friendAvatarRect = tester.getRect(
+        find.byKey(const ValueKey('home_friend_avatar_friend-user-id')),
+      );
+      final friendTextRect = tester.getRect(
+        find.byKey(const ValueKey('home_friend_text_friend-user-id')),
+      );
+
+      expect(roomRowRect.height, lessThan(56));
+      expect(friendRowRect.height, lessThan(56));
+      expect(
+        (roomAvatarRect.center.dy - roomRowRect.center.dy).abs(),
+        lessThan(1),
+      );
+      expect(
+        (roomTextRect.center.dy - roomRowRect.center.dy).abs(),
+        lessThan(1),
+      );
+      expect(
+        (friendAvatarRect.center.dy - friendRowRect.center.dy).abs(),
+        lessThan(1),
+      );
+      expect(
+        (friendTextRect.center.dy - friendRowRect.center.dy).abs(),
+        lessThan(1),
+      );
     },
   );
 }

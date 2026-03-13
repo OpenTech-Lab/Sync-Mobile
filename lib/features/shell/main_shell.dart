@@ -18,6 +18,9 @@ import '../planet/planet_page.dart';
 import '../chats/chats_page.dart';
 import '../settings/settings_page.dart';
 
+const _shellTabTransitionDuration = Duration(milliseconds: 260);
+const _shellTabHiddenOffset = 0.035;
+
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({
     super.key,
@@ -223,7 +226,49 @@ class _MainShellState extends ConsumerState<MainShell>
             : Brightness.dark,
       ),
       child: Scaffold(
-        body: IndexedStack(index: _selectedIndex, children: tabs),
+        body: Stack(
+          children: [
+            for (final index in [
+              ...List<int>.generate(
+                tabs.length,
+                (i) => i,
+              ).where((i) => i != _selectedIndex),
+              _selectedIndex,
+            ])
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: index != _selectedIndex,
+                  child: ExcludeSemantics(
+                    excluding: index != _selectedIndex,
+                    child: TickerMode(
+                      enabled: index == _selectedIndex,
+                      child: AnimatedSlide(
+                        duration: _shellTabTransitionDuration,
+                        curve: Curves.easeOutCubic,
+                        offset: index == _selectedIndex
+                            ? Offset.zero
+                            : Offset(
+                                index < _selectedIndex
+                                    ? -_shellTabHiddenOffset
+                                    : _shellTabHiddenOffset,
+                                0,
+                              ),
+                        child: AnimatedOpacity(
+                          duration: _shellTabTransitionDuration,
+                          curve: Curves.easeOutCubic,
+                          opacity: index == _selectedIndex ? 1 : 0,
+                          child: KeyedSubtree(
+                            key: ValueKey('main_shell_tab_$index'),
+                            child: tabs[index],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
         bottomNavigationBar: hideTabs
             ? null
             : AppBottomNav(

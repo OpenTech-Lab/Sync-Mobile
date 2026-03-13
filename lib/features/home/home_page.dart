@@ -18,7 +18,11 @@ import '../profile/my_profile_page.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 
-const _compactHomeSectionSpacing = 10.0;
+const _compactHomeSectionSpacing = 5.0;
+const _compactHomeRowVerticalPadding = 6.0;
+const _compactHomeRowHorizontalGap = 12.0;
+const _compactHomeRowTextGap = 2.0;
+const _compactHomeRowAvatarSize = 36.0;
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({
@@ -254,6 +258,70 @@ Color _avatarToneColor(String id) {
   return palette[hash.abs() % palette.length];
 }
 
+class _CompactHomeRow extends StatelessWidget {
+  const _CompactHomeRow({
+    required this.rowKey,
+    required this.leading,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.trailing,
+    this.contentKey,
+  });
+
+  final Key rowKey;
+  final Widget leading;
+  final Widget title;
+  final Widget? subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+  final Key? contentKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          key: rowKey,
+          padding: const EdgeInsets.symmetric(
+            vertical: _compactHomeRowVerticalPadding,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              leading,
+              const SizedBox(width: _compactHomeRowHorizontalGap),
+              Expanded(
+                child: Container(
+                  key: contentKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      title,
+                      if (subtitle != null) ...[
+                        const SizedBox(height: _compactHomeRowTextGap),
+                        subtitle!,
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: _compactHomeRowHorizontalGap),
+                trailing!,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeFriendRow extends ConsumerStatefulWidget {
   const _HomeFriendRow({
     super.key,
@@ -374,36 +442,41 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
         .watch(userAvatarBase64Provider(widget.friendId))
         .value;
 
-    return ListTile(
-      key: ValueKey('home_friend_row_${widget.friendId}'),
-      contentPadding: const EdgeInsets.symmetric(vertical: 2),
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: avatarBase64 != null
-            ? Colors.transparent
-            : _avatarToneColor(widget.friendId),
-        child: avatarBase64 == null
-            ? Text(
-                widget.friendId.isEmpty
-                    ? '?'
-                    : (widget.friendId.length >= 2
-                              ? widget.friendId.substring(0, 2)
-                              : widget.friendId)
-                          .toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: AppPalette.white,
-                ),
-              )
-            : ClipOval(
-                child: SizedBox.expand(
-                  child: Image.memory(
-                    base64Decode(avatarBase64),
-                    fit: BoxFit.cover,
+    return _CompactHomeRow(
+      rowKey: ValueKey('home_friend_row_${widget.friendId}'),
+      contentKey: ValueKey('home_friend_text_${widget.friendId}'),
+      leading: SizedBox(
+        key: ValueKey('home_friend_avatar_${widget.friendId}'),
+        width: _compactHomeRowAvatarSize,
+        height: _compactHomeRowAvatarSize,
+        child: CircleAvatar(
+          radius: 18,
+          backgroundColor: avatarBase64 != null
+              ? Colors.transparent
+              : _avatarToneColor(widget.friendId),
+          child: avatarBase64 == null
+              ? Text(
+                  widget.friendId.isEmpty
+                      ? '?'
+                      : (widget.friendId.length >= 2
+                                ? widget.friendId.substring(0, 2)
+                                : widget.friendId)
+                            .toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: AppPalette.white,
+                  ),
+                )
+              : ClipOval(
+                  child: SizedBox.expand(
+                    child: Image.memory(
+                      base64Decode(avatarBase64),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
       title: Row(
         children: [
@@ -420,15 +493,18 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            widget.planetLabel,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppPalette.neutral500,
-              letterSpacing: 0.3,
+          Flexible(
+            child: Text(
+              widget.planetLabel,
+              style: TextStyle(
+                fontSize: 10,
+                color: AppPalette.neutral500,
+                letterSpacing: 0.3,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -624,18 +700,23 @@ class _RoomRow extends ConsumerWidget {
     final memberNames =
         ref.watch(roomMemberNamesPreviewProvider(room.id)).valueOrNull ?? '';
 
-    return ListTile(
-      key: ValueKey('home_room_row_${room.id}'),
-      contentPadding: const EdgeInsets.symmetric(vertical: 2),
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: avatarBg,
-        child: Text(
-          initials,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w400,
-            color: AppPalette.white,
+    return _CompactHomeRow(
+      rowKey: ValueKey('home_room_row_${room.id}'),
+      contentKey: ValueKey('home_room_text_${room.id}'),
+      leading: SizedBox(
+        key: ValueKey('home_room_avatar_${room.id}'),
+        width: _compactHomeRowAvatarSize,
+        height: _compactHomeRowAvatarSize,
+        child: CircleAvatar(
+          radius: 18,
+          backgroundColor: avatarBg,
+          child: Text(
+            initials,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: AppPalette.white,
+            ),
           ),
         ),
       ),
@@ -657,7 +738,7 @@ class _RoomRow extends ConsumerWidget {
           fontSize: 11,
           fontWeight: FontWeight.w300,
           color: AppPalette.neutral500,
-          height: 1.45,
+          height: 1.2,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
