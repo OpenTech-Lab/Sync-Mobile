@@ -6,25 +6,31 @@ import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/sticker.dart';
+import '../../models/realtime_event.dart';
 import '../../services/server_health_service.dart';
 import '../../services/server_news_service.dart';
 import '../../services/sticker_service.dart';
 import '../../models/server_news.dart';
+import '../../state/notification_controller.dart';
+import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/atoms/simple_markdown.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import 'widgets/planet_overview_section.dart';
 
 class PlanetTab extends ConsumerStatefulWidget {
   const PlanetTab({
     super.key,
     required this.serverUrl,
     required this.accessToken,
+    this.planetInfo,
   });
 
   final String serverUrl;
   final String accessToken;
+  final PlanetInfo? planetInfo;
 
   @override
   ConsumerState<PlanetTab> createState() => _PlanetTabState();
@@ -69,7 +75,12 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
       stickers = const <Sticker>[];
     }
 
-    return _PlanetTabData(planets: planets, news: news, stickers: stickers);
+    return _PlanetTabData(
+      currentPlanet: current,
+      planets: planets,
+      news: news,
+      stickers: stickers,
+    );
   }
 
   Future<void> _refresh() async {
@@ -85,6 +96,12 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
+    final notifState = ref.watch(notificationControllerProvider).value;
+    final stickerCache = ref.watch(stickerControllerProvider).value ?? const [];
+    final isConnected =
+        realtimeState?.status == RealtimeConnectionStatus.connected;
+    final notifActive = notifState?.initialized == true;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -95,12 +112,34 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
             final isLoading =
                 snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData;
+            final currentPlanet =
+                snapshot.data?.currentPlanet ?? widget.planetInfo;
+            final stickerCount =
+                snapshot.data?.stickers.length ?? stickerCache.length;
+
+            List<Widget> buildTopSections() {
+              return [
+                PlanetOverviewSection(
+                  planetInfo: currentPlanet,
+                  stickerCount: stickerCount,
+                  isConnected: isConnected,
+                  notificationsActive: notifActive,
+                  inkColor: inkColor,
+                  ruleColor: ruleColor,
+                ),
+                const SizedBox(height: 32),
+              ];
+            }
 
             if (snapshot.hasError && !snapshot.hasData) {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                 children: [
-                  _SectionLabel(text: l10n.tabPlanet, ruleColor: ruleColor),
+                  ...buildTopSections(),
+                  _SectionLabel(
+                    text: l10n.planetNewsTitle,
+                    ruleColor: ruleColor,
+                  ),
                   const SizedBox(height: 18),
                   Text(
                     l10n.planetLoadFailed,
@@ -118,7 +157,11 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                 children: [
-                  _SectionLabel(text: l10n.tabPlanet, ruleColor: ruleColor),
+                  ...buildTopSections(),
+                  _SectionLabel(
+                    text: l10n.planetNewsTitle,
+                    ruleColor: ruleColor,
+                  ),
                   const SizedBox(height: 18),
                   Text(
                     l10n.planetLoading,
@@ -135,6 +178,7 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
             final data =
                 snapshot.data ??
                 const _PlanetTabData(
+                  currentPlanet: null,
                   planets: <PlanetInfo>[],
                   news: <ServerNewsItem>[],
                   stickers: <Sticker>[],
@@ -145,6 +189,7 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                 children: [
+                  ...buildTopSections(),
                   _SectionLabel(
                     text: l10n.planetNewsTitle,
                     ruleColor: ruleColor,
@@ -253,12 +298,9 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                       builder: (ctx) {
                         final grouped = <String, List<Sticker>>{};
                         for (final s in data.stickers) {
-                          grouped
-                              .putIfAbsent(s.groupName, () => [])
-                              .add(s);
+                          grouped.putIfAbsent(s.groupName, () => []).add(s);
                         }
-                        final groups =
-                            grouped.keys.toList(growable: false);
+                        final groups = grouped.keys.toList(growable: false);
                         return SizedBox(
                           height: 118,
                           child: ListView.separated(
@@ -302,16 +344,18 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                                         width: 90,
                                         height: 90,
                                         decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                           border: Border.all(
                                             color: ruleColor,
                                             width: 0.8,
                                           ),
                                         ),
                                         child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(15.2),
+                                          borderRadius: BorderRadius.circular(
+                                            15.2,
+                                          ),
                                           child: tabImage == null
                                               ? Center(
                                                   child: Icon(
@@ -576,9 +620,7 @@ class _StickerGroupDetailPageState
     extends ConsumerState<StickerGroupDetailPage> {
   bool _isDownloading = false;
 
-  Future<void> _downloadGroup(
-    List<Sticker> toDownload,
-  ) async {
+  Future<void> _downloadGroup(List<Sticker> toDownload) async {
     if (_isDownloading || toDownload.isEmpty) return;
     setState(() => _isDownloading = true);
     try {
@@ -589,11 +631,18 @@ class _StickerGroupDetailPageState
       }
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      showAppToast(context, l10n.planetStickerGroupDownloadedToast(widget.groupName));
+      showAppToast(
+        context,
+        l10n.planetStickerGroupDownloadedToast(widget.groupName),
+      );
     } catch (_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      showAppToast(context, l10n.planetStickerDownloadFailed, variant: AppToastVariant.error);
+      showAppToast(
+        context,
+        l10n.planetStickerDownloadFailed,
+        variant: AppToastVariant.error,
+      );
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }
@@ -614,10 +663,12 @@ class _StickerGroupDetailPageState
       (s) => s.name == '__tab__',
       orElse: () => widget.stickers.first,
     );
-    final contentStickers =
-        widget.stickers.where((s) => s.name != '__tab__').toList();
-    final pending =
-        contentStickers.where((s) => !localIds.contains(s.id)).toList();
+    final contentStickers = widget.stickers
+        .where((s) => s.name != '__tab__')
+        .toList();
+    final pending = contentStickers
+        .where((s) => !localIds.contains(s.id))
+        .toList();
     final allDownloaded = pending.isEmpty;
 
     ImageProvider? tabImage;
@@ -665,8 +716,8 @@ class _StickerGroupDetailPageState
               label: _isDownloading
                   ? l10n.planetStickerDownloading
                   : allDownloaded
-                      ? l10n.planetStickerDownloaded
-                      : l10n.planetStickerDownload,
+                  ? l10n.planetStickerDownloaded
+                  : l10n.planetStickerDownload,
               borderColor: inkColor,
               textColor: inkColor,
               disabled: allDownloaded || _isDownloading,
@@ -678,8 +729,7 @@ class _StickerGroupDetailPageState
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 4,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
@@ -690,9 +740,7 @@ class _StickerGroupDetailPageState
                   final sticker = contentStickers[i];
                   ImageProvider? img;
                   try {
-                    img = MemoryImage(
-                      base64Decode(sticker.contentBase64),
-                    );
+                    img = MemoryImage(base64Decode(sticker.contentBase64));
                   } catch (_) {}
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -706,10 +754,7 @@ class _StickerGroupDetailPageState
                                   color: AppPalette.neutral500,
                                 ),
                               )
-                            : Image(
-                                image: img,
-                                fit: BoxFit.contain,
-                              ),
+                            : Image(image: img, fit: BoxFit.contain),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -735,11 +780,13 @@ class _StickerGroupDetailPageState
 
 class _PlanetTabData {
   const _PlanetTabData({
+    required this.currentPlanet,
     required this.planets,
     required this.news,
     required this.stickers,
   });
 
+  final PlanetInfo? currentPlanet;
   final List<PlanetInfo> planets;
   final List<ServerNewsItem> news;
   final List<Sticker> stickers;

@@ -184,6 +184,18 @@ class _MainShellState extends ConsumerState<MainShell>
           });
           _syncChatVisibility();
         },
+        onOpenSettings: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => SettingsTab(
+                serverUrl: widget.serverUrl,
+                activePartnerId: _activePartnerId,
+                onSignOut: widget.onSignOut,
+                onDeleteAccount: widget.onDeleteAccount,
+              ),
+            ),
+          );
+        },
       ),
       ChatsTab(
         serverUrl: widget.serverUrl,
@@ -195,14 +207,10 @@ class _MainShellState extends ConsumerState<MainShell>
           _syncChatVisibility();
         },
       ),
-      PlanetTab(serverUrl: widget.serverUrl, accessToken: widget.accessToken),
-      SettingsTab(
+      PlanetTab(
         serverUrl: widget.serverUrl,
+        accessToken: widget.accessToken,
         planetInfo: widget.planetInfo,
-        currentUserId: widget.currentUserId,
-        activePartnerId: _activePartnerId,
-        onSignOut: widget.onSignOut,
-        onDeleteAccount: widget.onDeleteAccount,
       ),
     ];
 

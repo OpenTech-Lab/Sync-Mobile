@@ -1,42 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../ui/tokens/colors/app_palette.dart';
-import '../../ui/components/atoms/outline_action_button.dart';
-import '../../ui/components/atoms/app_toast.dart';
-import '../../ui/components/molecules/app_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
-import '../../models/realtime_event.dart';
-import '../../services/server_health_service.dart';
 import '../../services/chat_ui_preferences.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/deferred_deletion_controller.dart';
-import '../../state/notification_controller.dart';
-import '../../state/realtime_sync_controller.dart';
-import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
-import '../../state/unread_counts_controller.dart';
+import '../../ui/components/atoms/app_toast.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
+import '../../ui/components/molecules/app_dialog.dart';
 import '../../ui/components/molecules/language_picker.dart';
+import '../../ui/tokens/colors/app_palette.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({
     super.key,
     required this.serverUrl,
-    required this.planetInfo,
-    required this.currentUserId,
     required this.activePartnerId,
     required this.onSignOut,
     required this.onDeleteAccount,
   });
 
   final String serverUrl;
-  final PlanetInfo? planetInfo;
-  final String currentUserId;
   final String? activePartnerId;
   final Future<void> Function() onSignOut;
   final Future<void> Function() onDeleteAccount;
@@ -48,27 +37,11 @@ class SettingsTab extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final backupAsync = ref.watch(backupControllerProvider);
     final backupState = backupAsync.value;
-    final stickers = ref.watch(stickerControllerProvider).value ?? const [];
-    final unreadCounts =
-        ref.watch(unreadCountsProvider).value ?? const <String, int>{};
-    final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
-    final notifState = ref.watch(notificationControllerProvider).value;
     final typingStyleModeEnabled =
         ref.watch(typingStyleModeControllerProvider).value ?? false;
     final typingStyleSpeedMs =
         ref.watch(typingStyleSpeedControllerProvider).value ??
         ChatUiPreferences.defaultTypingStyleSpeedMs;
-    final isConnected =
-        realtimeState?.status == RealtimeConnectionStatus.connected;
-    final notifActive = notifState?.initialized == true;
-    final planetName = _planetNameFromData(planetInfo: planetInfo, l10n: l10n);
-    final planetDescription = _planetDescriptionFromData(
-      planetInfo: planetInfo,
-      l10n: l10n,
-    );
-    final serverCreatedDate = _serverCreatedDateFromData(
-      planetInfo: planetInfo,
-    );
 
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -96,26 +69,24 @@ class SettingsTab extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: bgColor,
+      appBar: AppBar(
+        title: Text(
+          l10n.tabSettings,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            color: inkColor,
+          ),
+        ),
+        backgroundColor: bgColor,
+        surfaceTintColor: AppPalette.transparent,
+        iconTheme: IconThemeData(color: inkColor),
+      ),
       body: SafeArea(
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 28),
           children: [
-            // ── My Planet ────────────────────────────────────────────────
-            _SectionHeader(label: l10n.settingsMyPlanet, ruleColor: ruleColor),
-            _PlanetCard(
-              planetName: planetName,
-              planetDescription: planetDescription,
-              stickerCount: stickers.length,
-              memberCount: unreadCounts.keys.length,
-              isConnected: isConnected,
-              notifActive: notifActive,
-              serverCreatedDate: serverCreatedDate,
-              inkColor: inkColor,
-              mutedColor: AppPalette.neutral500,
-            ),
-
-            const SizedBox(height: 32),
-
             // ── Appearance ───────────────────────────────────────────────
             _SectionHeader(
               label: l10n.settingsAppearance,
@@ -916,36 +887,6 @@ class _DangerNavRow extends StatelessWidget {
   }
 }
 
-String _planetNameFromData({
-  required PlanetInfo? planetInfo,
-  required AppLocalizations l10n,
-}) {
-  final remoteName = planetInfo?.instanceName?.trim();
-  if (remoteName != null && remoteName.isNotEmpty) {
-    return remoteName;
-  }
-  return l10n.settingsPlanetUnknownName;
-}
-
-String _planetDescriptionFromData({
-  required PlanetInfo? planetInfo,
-  required AppLocalizations l10n,
-}) {
-  final remoteDescription = planetInfo?.instanceDescription?.trim();
-  if (remoteDescription != null && remoteDescription.isNotEmpty) {
-    return remoteDescription;
-  }
-  return l10n.settingsPlanetNoDescription;
-}
-
-String _serverCreatedDateFromData({required PlanetInfo? planetInfo}) {
-  final value = planetInfo?.serverCreatedAt;
-  if (value == null) {
-    return '--';
-  }
-  return DateFormat('yyyy-MM-dd').format(value.toLocal());
-}
-
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.label, required this.ruleColor});
   final String label;
@@ -1154,189 +1095,6 @@ class _SettingsToggle extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PlanetCard extends StatelessWidget {
-  const _PlanetCard({
-    required this.planetName,
-    required this.planetDescription,
-    required this.stickerCount,
-    required this.memberCount,
-    required this.isConnected,
-    required this.notifActive,
-    required this.serverCreatedDate,
-    required this.inkColor,
-    required this.mutedColor,
-  });
-
-  final String planetName;
-  final String planetDescription;
-  final int stickerCount;
-  final int memberCount;
-  final bool isConnected;
-  final bool notifActive;
-  final String serverCreatedDate;
-  final Color inkColor;
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                planetName,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w300,
-                  color: inkColor,
-                  letterSpacing: -0.3,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 16),
-            _InlineStatus(
-              active: isConnected,
-              label: isConnected ? l10n.settingsOnline : l10n.settingsOffline,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 12),
-            _InlineStatus(
-              active: notifActive,
-              label: notifActive
-                  ? l10n.settingsNotificationsOn
-                  : l10n.settingsNotificationsOff,
-              mutedColor: mutedColor,
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          planetDescription,
-          style: TextStyle(
-            fontSize: 12,
-            color: mutedColor,
-            letterSpacing: 0.2,
-            height: 1.4,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            _TextStat(
-              value: '$memberCount',
-              label: l10n.settingsResidents,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 28),
-            _TextStat(
-              value: '$stickerCount',
-              label: l10n.settingsStickers,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 28),
-            _TextStat(
-              value: 'E2EE',
-              label: l10n.settingsEncrypted,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 28),
-            _TextStat(
-              value: serverCreatedDate,
-              label: l10n.settingsCreated,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _InlineStatus extends StatelessWidget {
-  const _InlineStatus({
-    required this.active,
-    required this.label,
-    required this.mutedColor,
-  });
-  final bool active;
-  final String label;
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final dotColor = active
-        ? AppPalette.success700
-        : mutedColor.withValues(alpha: 0.5);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: active ? AppPalette.success700 : mutedColor,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TextStat extends StatelessWidget {
-  const _TextStat({
-    required this.value,
-    required this.label,
-    required this.inkColor,
-    required this.mutedColor,
-  });
-
-  final String value;
-  final String label;
-  final Color inkColor;
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w200,
-            color: inkColor,
-            letterSpacing: -0.5,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, color: mutedColor, letterSpacing: 0.3),
-        ),
-      ],
     );
   }
 }

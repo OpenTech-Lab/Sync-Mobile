@@ -29,6 +29,7 @@ class HomeTab extends ConsumerWidget {
     required this.currentUsername,
     required this.planetInfo,
     this.onOpenChat,
+    this.onOpenSettings,
   });
 
   final String serverUrl;
@@ -37,6 +38,7 @@ class HomeTab extends ConsumerWidget {
   final String? currentUsername;
   final PlanetInfo? planetInfo;
   final ValueChanged<String>? onOpenChat;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,6 +68,26 @@ class HomeTab extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           children: [
+            if (onOpenSettings != null) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  key: const ValueKey('home_settings_button'),
+                  onPressed: onOpenSettings,
+                  tooltip: l10n.tabSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                  iconSize: 20,
+                  color: AppPalette.neutral500,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 32,
+                    height: 32,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             _SectionLabel(text: l10n.myProfileTitle, ruleColor: ruleColor),
             _ProfileCard(
               serverUrl: serverUrl,
