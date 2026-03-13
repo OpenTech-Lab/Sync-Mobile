@@ -65,7 +65,7 @@ void main() {
   );
 
   testWidgets(
-    'failed outgoing message keeps retry control outside bubble and tappable',
+    'failed outgoing message keeps retry control outside bubble on the left and tappable',
     (tester) async {
       var retryTapped = false;
       final message = LocalChatMessage(
@@ -108,7 +108,7 @@ void main() {
         find.byKey(const ValueKey('message_delivery_status')),
       );
 
-      expect(statusRect.left, greaterThanOrEqualTo(bubbleRect.right));
+      expect(statusRect.right, lessThanOrEqualTo(bubbleRect.left));
 
       await tester.tap(find.byKey(const ValueKey('message_delivery_status')));
       await tester.pump();

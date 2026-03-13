@@ -574,6 +574,11 @@ class MessageBubble extends ConsumerWidget {
             ),
             const SizedBox(width: 6),
           ],
+          if (isMine && deliveryStatusControl != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4, bottom: 2),
+              child: deliveryStatusControl,
+            ),
           Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: isMine
@@ -607,13 +612,6 @@ class MessageBubble extends ConsumerWidget {
               ],
             ],
           ),
-          if (isMine && deliveryStatusControl != null) ...[
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: deliveryStatusControl,
-            ),
-          ],
           if (isMine) ...[
             const SizedBox(width: 6),
             MessageAvatar(
