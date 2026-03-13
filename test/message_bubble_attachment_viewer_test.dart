@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/widgets/message_bubble.dart';
+import 'package:mobile/features/chats/models/outgoing_draft.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:mobile/models/local_chat_message.dart';
 
@@ -60,6 +61,59 @@ void main() {
         ),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'failed outgoing message keeps retry control outside bubble and tappable',
+    (tester) async {
+      var retryTapped = false;
+      final message = LocalChatMessage(
+        id: 'm2',
+        conversationId: 'c1',
+        senderId: 'me',
+        body: 'failed draft message',
+        createdAt: DateTime.utc(2026, 3, 13, 11, 0),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Center(
+                child: MessageBubble(
+                  message: message,
+                  isMine: true,
+                  currentUserId: 'me',
+                  partnerId: 'p1',
+                  isRoomConversation: false,
+                  stickers: const [],
+                  serverUrl: 'https://example.com',
+                  accessToken: 'token',
+                  deliveryState: OutgoingDeliveryState.failed,
+                  onRetryTap: () => retryTapped = true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final bubbleRect = tester.getRect(
+        find.byKey(const ValueKey('message_bubble_surface')),
+      );
+      final statusRect = tester.getRect(
+        find.byKey(const ValueKey('message_delivery_status')),
+      );
+
+      expect(statusRect.left, greaterThanOrEqualTo(bubbleRect.right));
+
+      await tester.tap(find.byKey(const ValueKey('message_delivery_status')));
+      await tester.pump();
+
+      expect(retryTapped, isTrue);
     },
   );
 }

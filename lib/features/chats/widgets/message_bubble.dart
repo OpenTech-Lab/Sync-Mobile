@@ -75,6 +75,49 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
+  Widget? _buildDeliveryStatusControl(Color statusColor) {
+    if (!isMine || deliveryState == null) {
+      return null;
+    }
+
+    switch (deliveryState!) {
+      case OutgoingDeliveryState.sending:
+        return const SizedBox(
+          key: ValueKey('message_delivery_status'),
+          width: 28,
+          height: 28,
+          child: Center(
+            child: Icon(Icons.schedule, size: 11, color: AppPalette.neutral500),
+          ),
+        );
+      case OutgoingDeliveryState.failed:
+        return Material(
+          color: Colors.transparent,
+          child: InkResponse(
+            onTap: onRetryTap,
+            radius: 18,
+            child: SizedBox(
+              key: const ValueKey('message_delivery_status'),
+              width: 28,
+              height: 28,
+              child: Center(
+                child: Icon(Icons.refresh, size: 14, color: statusColor),
+              ),
+            ),
+          ),
+        );
+      case OutgoingDeliveryState.blocked:
+        return SizedBox(
+          key: const ValueKey('message_delivery_status'),
+          width: 28,
+          height: 28,
+          child: Center(
+            child: Icon(Icons.block_rounded, size: 12, color: statusColor),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -109,6 +152,7 @@ class MessageBubble extends ConsumerWidget {
       height: 1.5,
     );
     final maxBubbleWidth = MediaQuery.of(context).size.width * 0.68;
+    final deliveryStatusControl = _buildDeliveryStatusControl(statusColor);
     final overflowProbe = TextPainter(
       text: TextSpan(text: message.body, style: messageTextStyle),
       textDirection: Directionality.of(context),
@@ -413,6 +457,7 @@ class MessageBubble extends ConsumerWidget {
     // ────────────────────────────────────────────────────────────────────────
 
     Widget bubble = Container(
+      key: const ValueKey('message_bubble_surface'),
       constraints: BoxConstraints(
         minWidth: 84,
         maxWidth: maxBubbleWidth,
@@ -470,26 +515,6 @@ class MessageBubble extends ConsumerWidget {
                             ),
                           ),
                         const Spacer(),
-                        if (deliveryState != null) ...[
-                          if (deliveryState == OutgoingDeliveryState.sending)
-                            Icon(Icons.schedule, size: 11, color: statusColor),
-                          if (deliveryState == OutgoingDeliveryState.failed)
-                            GestureDetector(
-                              onTap: onRetryTap,
-                              child: Icon(
-                                Icons.refresh,
-                                size: 12,
-                                color: statusColor,
-                              ),
-                            ),
-                          if (deliveryState == OutgoingDeliveryState.blocked)
-                            Icon(
-                              Icons.block_rounded,
-                              size: 12,
-                              color: statusColor,
-                            ),
-                          const SizedBox(width: 6),
-                        ],
                         Text(
                           timeLabel(message.createdAt),
                           maxLines: 1,
@@ -582,6 +607,13 @@ class MessageBubble extends ConsumerWidget {
               ],
             ],
           ),
+          if (isMine && deliveryStatusControl != null) ...[
+            const SizedBox(width: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: deliveryStatusControl,
+            ),
+          ],
           if (isMine) ...[
             const SizedBox(width: 6),
             MessageAvatar(
