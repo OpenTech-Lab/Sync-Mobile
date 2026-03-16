@@ -13,6 +13,8 @@ final userAvatarBase64Provider = FutureProvider.family<String?, String>((
   ref,
   userId,
 ) {
+  // Keep alive so navigating away and back doesn't re-fetch and blink.
+  ref.keepAlive();
   final serverUrl = ref.watch(activeServerUrlProvider);
   if (serverUrl == null) {
     return Future.value(null);
@@ -26,6 +28,7 @@ final userDisplayNameProvider = FutureProvider.family<String?, String>((
   ref,
   userId,
 ) {
+  ref.keepAlive();
   final serverUrl = ref.watch(activeServerUrlProvider);
   if (serverUrl == null) {
     return Future.value(null);

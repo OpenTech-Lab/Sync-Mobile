@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -17,6 +16,7 @@ import '../chats/room_detail_page.dart';
 import '../profile/my_profile_page.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
+import '../../ui/utils/avatar_image_cache.dart';
 
 const _compactHomeSectionSpacing = 5.0;
 const _compactHomeRowVerticalPadding = 6.0;
@@ -438,9 +438,15 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
     final description = _normalizedHomeDescription(
       ref.watch(userDescriptionProvider(widget.friendId)).value,
     );
+    // Use .when() so skipLoadingOnRefresh (default true) keeps the previous
+    // avatar visible while a refresh is in flight, preventing the blink.
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(widget.friendId))
-        .value;
+        .when(
+          data: (v) => v,
+          loading: () => null,
+          error: (_, __) => null,
+        );
 
     return _CompactHomeRow(
       rowKey: ValueKey('home_friend_row_${widget.friendId}'),
@@ -470,8 +476,11 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
                 )
               : ClipOval(
                   child: SizedBox.expand(
-                    child: Image.memory(
-                      base64Decode(avatarBase64),
+                    child: Image(
+                      image: AvatarImageCache.resolve(
+                        widget.friendId,
+                        avatarBase64,
+                      )!,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -826,7 +835,11 @@ class _ProfileCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
-        .value;
+        .when(
+          data: (v) => v,
+          loading: () => null,
+          error: (_, __) => null,
+        );
     final watchedUsername =
         ref.watch(userDisplayNameProvider(currentUserId)).value ??
         currentUsername;
@@ -883,8 +896,11 @@ class _ProfileCard extends ConsumerWidget {
                   )
                 : ClipOval(
                     child: SizedBox.expand(
-                      child: Image.memory(
-                        base64Decode(avatarBase64),
+                      child: Image(
+                        image: AvatarImageCache.resolve(
+                          currentUserId,
+                          avatarBase64,
+                        )!,
                         fit: BoxFit.cover,
                       ),
                     ),

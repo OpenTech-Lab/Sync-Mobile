@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -7,6 +5,7 @@ import 'package:mobile/l10n/app_localizations.dart';
 import '../../../models/chat_room.dart';
 import '../../../services/local_chat_repository.dart';
 import '../../../state/user_profile_controller.dart';
+import '../../../ui/utils/avatar_image_cache.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 import '../models/outgoing_draft.dart';
 import '../utils/chat_helpers.dart';
@@ -333,9 +332,13 @@ class ConversationStarter extends ConsumerWidget {
     final displayNameAsync = isRoom
         ? null
         : ref.watch(userDisplayNameProvider(userId));
-    final avatarBase64Async = isRoom
+    final avatarBase64 = isRoom
         ? null
-        : ref.watch(userAvatarBase64Provider(userId));
+        : ref.watch(userAvatarBase64Provider(userId)).when(
+            data: (v) => v,
+            loading: () => null,
+            error: (_, __) => null,
+          );
     final displayName = isRoom
         ? _formatConversationTitle(
             (summary?.title?.trim().isNotEmpty ?? false)
@@ -376,7 +379,7 @@ class ConversationStarter extends ConsumerWidget {
                 // avatar
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: !isRoom && avatarBase64Async?.value != null
+                  backgroundColor: !isRoom && avatarBase64 != null
                       ? Colors.transparent
                       : avatarColor,
                   child: isRoom
@@ -385,7 +388,7 @@ class ConversationStarter extends ConsumerWidget {
                           size: 18,
                           color: AppPalette.white,
                         )
-                      : avatarBase64Async?.value == null
+                      : avatarBase64 == null
                       ? Text(
                           userId.length >= 2
                               ? userId.substring(0, 2).toUpperCase()
@@ -398,8 +401,11 @@ class ConversationStarter extends ConsumerWidget {
                         )
                       : ClipOval(
                           child: SizedBox.expand(
-                            child: Image.memory(
-                              base64Decode(avatarBase64Async!.value!),
+                            child: Image(
+                              image: AvatarImageCache.resolve(
+                                userId,
+                                avatarBase64,
+                              )!,
                               fit: BoxFit.cover,
                             ),
                           ),
