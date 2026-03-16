@@ -401,7 +401,7 @@ class _PlanetInfoCard extends StatelessWidget {
             const SizedBox(width: 28),
             if (countryLabel.isNotEmpty)
               _Stat(
-                label: l10n.planetCardCountry,
+                label: l10n.planetCardHost,
                 value: countryLabel,
                 inkColor: inkColor,
                 mutedColor: mutedColor,
