@@ -3,6 +3,10 @@
   "appTitle": "Sync",
   "loadingSync": "sync",
   "errorTitle": "ERROR",
+  "errorNetwork": "Check your internet connection and try again.",
+  "errorServer": "The server is having trouble. Please try again later.",
+  "errorPermission": "You don't have permission to do this. Contact your administrator if this persists.",
+  "errorGeneric": "Something went wrong. Please try again.",
   "restartAppHint": "please restart the app",
   "tabHome": "home",
   "tabPlanet": "planet",
@@ -458,14 +462,7 @@
     }
   },
   "chatHomeEnterPartnerPrompt": "Enter a partner UUID to load conversation.",
-  "chatHomeFailedToLoadMessages": "Failed to load messages: {error}",
-  "@chatHomeFailedToLoadMessages": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "chatHomeFailedToLoadMessages": "Failed to load messages.",
   "chatHomeLoadOlder": "Load older",
   "chatHomeSelectedImage": "Selected image",
   "chatHomeRemoveMediaTooltip": "Remove media",

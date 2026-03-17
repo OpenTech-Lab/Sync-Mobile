@@ -9,6 +9,7 @@ import '../../state/user_profile_controller.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/molecules/app_dialog.dart';
 import '../../ui/tokens/colors/app_palette.dart';
+import '../../core/friendly_error.dart';
 
 enum RoomDetailAction { left, deleted, startChat }
 
@@ -71,7 +72,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = friendlyErrorMessage(e, AppLocalizations.of(context)!);
           _loading = false;
         });
       }
@@ -355,7 +356,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         setState(() => _actionInProgress = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e, AppLocalizations.of(context)!))));
       }
     }
   }
@@ -443,7 +444,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         setState(() => _actionInProgress = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e, AppLocalizations.of(context)!))));
       }
     }
   }
@@ -515,7 +516,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         setState(() => _actionInProgress = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e, AppLocalizations.of(context)!))));
       }
     }
   }
@@ -559,7 +560,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         setState(() => _actionInProgress = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e, AppLocalizations.of(context)!))));
       }
     }
   }
@@ -632,7 +633,7 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
         setState(() => _actionInProgress = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e, AppLocalizations.of(context)!))));
       }
     }
   }

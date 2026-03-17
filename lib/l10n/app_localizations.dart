@@ -114,6 +114,22 @@ abstract class AppLocalizations {
   /// **'ERROR'**
   String get errorTitle;
 
+  /// In en, this message translates to:
+  /// **'Check your internet connection and try again.'**
+  String get errorNetwork;
+
+  /// In en, this message translates to:
+  /// **'The server is having trouble. Please try again later.'**
+  String get errorServer;
+
+  /// In en, this message translates to:
+  /// **'You don\'t have permission to do this. Contact your administrator if this persists.'**
+  String get errorPermission;
+
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get errorGeneric;
+
   /// No description provided for @restartAppHint.
   ///
   /// In en, this message translates to:
@@ -1665,8 +1681,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatHomeFailedToLoadMessages.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load messages: {error}'**
-  String chatHomeFailedToLoadMessages(String error);
+  /// **'Failed to load messages.'**
+  String get chatHomeFailedToLoadMessages;
 
   /// No description provided for @chatHomeLoadOlder.
   ///

@@ -55,7 +55,7 @@ class SyncMobileApp extends ConsumerWidget {
       },
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),
-        error: (error, _) => _ErrorScreen(message: error.toString()),
+        error: (error, _) => const _ErrorScreen(message: 'Failed to start. Please restart the app.'),
         data: (state) {
           switch (state.stage) {
             case AppStage.onboarding:

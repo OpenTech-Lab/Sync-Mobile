@@ -35,6 +35,7 @@ import 'widgets/conversation_starter.dart';
 import 'widgets/composer.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/quick_action_sheet.dart';
+import '../../core/friendly_error.dart';
 
 class ChatsTab extends ConsumerStatefulWidget {
   const ChatsTab({
@@ -751,7 +752,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       }
     } catch (error) {
       if (!mounted) return;
-      showAppToast(context, error.toString(), variant: AppToastVariant.error);
+      showAppToast(context, friendlyErrorMessage(error, _l10n), variant: AppToastVariant.error);
     }
   }
 
@@ -1108,7 +1109,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       await _openPartner(room.conversationId);
     } catch (error) {
       if (!mounted) return;
-      showAppToast(context, error.toString(), variant: AppToastVariant.error);
+      showAppToast(context, friendlyErrorMessage(error, _l10n), variant: AppToastVariant.error);
     }
   }
 
@@ -1287,7 +1288,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     }
     showAppToast(
       context,
-      feedback?.toastMessage ?? error.toString(),
+      feedback?.toastMessage ?? friendlyErrorMessage(error, _l10n),
       variant: AppToastVariant.error,
     );
   }
@@ -1780,7 +1781,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                           error: (err, _) => Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24),
-                              child: Text('$err', textAlign: TextAlign.center),
+                              child: Text(friendlyErrorMessage(err, _l10n), textAlign: TextAlign.center),
                             ),
                           ),
                           data: (messages) {

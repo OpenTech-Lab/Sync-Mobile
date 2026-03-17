@@ -18,6 +18,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTitle => 'ERROR';
 
   @override
+  String get errorNetwork => 'Check your internet connection and try again.';
+
+  @override
+  String get errorServer => 'The server is having trouble. Please try again later.';
+
+  @override
+  String get errorPermission => "You don't have permission to do this. Contact your administrator if this persists.";
+
+  @override
+  String get errorGeneric => 'Something went wrong. Please try again.';
+
+  @override
   String get restartAppHint => 'please restart the app';
 
   @override
@@ -850,9 +862,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatHomeEnterPartnerPrompt => 'Enter a partner UUID to load conversation.';
 
   @override
-  String chatHomeFailedToLoadMessages(String error) {
-    return 'Failed to load messages: $error';
-  }
+  String get chatHomeFailedToLoadMessages => 'Failed to load messages.';
 
   @override
   String get chatHomeLoadOlder => 'Load older';
@@ -936,6 +946,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get errorTitle => '錯誤';
+
+  @override
+  String get errorNetwork => '請檢查網路連線後再試一次。';
+
+  @override
+  String get errorServer => '伺服器發生問題，請稍後再試。';
+
+  @override
+  String get errorPermission => '您沒有執行此操作的權限。若問題持續發生，請聯絡管理員。';
+
+  @override
+  String get errorGeneric => '發生錯誤，請再試一次。';
 
   @override
   String get restartAppHint => '請重新啟動應用程式';
@@ -1764,9 +1786,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get chatHomeEnterPartnerPrompt => '輸入對方 UUID 以載入對話。';
 
   @override
-  String chatHomeFailedToLoadMessages(String error) {
-    return '載入訊息失敗：$error';
-  }
+  String get chatHomeFailedToLoadMessages => '載入訊息失敗。';
 
   @override
   String get chatHomeLoadOlder => '載入較舊訊息';

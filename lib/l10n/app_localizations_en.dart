@@ -18,6 +18,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTitle => 'ERROR';
 
   @override
+  String get errorNetwork => 'Check your internet connection and try again.';
+
+  @override
+  String get errorServer => 'The server is having trouble. Please try again later.';
+
+  @override
+  String get errorPermission => "You don't have permission to do this. Contact your administrator if this persists.";
+
+  @override
+  String get errorGeneric => 'Something went wrong. Please try again.';
+
+  @override
   String get restartAppHint => 'please restart the app';
 
   @override
@@ -850,9 +862,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatHomeEnterPartnerPrompt => 'Enter a partner UUID to load conversation.';
 
   @override
-  String chatHomeFailedToLoadMessages(String error) {
-    return 'Failed to load messages: $error';
-  }
+  String get chatHomeFailedToLoadMessages => 'Failed to load messages.';
 
   @override
   String get chatHomeLoadOlder => 'Load older';

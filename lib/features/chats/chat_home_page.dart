@@ -16,6 +16,7 @@ import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
+import '../../core/friendly_error.dart';
 
 class ChatHomeScreen extends ConsumerStatefulWidget {
   const ChatHomeScreen({
@@ -335,7 +336,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                          l10n.chatHomeFailedToLoadMessages(error.toString()),
+                          '${l10n.chatHomeFailedToLoadMessages} ${friendlyErrorMessage(error, l10n)}',
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -476,7 +477,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                               );
                               showAppToast(
                                 context,
-                                feedback?.toastMessage ?? error.toString(),
+                                feedback?.toastMessage ?? friendlyErrorMessage(error, l10n),
                                 variant: AppToastVariant.error,
                               );
                             }
@@ -551,7 +552,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                             );
                             showAppToast(
                               context,
-                              feedback?.toastMessage ?? error.toString(),
+                              feedback?.toastMessage ?? friendlyErrorMessage(error, l10n),
                               variant: AppToastVariant.error,
                             );
                           }
