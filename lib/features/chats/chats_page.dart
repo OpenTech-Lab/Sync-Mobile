@@ -413,11 +413,15 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
           accessToken: accessToken,
           currentUserId: widget.currentUserId,
         );
-    await ref
-        .read(conversationMessagesProvider(partnerId).notifier)
-        .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
-    if (!isRoomConversationId(partnerId)) {
-      ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+    try {
+      await ref
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .markRead(baseUrl: widget.serverUrl, accessToken: accessToken);
+      if (!isRoomConversationId(partnerId)) {
+        ref.read(unreadCountsProvider.notifier).clearForPartner(partnerId);
+      }
+    } catch (_) {
+      // Mark-as-read is best-effort; will retry on next open when online.
     }
   }
 

@@ -221,17 +221,23 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                               accessToken: widget.accessToken,
                               currentUserId: widget.currentUserId,
                             );
-                        await ref
-                            .read(
-                              conversationMessagesProvider(partnerId).notifier,
-                            )
-                            .markRead(
-                              baseUrl: widget.serverUrl,
-                              accessToken: widget.accessToken,
-                            );
-                        ref
-                            .read(unreadCountsProvider.notifier)
-                            .clearForPartner(partnerId);
+                        try {
+                          await ref
+                              .read(
+                                conversationMessagesProvider(
+                                  partnerId,
+                                ).notifier,
+                              )
+                              .markRead(
+                                baseUrl: widget.serverUrl,
+                                accessToken: widget.accessToken,
+                              );
+                          ref
+                              .read(unreadCountsProvider.notifier)
+                              .clearForPartner(partnerId);
+                        } catch (_) {
+                          // Best-effort; retry when online.
+                        }
                       },
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

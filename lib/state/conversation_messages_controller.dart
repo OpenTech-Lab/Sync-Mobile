@@ -229,43 +229,50 @@ class ConversationMessagesController
     required String accessToken,
     required String currentUserId,
   }) async {
-    final latest = _isRoomConversation
-        ? await _remoteChatService.getRoomMessages(
-            baseUrl: baseUrl,
-            accessToken: accessToken,
-            roomId: _roomId,
-            limit: 30,
-          )
-        : await _remoteChatService.getConversation(
-            baseUrl: baseUrl,
-            accessToken: accessToken,
-            currentUserId: currentUserId,
-            partnerId: arg,
-            limit: 30,
-          );
+    try {
+      final latest = _isRoomConversation
+          ? await _remoteChatService.getRoomMessages(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              roomId: _roomId,
+              limit: 30,
+            )
+          : await _remoteChatService.getConversation(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              partnerId: arg,
+              limit: 30,
+            );
 
-    // Don't restore messages that pre-date a local-data deletion.
-    final clearedAt = await _latestClearedAt(baseUrl);
-    final toUpsert = clearedAt == null
-        ? latest
-        : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
+      // Don't restore messages that pre-date a local-data deletion.
+      final clearedAt = await _latestClearedAt(baseUrl);
+      final toUpsert = clearedAt == null
+          ? latest
+          : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
 
-    await _repository.upsertMessages(toUpsert);
-    if (toUpsert.isNotEmpty) {
-      await _unhideConversationIfNeeded();
+      await _repository.upsertMessages(toUpsert);
+      if (toUpsert.isNotEmpty) {
+        await _unhideConversationIfNeeded();
+      }
+      if (_isRoomConversation) {
+        await ref
+            .read(roomConversationsProvider.notifier)
+            .markRoomReadLocal(_roomId);
+      } else {
+        ref.invalidate(conversationSummariesProvider);
+      }
+    } catch (_) {
+      // Network unavailable — fall through to show local cache below.
+    } finally {
+      // Always resolve the provider with whatever is in local storage so the
+      // UI shows cached history even when the server is unreachable.
+      final local = await _repository.listMessages(
+        conversationId: arg,
+        limit: 200,
+      );
+      state = AsyncData(local);
     }
-    if (_isRoomConversation) {
-      await ref
-          .read(roomConversationsProvider.notifier)
-          .markRoomReadLocal(_roomId);
-    } else {
-      ref.invalidate(conversationSummariesProvider);
-    }
-    final local = await _repository.listMessages(
-      conversationId: arg,
-      limit: 200,
-    );
-    state = AsyncData(local);
   }
 
   Future<void> loadMore({
@@ -283,38 +290,42 @@ class ConversationMessagesController
       return;
     }
 
-    final before = current.last.id;
-    final clearedAt = await _latestClearedAt(baseUrl);
-    final older = _isRoomConversation
-        ? await _remoteChatService.getRoomMessages(
-            baseUrl: baseUrl,
-            accessToken: accessToken,
-            roomId: _roomId,
-            before: before,
-            limit: 30,
-          )
-        : await _remoteChatService.getConversation(
-            baseUrl: baseUrl,
-            accessToken: accessToken,
-            currentUserId: currentUserId,
-            partnerId: arg,
-            before: before,
-            limit: 30,
-          );
+    try {
+      final before = current.last.id;
+      final clearedAt = await _latestClearedAt(baseUrl);
+      final older = _isRoomConversation
+          ? await _remoteChatService.getRoomMessages(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              roomId: _roomId,
+              before: before,
+              limit: 30,
+            )
+          : await _remoteChatService.getConversation(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              partnerId: arg,
+              before: before,
+              limit: 30,
+            );
 
-    final toUpsert = clearedAt == null
-        ? older
-        : older.where((m) => m.createdAt.isAfter(clearedAt)).toList();
-    await _repository.upsertMessages(toUpsert);
-    if (toUpsert.isNotEmpty) {
-      await _unhideConversationIfNeeded();
+      final toUpsert = clearedAt == null
+          ? older
+          : older.where((m) => m.createdAt.isAfter(clearedAt)).toList();
+      await _repository.upsertMessages(toUpsert);
+      if (toUpsert.isNotEmpty) {
+        await _unhideConversationIfNeeded();
+      }
+      ref.invalidate(conversationSummariesProvider);
+      final local = await _repository.listMessages(
+        conversationId: arg,
+        limit: 200,
+      );
+      state = AsyncData(local);
+    } catch (_) {
+      // Network unavailable — keep showing the messages already in state.
     }
-    ref.invalidate(conversationSummariesProvider);
-    final local = await _repository.listMessages(
-      conversationId: arg,
-      limit: 200,
-    );
-    state = AsyncData(local);
   }
 
   Future<void> sendMessage({
