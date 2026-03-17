@@ -32,6 +32,8 @@ class RealtimeSyncService {
   }) async {
     _closedByUser = false;
     _attempt = 0;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     await _closeChannel();
     await _open(
       baseUrl: baseUrl,
