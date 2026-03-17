@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:super_clipboard/super_clipboard.dart';
 
 import '../../constants/feature_flags.dart';
 import '../../constants/planet_presets.dart';
@@ -1046,9 +1048,40 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
     });
   }
 
-  void _copyQrPayload() {
+  Future<void> _copyQrPayload() async {
     final l10n = AppLocalizations.of(context)!;
-    Clipboard.setData(ClipboardData(text: widget.payload));
+    const size = 512.0;
+    final painter = QrPainter(
+      data: widget.payload,
+      version: QrVersions.auto,
+      eyeStyle: const QrEyeStyle(
+        eyeShape: QrEyeShape.square,
+        color: Colors.black,
+      ),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Colors.black,
+      ),
+    );
+    // Paint QR onto a white background so the PNG is opaque
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, size, size),
+      Paint()..color = Colors.white,
+    );
+    painter.paint(canvas, const Size(size, size));
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return;
+    final pngBytes = byteData.buffer.asUint8List();
+
+    final item = DataWriterItem();
+    item.add(Formats.png(pngBytes));
+    await ClipboardWriter.instance.write([item]);
+
+    if (!mounted) return;
     _showCopiedState();
     showAppToast(
       context,
