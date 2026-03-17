@@ -207,95 +207,91 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
     final text = buffer.toString();
 
     if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+
     await showModalBottomSheet<void>(
       context: context,
+      backgroundColor: bgColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       builder: (sheetCtx) {
-        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
-        final inkColor =
-            isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-        final subColor = AppPalette.neutral500;
-        final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: subColor.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
                   l10n.chatExportHistory.toUpperCase(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10,
                     letterSpacing: 2.4,
-                    color: subColor,
+                    color: AppPalette.neutral500,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                tileColor: bgColor,
-                leading: Icon(Icons.copy_outlined, color: inkColor, size: 20),
-                title: Text(
-                  l10n.chatExportCopyAction,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
+                const SizedBox(height: 8),
+                Divider(height: 1, thickness: 1, color: ruleColor),
+                const SizedBox(height: 4),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.copy_outlined, color: inkColor, size: 20),
+                  title: Text(
+                    l10n.chatExportCopyAction,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w300,
+                      color: inkColor,
+                    ),
                   ),
+                  onTap: () async {
+                    Navigator.of(sheetCtx).pop();
+                    await Clipboard.setData(ClipboardData(text: text));
+                    if (mounted) showAppToast(context, l10n.chatExportCopied);
+                  },
                 ),
-                onTap: () async {
-                  Navigator.of(sheetCtx).pop();
-                  await Clipboard.setData(ClipboardData(text: text));
-                  if (mounted) showAppToast(context, l10n.chatExportCopied);
-                },
-              ),
-              ListTile(
-                tileColor: bgColor,
-                leading: Icon(Icons.save_alt_outlined, color: inkColor, size: 20),
-                title: Text(
-                  l10n.chatExportSaveAction,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading:
+                      Icon(Icons.save_alt_outlined, color: inkColor, size: 20),
+                  title: Text(
+                    l10n.chatExportSaveAction,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w300,
+                      color: inkColor,
+                    ),
                   ),
-                ),
-                onTap: () async {
-                  Navigator.of(sheetCtx).pop();
-                  try {
-                    final bytes = Uint8List.fromList(
-                      const Utf8Encoder().convert(text),
-                    );
-                    final fileName =
-                        'chat_${partnerLabel.replaceAll(RegExp(r'[\s\\/:*?"<>|]'), '_')}.txt';
-                    await ChatAttachmentDownloadService().download(
-                      bytes: bytes,
-                      suggestedFileName: fileName,
-                    );
-                    if (mounted) showAppToast(context, l10n.chatExportSaved);
-                  } catch (_) {
-                    if (mounted) {
-                      showAppToast(
-                        context,
-                        l10n.chatExportFailed,
-                        variant: AppToastVariant.error,
+                  onTap: () async {
+                    Navigator.of(sheetCtx).pop();
+                    try {
+                      final bytes = Uint8List.fromList(
+                        const Utf8Encoder().convert(text),
                       );
+                      final fileName =
+                          'chat_${partnerLabel.replaceAll(RegExp(r'[\s\\/:*?"<>|]'), '_')}.txt';
+                      await ChatAttachmentDownloadService().download(
+                        bytes: bytes,
+                        suggestedFileName: fileName,
+                      );
+                      if (mounted) showAppToast(context, l10n.chatExportSaved);
+                    } catch (_) {
+                      if (mounted) {
+                        showAppToast(
+                          context,
+                          l10n.chatExportFailed,
+                          variant: AppToastVariant.error,
+                        );
+                      }
                     }
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
