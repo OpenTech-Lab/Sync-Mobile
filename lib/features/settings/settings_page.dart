@@ -621,7 +621,6 @@ class DangerousActionsPage extends ConsumerWidget {
                   deferredDeletionState.remaining,
                 ),
                 isExecuting: isExecutingDeletion,
-                isDark: isDark,
                 onCancel: deferredDeletionState.canCancel
                     ? () => ref
                           .read(deferredDeletionControllerProvider.notifier)
@@ -744,75 +743,79 @@ class _PendingDeletionCard extends StatelessWidget {
     required this.title,
     required this.countdown,
     required this.isExecuting,
-    required this.isDark,
     this.onCancel,
   });
 
   final String title;
   final String countdown;
   final bool isExecuting;
-  final bool isDark;
   final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final borderColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
-    final bgColor = isDark ? AppPalette.neutral800 : AppPalette.neutral100;
-    final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final mutedColor = AppPalette.neutral500;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: AppPalette.danger700.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: AppPalette.danger700.withValues(alpha: 0.4)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: inkColor,
-              letterSpacing: 0.1,
-            ),
+          HugeIcon(
+            icon: HugeIcons.strokeRoundedClock01,
+            color: AppPalette.danger700,
+            size: 20,
           ),
-          const SizedBox(height: 6),
-          Text(
-            isExecuting
-                ? l10n.settingsDeletionExecuting
-                : l10n.settingsDeletionCountdown(countdown),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w300,
-              color: mutedColor,
-              height: 1.5,
-              letterSpacing: 0.2,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppPalette.danger700,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isExecuting
+                      ? l10n.settingsDeletionExecuting
+                      : l10n.settingsDeletionCountdown(countdown),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w300,
+                    color: AppPalette.neutral500,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
             ),
           ),
           if (!isExecuting && onCancel != null) ...[
-            const SizedBox(height: 14),
-            Center(
-              child: GestureDetector(
-                onTap: onCancel,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    l10n.actionCancel,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppPalette.danger700,
-                      letterSpacing: 0.3,
-                    ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: onCancel,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 4,
+                ),
+                child: Text(
+                  l10n.actionCancel,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: AppPalette.neutral500,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),
