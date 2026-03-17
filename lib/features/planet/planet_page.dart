@@ -473,8 +473,6 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                                         color: inkColor,
                                         letterSpacing: 0.1,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
                                     ),
                                   ],
