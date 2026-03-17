@@ -1737,85 +1737,73 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
             bottom: false,
             child: SizedBox(
               height: kToolbarHeight,
-              child: Stack(
-                alignment: Alignment.center,
+              child: Row(
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(CupertinoIcons.back),
-                      onPressed: _closeActiveConversation,
-                    ),
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.back),
+                    onPressed: _closeActiveConversation,
                   ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 48, right: 104),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(8),
-                        onTap: _activePartnerId == null
-                            ? null
-                            : isRoomConversationId(_activePartnerId!)
-                            ? _openRoomDetail
-                            : _openActivePartnerProfile,
-                        child: Text(
-                          activeDisplayName ?? _l10n.chatDefaultTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
+                  Expanded(
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (_activePartnerId != null) ...[
-                          IconButton(
-                            icon: const Icon(Icons.notes, size: 20),
-                            tooltip: _l10n.chatNotes,
-                            onPressed: () {
-                              final partnerId = _activePartnerId!;
-                              final name = activeDisplayName ??
-                                  _l10n.chatDefaultTitle;
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ConversationNotePage(
-                                    conversationId: partnerId,
-                                    conversationName: name,
-                                  ),
-                                ),
-                              );
-                            },
+                        Flexible(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: _activePartnerId == null
+                                ? null
+                                : isRoomConversationId(_activePartnerId!)
+                                ? _openRoomDetail
+                                : _openActivePartnerProfile,
+                            child: Text(
+                              activeDisplayName ?? _l10n.chatDefaultTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.checklist, size: 20),
-                            tooltip: _l10n.chatTodos,
-                            onPressed: () {
-                              final partnerId = _activePartnerId!;
-                              final name = activeDisplayName ??
-                                  _l10n.chatDefaultTitle;
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ConversationTodosPage(
-                                    conversationId: partnerId,
-                                    conversationName: name,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                        ),
                         if (activeUnread > 0) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: UnreadBadge(count: activeUnread),
-                          ),
+                          const SizedBox(width: 8),
+                          UnreadBadge(count: activeUnread),
                         ],
                       ],
                     ),
                   ),
+                  if (_activePartnerId != null) ...[
+                    IconButton(
+                      icon: const Icon(Icons.notes, size: 20),
+                      tooltip: _l10n.chatNotes,
+                      onPressed: () {
+                        final partnerId = _activePartnerId!;
+                        final name = activeDisplayName ??
+                            _l10n.chatDefaultTitle;
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ConversationNotePage(
+                              conversationId: partnerId,
+                              conversationName: name,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.checklist, size: 20),
+                      tooltip: _l10n.chatTodos,
+                      onPressed: () {
+                        final partnerId = _activePartnerId!;
+                        final name = activeDisplayName ??
+                            _l10n.chatDefaultTitle;
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ConversationTodosPage(
+                              conversationId: partnerId,
+                              conversationName: name,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
