@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../services/server_health_service.dart';
-import '../../../ui/components/atoms/outline_action_button.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 
 class PlanetOverviewSection extends StatelessWidget {
@@ -188,6 +187,28 @@ class _PlanetCard extends StatelessWidget {
                   : l10n.settingsNotificationsOff,
               mutedColor: mutedColor,
             ),
+            if (!isConnected) ...[
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  key: const ValueKey('planet_reconnect_button'),
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    isReconnecting ? Icons.sync : Icons.refresh,
+                    size: 16,
+                    color: isReconnecting
+                        ? mutedColor.withValues(alpha: 0.5)
+                        : inkColor,
+                  ),
+                  onPressed: isReconnecting ? null : onReconnect,
+                  tooltip: isReconnecting
+                      ? l10n.planetReconnectInProgress
+                      : l10n.planetReconnectAction,
+                ),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 4),
@@ -233,24 +254,6 @@ class _PlanetCard extends StatelessWidget {
               mutedColor: mutedColor,
             ),
           ],
-        ),
-        const SizedBox(height: 20),
-        Align(
-          alignment: Alignment.centerRight,
-          child: SizedBox(
-            width: 168,
-            child: OutlineActionButton(
-              key: const ValueKey('planet_reconnect_button'),
-              label: isReconnecting
-                  ? l10n.planetReconnectInProgress
-                  : l10n.planetReconnectAction,
-              borderColor: inkColor,
-              textColor: inkColor,
-              onTap: onReconnect,
-              disabled: isReconnecting,
-              compact: true,
-            ),
-          ),
         ),
       ],
     );
