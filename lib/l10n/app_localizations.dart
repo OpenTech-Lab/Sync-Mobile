@@ -1816,6 +1816,18 @@ abstract class AppLocalizations {
   String get chatExportCopied;
   String get chatExportSaved;
   String get chatExportFailed;
+
+  String get chatNotes;
+
+  String get chatNotesHint;
+
+  String get chatTodos;
+
+  String get chatTodosHint;
+
+  String get chatTodosAddAction;
+
+  String get chatTodosEmptyHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

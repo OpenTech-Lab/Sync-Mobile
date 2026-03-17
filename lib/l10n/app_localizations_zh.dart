@@ -950,6 +950,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatExportFailed => 'Failed to export chat history';
+
+  @override
+  String get chatNotes => 'Notes';
+
+  @override
+  String get chatNotesHint => 'Write a note…';
+
+  @override
+  String get chatTodos => 'Todos';
+
+  @override
+  String get chatTodosHint => 'Add a todo…';
+
+  @override
+  String get chatTodosAddAction => 'A D D';
+
+  @override
+  String get chatTodosEmptyHint => 'No todos yet';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1892,4 +1910,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatExportFailed => '匯出聊天記錄失敗';
+
+  @override
+  String get chatNotes => '備忘錄';
+
+  @override
+  String get chatNotesHint => '寫下備忘…';
+
+  @override
+  String get chatTodos => '待辦事項';
+
+  @override
+  String get chatTodosHint => '新增待辦…';
+
+  @override
+  String get chatTodosAddAction => '新增';
+
+  @override
+  String get chatTodosEmptyHint => '尚無待辦事項';
 }

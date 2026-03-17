@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/chat_room.dart';
+import 'package:mobile/models/conversation_note.dart';
 import 'package:mobile/models/local_chat_message.dart';
+import 'package:mobile/models/todo_item.dart';
 import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/services/backup_preferences.dart';
 import 'package:mobile/services/local_chat_repository.dart';
@@ -127,6 +129,50 @@ class _InMemoryChatRepository implements ChatRepository {
       return;
     }
     _rooms[roomId] = room.copyWith(unreadCount: unreadCount);
+  }
+
+  final _notes = <String, ConversationNote>{};
+  final _todos = <String, List<TodoItem>>{};
+
+  @override
+  Future<ConversationNote?> readNote(String conversationId) async {
+    return _notes[conversationId];
+  }
+
+  @override
+  Future<void> saveNote(ConversationNote note) async {
+    _notes[note.conversationId] = note;
+  }
+
+  @override
+  Future<List<TodoItem>> listTodos(String conversationId) async {
+    return [...(_todos[conversationId] ?? <TodoItem>[])];
+  }
+
+  @override
+  Future<void> upsertTodo(TodoItem todo) async {
+    final list = _todos[todo.conversationId] ??= [];
+    final idx = list.indexWhere((e) => e.id == todo.id);
+    if (idx == -1) {
+      list.add(todo);
+    } else {
+      list[idx] = todo;
+    }
+  }
+
+  @override
+  Future<void> deleteTodo(String todoId) async {
+    for (final list in _todos.values) {
+      list.removeWhere((e) => e.id == todoId);
+    }
+  }
+
+  @override
+  Future<void> replaceTodos(
+    String conversationId,
+    List<TodoItem> todos,
+  ) async {
+    _todos[conversationId] = [...todos];
   }
 }
 

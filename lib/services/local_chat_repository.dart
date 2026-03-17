@@ -3,7 +3,9 @@ import 'dart:math';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../models/chat_room.dart';
+import '../models/conversation_note.dart';
 import '../models/local_chat_message.dart';
+import '../models/todo_item.dart';
 import 'encrypted_database.dart';
 
 class ConversationSummary {
@@ -57,12 +59,26 @@ abstract class ChatRepository {
     required String roomId,
     required int unreadCount,
   });
+
+  Future<ConversationNote?> readNote(String conversationId);
+
+  Future<void> saveNote(ConversationNote note);
+
+  Future<List<TodoItem>> listTodos(String conversationId);
+
+  Future<void> upsertTodo(TodoItem todo);
+
+  Future<void> deleteTodo(String todoId);
+
+  Future<void> replaceTodos(String conversationId, List<TodoItem> todos);
 }
 
 // ── In-memory fallback for Flutter Web (sqflite_sqlcipher is native-only) ───
 class InMemoryChatRepository implements ChatRepository {
   final _store = <String, List<LocalChatMessage>>{};
   final _rooms = <String, ChatRoom>{};
+  final _notes = <String, ConversationNote>{};
+  final _todos = <String, List<TodoItem>>{};
 
   @override
   Future<List<LocalChatMessage>> listMessages({
@@ -202,6 +218,49 @@ class InMemoryChatRepository implements ChatRepository {
       return;
     }
     _rooms[roomId] = room.copyWith(unreadCount: unreadCount);
+  }
+
+  @override
+  Future<ConversationNote?> readNote(String conversationId) async {
+    return _notes[conversationId];
+  }
+
+  @override
+  Future<void> saveNote(ConversationNote note) async {
+    _notes[note.conversationId] = note;
+  }
+
+  @override
+  Future<List<TodoItem>> listTodos(String conversationId) async {
+    final items = [...(_todos[conversationId] ?? <TodoItem>[])];
+    items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return items;
+  }
+
+  @override
+  Future<void> upsertTodo(TodoItem todo) async {
+    final list = _todos[todo.conversationId] ??= [];
+    final idx = list.indexWhere((e) => e.id == todo.id);
+    if (idx == -1) {
+      list.add(todo);
+    } else {
+      list[idx] = todo;
+    }
+  }
+
+  @override
+  Future<void> deleteTodo(String todoId) async {
+    for (final list in _todos.values) {
+      list.removeWhere((e) => e.id == todoId);
+    }
+  }
+
+  @override
+  Future<void> replaceTodos(
+    String conversationId,
+    List<TodoItem> todos,
+  ) async {
+    _todos[conversationId] = [...todos];
   }
 }
 
@@ -421,6 +480,77 @@ class LocalChatRepository implements ChatRepository {
       where: 'id = ?',
       whereArgs: [roomId],
     );
+  }
+
+  @override
+  Future<ConversationNote?> readNote(String conversationId) async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'conversation_notes',
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return ConversationNote.fromMap(Map<String, Object?>.from(rows.first));
+  }
+
+  @override
+  Future<void> saveNote(ConversationNote note) async {
+    final db = await _encryptedDatabase.open();
+    await db.insert(
+      'conversation_notes',
+      note.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  @override
+  Future<List<TodoItem>> listTodos(String conversationId) async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'todo_items',
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      orderBy: 'sort_order ASC',
+    );
+    return rows
+        .map((row) => TodoItem.fromMap(Map<String, Object?>.from(row)))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> upsertTodo(TodoItem todo) async {
+    final db = await _encryptedDatabase.open();
+    await db.insert(
+      'todo_items',
+      todo.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  @override
+  Future<void> deleteTodo(String todoId) async {
+    final db = await _encryptedDatabase.open();
+    await db.delete('todo_items', where: 'id = ?', whereArgs: [todoId]);
+  }
+
+  @override
+  Future<void> replaceTodos(
+    String conversationId,
+    List<TodoItem> todos,
+  ) async {
+    final db = await _encryptedDatabase.open();
+    await db.transaction((txn) async {
+      await txn.delete(
+        'todo_items',
+        where: 'conversation_id = ?',
+        whereArgs: [conversationId],
+      );
+      for (final todo in todos) {
+        await txn.insert('todo_items', todo.toMap());
+      }
+    });
   }
 
   String _generateMessageId() {

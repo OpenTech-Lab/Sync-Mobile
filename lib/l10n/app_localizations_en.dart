@@ -950,4 +950,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatExportFailed => 'Failed to export chat history';
+
+  @override
+  String get chatNotes => 'Notes';
+
+  @override
+  String get chatNotesHint => 'Write a note…';
+
+  @override
+  String get chatTodos => 'Todos';
+
+  @override
+  String get chatTodosHint => 'Add a todo…';
+
+  @override
+  String get chatTodosAddAction => 'A D D';
+
+  @override
+  String get chatTodosEmptyHint => 'No todos yet';
 }

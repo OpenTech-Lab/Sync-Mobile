@@ -1,5 +1,15 @@
 # ios certificates and provisioning profiles
-scripts/ios
+scripts/ios/**/*.p8
+scripts/ios/**/*.cer
+scripts/ios/**/*.csr
+scripts/ios/**/*.key
+scripts/ios/**/*.mobileprovision
+scripts/ios/**/*.p12
+scripts/ios/**/*.pem
+scripts/ios/**/*.env
+vars.env
+
+
 
 # Miscellaneous
 *.class

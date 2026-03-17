@@ -52,7 +52,7 @@ class EncryptedDatabase {
        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _legacyDatabaseName = 'sync_local_chat.db';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
   static const _legacyDatabaseKeyStorageKey = 'local_chat_db_key';
 
   final String _serverUrl;
@@ -144,10 +144,16 @@ class EncryptedDatabase {
           'CREATE INDEX idx_local_messages_conversation_created_at ON local_messages(conversation_id, created_at DESC)',
         );
         await _createRoomsTable(db);
+        await _createNotesTable(db);
+        await _createTodosTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _createRoomsTable(db);
+        }
+        if (oldVersion < 3) {
+          await _createNotesTable(db);
+          await _createTodosTable(db);
         }
       },
     );
@@ -273,6 +279,32 @@ class EncryptedDatabase {
         }
       }
     }
+  }
+
+  Future<void> _createNotesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS conversation_notes (
+        conversation_id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createTodosTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS todo_items (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        text TEXT NOT NULL,
+        is_done INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_todo_items_conversation ON todo_items(conversation_id, sort_order)',
+    );
   }
 
   Future<void> _createRoomsTable(Database db) async {

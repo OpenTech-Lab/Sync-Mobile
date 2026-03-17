@@ -29,6 +29,8 @@ import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
+import 'conversation_note_page.dart';
+import 'conversation_todos_page.dart';
 import 'models/outgoing_draft.dart';
 import 'utils/chat_helpers.dart';
 import 'widgets/conversation_starter.dart';
@@ -1748,7 +1750,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                   Align(
                     alignment: Alignment.center,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 56),
+                      padding: const EdgeInsets.only(left: 48, right: 104),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(8),
                         onTap: _activePartnerId == null
@@ -1764,14 +1766,56 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       ),
                     ),
                   ),
-                  if (activeUnread > 0)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: UnreadBadge(count: activeUnread),
-                      ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_activePartnerId != null) ...[
+                          IconButton(
+                            icon: const Icon(Icons.notes, size: 20),
+                            tooltip: _l10n.chatNotes,
+                            onPressed: () {
+                              final partnerId = _activePartnerId!;
+                              final name = activeDisplayName ??
+                                  _l10n.chatDefaultTitle;
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ConversationNotePage(
+                                    conversationId: partnerId,
+                                    conversationName: name,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.checklist, size: 20),
+                            tooltip: _l10n.chatTodos,
+                            onPressed: () {
+                              final partnerId = _activePartnerId!;
+                              final name = activeDisplayName ??
+                                  _l10n.chatDefaultTitle;
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ConversationTodosPage(
+                                    conversationId: partnerId,
+                                    conversationName: name,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        if (activeUnread > 0) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: UnreadBadge(count: activeUnread),
+                          ),
+                        ],
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
