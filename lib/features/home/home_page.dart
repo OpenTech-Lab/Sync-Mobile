@@ -61,6 +61,9 @@ class HomeTab extends ConsumerWidget {
       (sum, count) => sum + count,
     );
     final friendIds = ref.watch(friendIdsProvider).value ?? const <String>[];
+    final deletionState =
+        ref.watch(deferredDeletionControllerProvider).value ??
+        const DeferredDeletionState();
     final planetLabel = resolvePlanetName(
       serverUrl: serverUrl,
       instanceName: planetInfo?.instanceName,
@@ -73,24 +76,44 @@ class HomeTab extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           children: [
-            const _DeletionPendingBanner(),
             if (onOpenSettings != null) ...[
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  key: const ValueKey('home_settings_button'),
-                  onPressed: onOpenSettings,
-                  tooltip: l10n.tabSettings,
-                  icon: const Icon(Icons.settings_outlined),
-                  iconSize: 20,
-                  color: AppPalette.neutral500,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 32,
-                    height: 32,
+              Row(
+                children: [
+                  if (deletionState.hasPending || deletionState.isExecuting)
+                    Expanded(
+                      child: Text(
+                        deletionState.isExecuting
+                            ? l10n.settingsDeletionExecuting
+                            : l10n.settingsDeletionCountdown(
+                                _formatHomeDeletionCountdown(
+                                  deletionState.remaining,
+                                ),
+                              ),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w300,
+                          color: AppPalette.danger700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  IconButton(
+                    key: const ValueKey('home_settings_button'),
+                    onPressed: onOpenSettings,
+                    tooltip: l10n.tabSettings,
+                    icon: const Icon(Icons.settings_outlined),
+                    iconSize: 20,
+                    color: AppPalette.neutral500,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: 8),
             ],
@@ -1005,95 +1028,12 @@ class _HomeGuildBadge extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Banner shown at the top-left of the home page when a deferred deletion
-// is pending, reminding the user the action will execute automatically.
-// ---------------------------------------------------------------------------
-
 String _formatHomeDeletionCountdown(Duration remaining) {
   final totalSeconds = remaining.inSeconds.clamp(0, 999999);
   final hours = totalSeconds ~/ 3600;
   final minutes = (totalSeconds % 3600) ~/ 60;
   final seconds = totalSeconds % 60;
   return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-}
-
-class _DeletionPendingBanner extends ConsumerWidget {
-  const _DeletionPendingBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final deletionState =
-        ref.watch(deferredDeletionControllerProvider).value ??
-        const DeferredDeletionState();
-    if (!deletionState.hasPending && !deletionState.isExecuting) {
-      return const SizedBox.shrink();
-    }
-
-    final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final actionLabel =
-        deletionState.activeKind == DeferredDeletionKind.deleteAllPlanetData
-            ? l10n.settingsDeleteAllPlanetData
-            : l10n.settingsDeleteAccount;
-
-    final statusText = deletionState.isExecuting
-        ? l10n.settingsDeletionExecuting
-        : l10n.settingsDeletionCountdown(
-            _formatHomeDeletionCountdown(deletionState.remaining),
-          );
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppPalette.danger700.withValues(
-          alpha: isDark ? 0.12 : 0.08,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppPalette.danger700.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            size: 14,
-            color: AppPalette.danger700,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  actionLabel,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: AppPalette.danger700,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w300,
-                    color: AppPalette.danger700.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
