@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/todo_item.dart';
 import '../../state/conversation_notes_controller.dart';
+import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 
 class ConversationTodosPage extends ConsumerStatefulWidget {
@@ -51,74 +52,133 @@ class _ConversationTodosPageState
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final l10n = AppLocalizations.of(context)!;
 
-    final todosAsync = ref.watch(
-      conversationTodosProvider(widget.conversationId),
-    );
-    final todos = todosAsync.value ?? const <TodoItem>[];
+    final todos = ref
+            .watch(conversationTodosProvider(widget.conversationId))
+            .value ??
+        const <TodoItem>[];
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
         surfaceTintColor: AppPalette.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: AppPalette.neutral500),
-        title: Text(l10n.chatTodos, style: TextStyle(color: inkColor)),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Input row
+          // ── header ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(28, 8, 28, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _focusNode,
-                    style: TextStyle(color: inkColor),
-                    cursorColor: AppPalette.neutral500,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _add(),
-                    decoration: InputDecoration(
-                      hintText: l10n.chatTodosHint,
-                      hintStyle: TextStyle(
-                        color: AppPalette.neutral500.withValues(alpha: 0.6),
+                Text(
+                  l10n.chatTodos.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    color: AppPalette.neutral500,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.conversationName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: AppPalette.neutral500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Divider(height: 1, color: ruleColor),
+                const SizedBox(height: 14),
+
+                // ── input row ──
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w300,
+                          color: inkColor,
+                        ),
+                        cursorColor: AppPalette.neutral500,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _add(),
+                        decoration: InputDecoration(
+                          hintText: l10n.chatTodosHint,
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: AppPalette.neutral500.withValues(alpha: 0.55),
+                            fontWeight: FontWeight.w300,
+                          ),
+                          border: UnderlineInputBorder(
+                            borderSide: BorderSide(color: ruleColor),
+                          ),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: ruleColor),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppPalette.neutral500,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 11,
+                          ),
+                          isDense: true,
+                        ),
                       ),
-                      border: InputBorder.none,
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    OutlineActionButton(
+                      label: l10n.chatTodosAddAction,
+                      borderColor: ruleColor,
+                      textColor: inkColor,
+                      compact: true,
+                      onTap: _add,
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: _add,
-                  child: Text(
-                    l10n.chatTodosAddAction,
-                    style: TextStyle(color: inkColor),
-                  ),
-                ),
+                const SizedBox(height: 16),
+                Divider(height: 1, color: ruleColor),
               ],
             ),
           ),
-          Divider(height: 1, color: ruleColor),
-          // Todo list
+
+          // ── todo list ──
           Expanded(
             child: todos.isEmpty
                 ? Center(
                     child: Text(
                       l10n.chatTodosEmptyHint,
-                      style: TextStyle(color: AppPalette.neutral500),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: AppPalette.neutral500,
+                      ),
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     itemCount: todos.length,
                     separatorBuilder: (context, index) =>
                         Divider(height: 1, color: ruleColor),
                     itemBuilder: (context, index) {
                       final todo = todos[index];
-                      return _TodoTile(
+                      return _TodoRow(
                         key: ValueKey(todo.id),
                         todo: todo,
                         inkColor: inkColor,
+                        ruleColor: ruleColor,
                         onToggle: () => ref
                             .read(
                               conversationTodosProvider(
@@ -143,55 +203,60 @@ class _ConversationTodosPageState
   }
 }
 
-class _TodoTile extends StatelessWidget {
-  const _TodoTile({
+class _TodoRow extends StatelessWidget {
+  const _TodoRow({
     super.key,
     required this.todo,
     required this.inkColor,
+    required this.ruleColor,
     required this.onToggle,
     required this.onDelete,
   });
 
   final TodoItem todo;
   final Color inkColor;
+  final Color ruleColor;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
+    final doneColor = AppPalette.neutral500;
+
     return InkWell(
       onTap: onToggle,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(28, 14, 16, 14),
         child: Row(
           children: [
             Icon(
               todo.isDone
-                  ? Icons.check_circle_outline
-                  : Icons.radio_button_unchecked,
-              color: todo.isDone
-                  ? AppPalette.neutral500
-                  : inkColor,
-              size: 22,
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              size: 18,
+              color: todo.isDone ? doneColor : inkColor,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 todo.text,
                 style: TextStyle(
-                  color: todo.isDone
-                      ? AppPalette.neutral500
-                      : inkColor,
-                  decoration: todo.isDone
-                      ? TextDecoration.lineThrough
-                      : null,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w300,
+                  color: todo.isDone ? doneColor : inkColor,
+                  decoration: todo.isDone ? TextDecoration.lineThrough : null,
+                  decorationColor: doneColor,
                 ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.close, size: 18, color: AppPalette.neutral500),
+              icon: Icon(
+                Icons.close,
+                size: 16,
+                color: AppPalette.neutral500,
+              ),
               onPressed: onDelete,
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               visualDensity: VisualDensity.compact,
               constraints: const BoxConstraints(),
             ),

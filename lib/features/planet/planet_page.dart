@@ -396,7 +396,7 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                       }
                       final groups = grouped.keys.toList(growable: false);
                       return SizedBox(
-                        height: 118,
+                        height: 140,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           padding: EdgeInsets.zero,

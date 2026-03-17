@@ -638,9 +638,19 @@ class DangerousActionsPage extends ConsumerWidget {
               disabled: deleteButtonsDisabled,
               isDark: isDark,
               onPressed: () async {
-                await ref
-                    .read(deferredDeletionControllerProvider.notifier)
-                    .scheduleDeleteAllPlanetData();
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsDeleteAllPlanetData,
+                    message: l10n.settingsDeleteAllPlanetDataMessage,
+                    confirmLabel: l10n.settingsDeleteAllPlanetDataConfirm,
+                  ),
+                );
+                if (confirmed == true) {
+                  await ref
+                      .read(deferredDeletionControllerProvider.notifier)
+                      .scheduleDeleteAllPlanetData();
+                }
               },
             ),
             const SizedBox(height: 10),
@@ -652,9 +662,19 @@ class DangerousActionsPage extends ConsumerWidget {
               disabled: deleteButtonsDisabled,
               isDark: isDark,
               onPressed: () async {
-                await ref
-                    .read(deferredDeletionControllerProvider.notifier)
-                    .scheduleDeleteAccount();
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => _ConfirmDialog(
+                    title: l10n.settingsDeleteAccount,
+                    message: l10n.settingsDeleteAccountMessage,
+                    confirmLabel: l10n.settingsDeleteAccountConfirm,
+                  ),
+                );
+                if (confirmed == true) {
+                  await ref
+                      .read(deferredDeletionControllerProvider.notifier)
+                      .scheduleDeleteAccount();
+                }
               },
             ),
             // ── Sign Out ────────────────────────────────────────────────
