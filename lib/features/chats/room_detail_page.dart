@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../models/chat_room.dart';
+import '../../services/chat_attachment_download_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/user_profile_controller.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/molecules/app_dialog.dart';
 import '../../ui/tokens/colors/app_palette.dart';
@@ -638,6 +643,146 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     }
   }
 
+  Future<void> _exportChatHistory() async {
+    final l10n = AppLocalizations.of(context)!;
+    final detail = _detail;
+    final repository = ref.read(chatRepositoryProvider);
+    final conversationId = roomConversationId(widget.roomId);
+    final messages = await repository.listMessages(
+      conversationId: conversationId,
+      limit: 5000,
+    );
+    if (!mounted) return;
+
+    final roomLabel = detail?.name.trim().isNotEmpty == true
+        ? detail!.name.trim()
+        : widget.roomId;
+
+    Map<String, String> memberNames = {};
+    if (detail != null) {
+      for (final m in detail.members) {
+        memberNames[m.userId] = m.username.trim().isNotEmpty
+            ? m.username.trim()
+            : m.userId.substring(0, 8);
+      }
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('=== Chat history: $roomLabel ===');
+    buffer.writeln('Exported: ${_formatExportDate(DateTime.now().toLocal())}');
+    buffer.writeln();
+    for (final msg in messages.reversed) {
+      final senderLabel = msg.senderId == widget.currentUserId
+          ? 'You'
+          : (memberNames[msg.senderId] ??
+              msg.senderId.substring(
+                0,
+                msg.senderId.length.clamp(0, 8),
+              ));
+      final time = _formatExportDate(msg.createdAt.toLocal());
+      buffer.writeln('[$time] $senderLabel: ${msg.body}');
+    }
+    final text = buffer.toString();
+
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetCtx) {
+        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        final inkColor =
+            isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+        final subColor = AppPalette.neutral500;
+        final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: subColor.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  l10n.chatExportHistory.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    color: subColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                tileColor: bgColor,
+                leading: Icon(Icons.copy_outlined, color: inkColor, size: 20),
+                title: Text(
+                  l10n.chatExportCopyAction,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.of(sheetCtx).pop();
+                  await Clipboard.setData(ClipboardData(text: text));
+                  if (mounted) showAppToast(context, l10n.chatExportCopied);
+                },
+              ),
+              ListTile(
+                tileColor: bgColor,
+                leading:
+                    Icon(Icons.save_alt_outlined, color: inkColor, size: 20),
+                title: Text(
+                  l10n.chatExportSaveAction,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.of(sheetCtx).pop();
+                  try {
+                    final bytes = Uint8List.fromList(
+                      const Utf8Encoder().convert(text),
+                    );
+                    final safeName = roomLabel.replaceAll(
+                      RegExp(r'[\\/:*?"<>|\s]'),
+                      '_',
+                    );
+                    await ChatAttachmentDownloadService().download(
+                      bytes: bytes,
+                      suggestedFileName: 'room_$safeName.txt',
+                    );
+                    if (mounted) showAppToast(context, l10n.chatExportSaved);
+                  } catch (_) {
+                    if (mounted) {
+                      showAppToast(
+                        context,
+                        l10n.chatExportFailed,
+                        variant: AppToastVariant.error,
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -819,6 +964,14 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        OutlineActionButton(
+          label: AppLocalizations.of(context)!.chatExportHistory,
+          borderColor: ruleColor,
+          textColor: inkColor,
+          disabled: _actionInProgress,
+          onTap: _actionInProgress ? null : _exportChatHistory,
+        ),
         const SizedBox(height: 28),
         Divider(height: 1, color: ruleColor),
         const SizedBox(height: 16),
@@ -875,6 +1028,15 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
       ],
     );
   }
+}
+
+String _formatExportDate(DateTime value) {
+  final y = value.year.toString().padLeft(4, '0');
+  final m = value.month.toString().padLeft(2, '0');
+  final d = value.day.toString().padLeft(2, '0');
+  final hh = value.hour.toString().padLeft(2, '0');
+  final mm = value.minute.toString().padLeft(2, '0');
+  return '$y-$m-$d $hh:$mm';
 }
 
 String _displayNameOrFallback(String userId, String? displayName) {

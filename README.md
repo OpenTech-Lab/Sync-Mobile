@@ -26,3 +26,30 @@ MIT License - see [LICENSE](LICENSE).
 
 - Powered by Flutter for beautiful, fast apps.
 - Inspired by secure chat apps like Signal, with federation from Mastodon/Matrix.
+
+## Community Feedback and Roadmap
+
+We welcome public participation in the direction of this project.
+
+### Suggest a feature
+Use the Feature Request form in Issues.
+
+### Share broader feedback
+Use the Community Survey form.
+
+### Vote on priorities
+Use GitHub Discussions polls to vote on roadmap direction and upcoming features.
+
+### Follow the roadmap
+See the public roadmap here:
+
+- [Roadmap](docs/ROADMAP.md)
+- [Decision Log](docs/DECISIONS.md)
+
+### How we prioritize
+We consider:
+- Community demand
+- Security and stability
+- Technical complexity
+- Maintainer capacity
+- Long-term product direction

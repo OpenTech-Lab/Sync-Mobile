@@ -705,6 +705,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
           builder: (_) => ChatTargetProfileScreen(
             serverUrl: widget.serverUrl,
             userId: resolved.partnerId,
+            currentUserId: widget.currentUserId,
             displayName: resolved.displayName,
             displayHandle: resolved.displayHandle,
             avatarBase64: resolved.avatarBase64,
@@ -1388,6 +1389,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         builder: (_) => ChatTargetProfileScreen(
           serverUrl: widget.serverUrl,
           userId: partnerId,
+          currentUserId: widget.currentUserId,
           displayName: displayName,
           displayHandle: partnerId,
           avatarBase64: avatarBase64,

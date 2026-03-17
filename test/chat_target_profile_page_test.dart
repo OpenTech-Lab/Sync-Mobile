@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/chat_target_profile_page.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+import 'package:mobile/services/local_chat_repository.dart';
 import 'package:mobile/services/user_profile_preferences.dart';
+import 'package:mobile/state/conversation_messages_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -18,16 +21,22 @@ void main() {
       required String displayName,
     }) async {
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ChatTargetProfileScreen(
-            serverUrl: serverUrl,
-            userId: userId,
-            displayName: displayName,
-            displayHandle: userId,
-            avatarBase64: null,
-            isFriend: true,
+        ProviderScope(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChatTargetProfileScreen(
+              serverUrl: serverUrl,
+              userId: userId,
+              currentUserId: 'current-user',
+              displayName: displayName,
+              displayHandle: userId,
+              avatarBase64: null,
+              isFriend: true,
+            ),
           ),
         ),
       );
@@ -83,16 +92,22 @@ void main() {
       await preferences.writeFriendTags(serverUrl, 'friend-b', ['Work']);
 
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const ChatTargetProfileScreen(
-            serverUrl: serverUrl,
-            userId: 'friend-a',
-            displayName: 'Friend A',
-            displayHandle: 'friend-a',
-            avatarBase64: null,
-            isFriend: true,
+        ProviderScope(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const ChatTargetProfileScreen(
+              serverUrl: serverUrl,
+              userId: 'friend-a',
+              currentUserId: 'current-user',
+              displayName: 'Friend A',
+              displayHandle: 'friend-a',
+              avatarBase64: null,
+              isFriend: true,
+            ),
           ),
         ),
       );
@@ -128,32 +143,38 @@ void main() {
       late Future<ChatTargetProfileAction?> resultFuture;
 
       await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: TextButton(
-                  onPressed: () {
-                    resultFuture = Navigator.of(context).push(
-                      MaterialPageRoute<ChatTargetProfileAction>(
-                        builder: (_) => const ChatTargetProfileScreen(
-                          serverUrl: 'https://example.com',
-                          userId: 'friend-a',
-                          displayName: 'Friend A',
-                          displayHandle: 'friend-a',
-                          avatarBase64: null,
-                          isFriend: true,
+        ProviderScope(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: TextButton(
+                    onPressed: () {
+                      resultFuture = Navigator.of(context).push(
+                        MaterialPageRoute<ChatTargetProfileAction>(
+                          builder: (_) => const ChatTargetProfileScreen(
+                            serverUrl: 'https://example.com',
+                            userId: 'friend-a',
+                            currentUserId: 'current-user',
+                            displayName: 'Friend A',
+                            displayHandle: 'friend-a',
+                            avatarBase64: null,
+                            isFriend: true,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  child: const Text('OPEN'),
-                ),
-              );
-            },
+                      );
+                    },
+                    child: const Text('OPEN'),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       );
@@ -192,17 +213,23 @@ void main() {
       SharedPreferences.setMockInitialValues(const <String, Object>{});
 
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const ChatTargetProfileScreen(
-            serverUrl: 'https://example.com',
-            userId: 'friend-a',
-            displayName: 'Friend A',
-            displayHandle: 'friend-a',
-            avatarBase64: null,
-            description: 'Quiet observer from another planet.',
-            isFriend: true,
+        ProviderScope(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const ChatTargetProfileScreen(
+              serverUrl: 'https://example.com',
+              userId: 'friend-a',
+              currentUserId: 'current-user',
+              displayName: 'Friend A',
+              displayHandle: 'friend-a',
+              avatarBase64: null,
+              description: 'Quiet observer from another planet.',
+              isFriend: true,
+            ),
           ),
         ),
       );

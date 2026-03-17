@@ -572,6 +572,7 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
                 builder: (_) => ChatTargetProfileScreen(
                   serverUrl: widget.serverUrl,
                   userId: widget.friendId,
+                  currentUserId: widget.currentUserId,
                   displayName: displayName,
                   displayHandle: widget.friendId,
                   avatarBase64: avatarBase64,

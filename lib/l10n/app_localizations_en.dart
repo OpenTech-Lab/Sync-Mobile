@@ -932,4 +932,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String profileTrustMilestoneLevelDetail(String level) {
     return 'You reached level $level.';
   }
+
+  @override
+  String get chatExportHistory => 'Export history';
+
+  @override
+  String get chatExportCopyAction => 'copy to clipboard';
+
+  @override
+  String get chatExportSaveAction => 'save as .txt';
+
+  @override
+  String get chatExportCopied => 'Chat history copied';
+
+  @override
+  String get chatExportSaved => 'Chat history saved';
+
+  @override
+  String get chatExportFailed => 'Failed to export chat history';
 }

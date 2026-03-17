@@ -1,0 +1,62 @@
+name: Community Survey
+description: Share feedback about priorities, usability, and roadmap direction
+title: "[Survey]: "
+labels: ["survey", "community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form helps us understand what the community wants most.
+
+  - type: input
+    id: role
+    attributes:
+      label: How do you use this project?
+      placeholder: Developer, self-hosting user, maintainer, tester, student...
+
+  - type: textarea
+    id: most_valuable
+    attributes:
+      label: Which part of the project is most valuable to you?
+      placeholder: The feature I use most is...
+    validations:
+      required: true
+
+  - type: textarea
+    id: biggest_gap
+    attributes:
+      label: What is the biggest missing feature or weakness?
+      placeholder: What is currently missing?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: next_focus
+    attributes:
+      label: What should we focus on next?
+      options:
+        - Stability and bug fixes
+        - Performance
+        - Documentation
+        - UX / UI
+        - New features
+        - Security
+        - Ecosystem / integrations
+    validations:
+      required: true
+
+  - type: textarea
+    id: top_requests
+    attributes:
+      label: Top 3 things you want next
+      placeholder: |
+        1.
+        2.
+        3.
+
+  - type: checkboxes
+    id: follow_up
+    attributes:
+      label: Can we contact you in a discussion thread if needed?
+      options:
+        - label: Yes, maintainers can tag me for follow-up discussion

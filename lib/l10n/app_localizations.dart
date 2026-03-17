@@ -1809,6 +1809,13 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You reached level {level}.'**
   String profileTrustMilestoneLevelDetail(String level);
+
+  String get chatExportHistory;
+  String get chatExportCopyAction;
+  String get chatExportSaveAction;
+  String get chatExportCopied;
+  String get chatExportSaved;
+  String get chatExportFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

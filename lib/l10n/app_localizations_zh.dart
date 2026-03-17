@@ -932,6 +932,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String profileTrustMilestoneLevelDetail(String level) {
     return 'You reached level $level.';
   }
+
+  @override
+  String get chatExportHistory => 'Export history';
+
+  @override
+  String get chatExportCopyAction => 'copy to clipboard';
+
+  @override
+  String get chatExportSaveAction => 'save as .txt';
+
+  @override
+  String get chatExportCopied => 'Chat history copied';
+
+  @override
+  String get chatExportSaved => 'Chat history saved';
+
+  @override
+  String get chatExportFailed => 'Failed to export chat history';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1856,4 +1874,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String profileTrustMilestoneLevelDetail(String level) {
     return '您已達到第 $level 級。';
   }
+
+  @override
+  String get chatExportHistory => '匯出聊天記錄';
+
+  @override
+  String get chatExportCopyAction => '複製到剪貼簿';
+
+  @override
+  String get chatExportSaveAction => '儲存為 .txt';
+
+  @override
+  String get chatExportCopied => '聊天記錄已複製';
+
+  @override
+  String get chatExportSaved => '聊天記錄已儲存';
+
+  @override
+  String get chatExportFailed => '匯出聊天記錄失敗';
 }
