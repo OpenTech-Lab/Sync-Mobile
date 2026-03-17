@@ -99,6 +99,7 @@ class RealtimeSyncService {
       final wsUri = _wsUri(baseUrl, accessToken);
       final channel = connectDevWebSocketChannel(wsUri);
       _channel = channel;
+      await channel.ready;
       _events.add(RealtimeEvent.connection(RealtimeConnectionStatus.connected));
 
       _pingTimer?.cancel();
