@@ -6,6 +6,7 @@ import UserNotifications
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pushChannel: FlutterMethodChannel?
+  private var clipboardChannel: FlutterMethodChannel?
   private var apnsTokenHex: String?
 
   override func application(
@@ -14,6 +15,7 @@ import UserNotifications
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
     setupPushBridge(registry: self)
+    setupClipboardBridge(registry: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -36,6 +38,7 @@ import UserNotifications
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     setupPushBridge(registry: engineBridge.pluginRegistry)
+    setupClipboardBridge(registry: engineBridge.pluginRegistry)
   }
 
   private func setupPushBridge(registry: FlutterPluginRegistry) {
@@ -69,6 +72,32 @@ import UserNotifications
     pushChannel = channel
   }
 
+  private func setupClipboardBridge(registry: FlutterPluginRegistry) {
+    guard clipboardChannel == nil else { return }
+    guard let registrar = registry.registrar(forPlugin: "ClipboardBridgePlugin") else { return }
+
+    let channel = FlutterMethodChannel(
+      name: "sync.clipboard",
+      binaryMessenger: registrar.messenger()
+    )
+
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(FlutterError(code: "unavailable", message: "App delegate missing", details: nil))
+        return
+      }
+
+      switch call.method {
+      case "copyPngToClipboard":
+        self.copyPngToClipboard(call: call, result: result)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    clipboardChannel = channel
+  }
+
   private func requestPushPermission(result: @escaping FlutterResult) {
     UNUserNotificationCenter.current().requestAuthorization(
       options: [.alert, .sound, .badge]
@@ -90,6 +119,24 @@ import UserNotifications
         }
         result(granted)
       }
+    }
+  }
+
+  private func copyPngToClipboard(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let typedData = call.arguments as? FlutterStandardTypedData else {
+      result(
+        FlutterError(
+          code: "invalid_args",
+          message: "Expected PNG bytes",
+          details: nil
+        )
+      )
+      return
+    }
+
+    DispatchQueue.main.async {
+      UIPasteboard.general.setData(typedData.data, forPasteboardType: "public.png")
+      result(nil)
     }
   }
 

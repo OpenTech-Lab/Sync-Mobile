@@ -33,15 +33,14 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Required by super_clipboard for writing image data to clipboard on Android -->
         <provider
-            android:name="com.superlist.super_clipboard.SuperClipboardProvider"
-            android:authorities="${applicationId}.SuperClipboardProvider"
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.clipboardprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/super_clipboard_provider_paths" />
+                android:resource="@xml/clipboard_provider_paths" />
         </provider>
     </application>
     <!-- Required to query activities that can process text, see:

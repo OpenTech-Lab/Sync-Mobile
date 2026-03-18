@@ -3,11 +3,16 @@ package com.icyanstudio.sync
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Base64
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.min
 import kotlin.math.roundToInt
 import androidx.core.app.ActivityCompat
@@ -19,7 +24,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val channelName = "sync.notifications"
+    private val notificationChannelName = "sync.notifications"
+    private val clipboardChannelName = "sync.clipboard"
     private val notificationChannelId = "sync_messages"
     private val notificationRequestCode = 4041
     private var permissionResult: MethodChannel.Result? = null
@@ -29,12 +35,21 @@ class MainActivity : FlutterActivity() {
         createNotificationChannel()
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            channelName,
+            notificationChannelName,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestPushPermission" -> requestPushPermission(result)
                 "getPushToken" -> result.success(null)
                 "showLocalNotification" -> showLocalNotification(call.arguments, result)
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            clipboardChannelName,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "copyPngToClipboard" -> copyPngToClipboard(call.arguments, result)
                 else -> result.notImplemented()
             }
         }
@@ -109,6 +124,34 @@ class MainActivity : FlutterActivity() {
 
         NotificationManagerCompat.from(this).notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), notification)
         result.success(null)
+    }
+
+    private fun copyPngToClipboard(args: Any?, result: MethodChannel.Result) {
+        val bytes = args as? ByteArray ?: run {
+            result.error("invalid_args", "Expected PNG bytes", null)
+            return
+        }
+
+        try {
+            val clipboardDir = File(cacheDir, "clipboard")
+            if (!clipboardDir.exists()) {
+                clipboardDir.mkdirs()
+            }
+            val imageFile = File(clipboardDir, "qr_payload.png")
+            FileOutputStream(imageFile).use { stream ->
+                stream.write(bytes)
+                stream.flush()
+            }
+
+            val authority = "$packageName.clipboardprovider"
+            val imageUri = FileProvider.getUriForFile(this, authority, imageFile)
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newUri(contentResolver, "QR payload", imageUri)
+            clipboard.setPrimaryClip(clip)
+            result.success(null)
+        } catch (error: Exception) {
+            result.error("clipboard_error", "Failed to copy PNG to clipboard", error.localizedMessage)
+        }
     }
 
     private fun decodeCenteredAvatarLargeIcon(avatarBase64: String): Bitmap? {

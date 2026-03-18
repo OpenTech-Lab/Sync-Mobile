@@ -12,12 +12,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:super_clipboard/super_clipboard.dart';
 
 import '../../constants/feature_flags.dart';
 import '../../constants/planet_presets.dart';
 import '../../models/friend_qr_payload.dart';
 import '../../models/qr_login_payload.dart';
+import '../../services/clipboard_image_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_controller.dart';
@@ -1077,9 +1077,10 @@ class _CopyQrPayloadButtonState extends State<_CopyQrPayloadButton> {
     if (byteData == null) return;
     final pngBytes = byteData.buffer.asUint8List();
 
-    final item = DataWriterItem();
-    item.add(Formats.png(pngBytes));
-    await ClipboardWriter.instance.write([item]);
+    await ClipboardImageService.copyPng(
+      pngBytes: pngBytes,
+      fallbackText: widget.payload,
+    );
 
     if (!mounted) return;
     _showCopiedState();
