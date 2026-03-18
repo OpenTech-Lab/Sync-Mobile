@@ -34,28 +34,37 @@ end
 
 post_install do |installer|
   # Fix "Multiple commands produce libsuper_native_extensions.a".
-  # The Rust build phase can appear more than once — either duplicated within
-  # the super_native_extensions target, present in multiple targets (e.g. an
-  # aggregate), or with the same output path listed twice inside one phase's
-  # output_paths array. We scan every target, keep the very first matching
-  # phase (deduplicating its output_paths in-place), and delete all subsequent
-  # matches so Xcode sees exactly one command producing the library.
-  sne_phase_seen = false
+  #
+  # The Rust build-phase (cargokit / super_native_extensions) declares
+  # libsuper_native_extensions.a in its output_paths.  CocoaPods' native
+  # static-library target for the same pod ALSO produces a .a with the
+  # identical name.  Xcode's new build system rejects two commands that
+  # claim the same product.
+  #
+  # We strip the conflicting .a entry from the script's output_paths and
+  # replace it with a sentinel stamp file that the script touches at the
+  # end.  This keeps Xcode's dependency graph intact (the script still has
+  # a declared output so it runs in deterministic order) without a
+  # duplicate-product conflict.
   installer.pods_project.targets.each do |target|
-    phases_to_remove = []
     target.build_phases.each do |phase|
       next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
-      is_sne = phase.name&.include?('Build SuperNativeExtensions') ||
-               (phase.output_paths || []).any? { |p| p.include?('libsuper_native_extensions') }
-      next unless is_sne
-      if sne_phase_seen
-        phases_to_remove << phase
-      else
-        phase.output_paths = (phase.output_paths || []).uniq
-        sne_phase_seen = true
+      next unless phase.name&.include?('Build SuperNativeExtensions') ||
+                  (phase.output_paths || []).any? { |p| p.include?('libsuper_native_extensions') }
+
+      original = phase.output_paths || []
+      cleaned  = original.reject { |p| p.include?('libsuper_native_extensions') }
+      next if cleaned.length == original.length          # nothing conflicting
+
+      stamp = '$(DERIVED_FILE_DIR)/super_native_extensions_build.stamp'
+      cleaned << stamp unless cleaned.include?(stamp)
+      phase.output_paths = cleaned
+
+      unless phase.shell_script.to_s.include?('super_native_extensions_build.stamp')
+        phase.shell_script = phase.shell_script.to_s.rstrip +
+          "\ntouch \"${DERIVED_FILE_DIR}/super_native_extensions_build.stamp\"\n"
       end
     end
-    phases_to_remove.each { |p| target.build_phases.delete(p) }
   end
 
   installer.pods_project.targets.each do |target|
