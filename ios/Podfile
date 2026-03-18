@@ -35,35 +35,80 @@ end
 post_install do |installer|
   # Fix "Multiple commands produce libsuper_native_extensions.a".
   #
-  # The Rust build-phase (cargokit / super_native_extensions) declares
-  # libsuper_native_extensions.a in its output_paths. CocoaPods' native
-  # static-library target for the same pod also produces a .a with the same
-  # name, and Xcode rejects two commands that claim the same product.
+  # We need both parts of the plugin during archive:
+  # 1. the normal CocoaPods static library containing `SuperNativeExtensionsPlugin`
+  # 2. the Rust archive produced by cargokit.
   #
-  # Keep the script phase, but replace the conflicting output entry with a
-  # stamp file that the phase touches at the end. This preserves deterministic
-  # build ordering without rewriting the library path CocoaPods later expects
-  # during archive linkage.
+  # Xcode 16 rejects the shell-script phase and the pod static-library target
+  # when they both claim `${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a`.
+  # Keep a single Rust build phase, rewrite its declared output to a dedicated
+  # sibling directory, and copy the Rust archive there immediately after the
+  # script runs. The pod target can then still emit the normal
+  # `libsuper_native_extensions.a` product used for ObjC/Swift symbols, while
+  # the generated xcconfigs force-load the preserved Rust archive from the new
+  # path.
+  rust_dest_var = '${PODS_CONFIGURATION_BUILD_DIR}/super_native_extensions_rust'
+  rust_lib_var = "#{rust_dest_var}/libsuper_native_extensions.a"
+
+  sne_phase_matches = []
   installer.pods_project.targets.each do |target|
     target.build_phases.each do |phase|
       next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
       next unless phase.name&.include?('Build SuperNativeExtensions') ||
                   (phase.output_paths || []).any? { |path| path.include?('libsuper_native_extensions') }
 
-      original_output_paths = phase.output_paths || []
-      deduped_output_paths = original_output_paths.reject do |path|
-        path.include?('libsuper_native_extensions')
+      sne_phase_matches << [target, phase]
+    end
+  end
+
+  preferred_match = sne_phase_matches.find { |target, _phase| target.name == 'super_native_extensions' }
+  preferred_match ||= sne_phase_matches.first
+
+  installer.pods_project.targets.each do |target|
+    phases_to_remove = []
+
+    target.build_phases.each do |phase|
+      match = [target, phase]
+      next unless sne_phase_matches.include?(match)
+
+      unless match == preferred_match
+        phases_to_remove << phase
+        next
       end
-      next if deduped_output_paths.length == original_output_paths.length
 
-      stamp_path = '$(DERIVED_FILE_DIR)/super_native_extensions_build.stamp'
-      deduped_output_paths << stamp_path unless deduped_output_paths.include?(stamp_path)
-      phase.output_paths = deduped_output_paths
+      phase.output_paths = [rust_lib_var]
 
-      next if phase.shell_script.to_s.include?('super_native_extensions_build.stamp')
+      next if phase.shell_script.to_s.include?('super_native_extensions_rust')
 
-      phase.shell_script = phase.shell_script.to_s.rstrip +
-        "\ntouch \"${DERIVED_FILE_DIR}/super_native_extensions_build.stamp\"\n"
+      phase.shell_script = phase.shell_script.to_s.rstrip + "\n" + <<~'COPY_RUST_LIB'
+        # Preserve the Rust archive separately so the pod's normal static library
+        # can still provide `SuperNativeExtensionsPlugin` to the app link.
+        _sne_rust_dest="${PODS_CONFIGURATION_BUILD_DIR}/super_native_extensions_rust"
+        mkdir -p "$_sne_rust_dest"
+        if [ -f "${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a" ]; then
+          cp "${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a" \
+             "$_sne_rust_dest/libsuper_native_extensions.a"
+        fi
+      COPY_RUST_LIB
+    end
+
+    phases_to_remove.each { |phase| target.build_phases.delete(phase) }
+  end
+
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      xcconfig_ref = config.base_configuration_reference
+      next unless xcconfig_ref
+
+      xcconfig_path = xcconfig_ref.real_path.to_s
+      next unless File.exist?(xcconfig_path)
+
+      content = File.read(xcconfig_path)
+      old_flag = '-force_load ${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a'
+      new_flag = "-force_load #{rust_lib_var}"
+      next unless content.include?(old_flag)
+
+      File.write(xcconfig_path, content.gsub(old_flag, new_flag))
     end
   end
 
