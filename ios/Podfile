@@ -33,17 +33,19 @@ target 'Runner' do
 end
 
 post_install do |installer|
-  # Fix: super_native_extensions Rust build script runs multiple times during
-  # archive, declaring the same output file from different invocations.
-  # Clearing output_paths removes Xcode's output tracking so it no longer
-  # raises "Multiple commands produce …libsuper_native_extensions.a".
+  # Fix: CocoaPods sometimes adds the "Build SuperNativeExtensions Rust library"
+  # script phase more than once to the super_native_extensions target, causing
+  # Xcode to error with "Multiple commands produce libsuper_native_extensions.a".
+  # Deduplicating the phases (keeping the first) resolves the conflict while
+  # preserving the output_paths declaration that Xcode needs for build ordering,
+  # which prevents the follow-on "Undefined symbols: SuperNativeExtensionsPlugin".
   installer.pods_project.targets.each do |target|
     next unless target.name == 'super_native_extensions'
-    target.build_phases.each do |phase|
-      next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
-      next unless phase.name&.include?('Build SuperNativeExtensions')
-      phase.output_paths = []
+    rust_phases = target.build_phases.select do |phase|
+      phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase) &&
+        phase.name&.include?('Build SuperNativeExtensions')
     end
+    rust_phases.drop(1).each { |dup| target.build_phases.delete(dup) }
   end
 
   installer.pods_project.targets.each do |target|
