@@ -33,6 +33,19 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Fix: super_native_extensions Rust build script runs multiple times during
+  # archive, declaring the same output file from different invocations.
+  # Clearing output_paths removes Xcode's output tracking so it no longer
+  # raises "Multiple commands produce …libsuper_native_extensions.a".
+  installer.pods_project.targets.each do |target|
+    next unless target.name == 'super_native_extensions'
+    target.build_phases.each do |phase|
+      next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+      next unless phase.name&.include?('Build SuperNativeExtensions')
+      phase.output_paths = []
+    end
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
