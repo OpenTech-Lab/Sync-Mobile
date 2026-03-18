@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
@@ -1141,7 +1142,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     final mediaBytes = _selectedMediaBytes;
     final mediaToken = mediaBytes == null
         ? ''
-        : '[media-data:${base64Encode(mediaBytes)}]';
+        : '[media-data:${await compute(base64Encode, mediaBytes)}]';
     final content = [text, mediaToken].where((p) => p.isNotEmpty).join('\n');
     if (content.isEmpty) return;
 

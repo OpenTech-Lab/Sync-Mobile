@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -513,7 +514,7 @@ class _ChatHomeScreenState extends ConsumerState<ChatHomeScreen> {
                           final mediaBytes = _selectedMediaBytes;
                           final mediaToken = mediaBytes == null
                               ? ''
-                              : '[media-data:${base64Encode(mediaBytes)}]';
+                              : '[media-data:${await compute(base64Encode, mediaBytes)}]';
                           final content = [
                             text,
                             mediaToken,
