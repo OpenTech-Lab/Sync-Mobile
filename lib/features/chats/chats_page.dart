@@ -1978,6 +1978,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                     onSend: _sendMessage,
                     onPickMedia: _pickMedia,
                     onClearMedia: _clearMedia,
+                    onPastedMedia: (bytes) => setState(() {
+                      _selectedMediaBytes = bytes;
+                      _selectedMediaName = null;
+                    }),
                     onStickerSelected: (sticker) async {
                       if (_activePartnerId == null) return;
                       await _sendMessageWithOptimisticBubble(
