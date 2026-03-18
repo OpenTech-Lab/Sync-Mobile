@@ -24,4 +24,20 @@ class ClipboardImageService {
 
     await Clipboard.setData(ClipboardData(text: fallbackText));
   }
+
+  static Future<Uint8List?> readPng() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.android) {
+      return null;
+    }
+
+    try {
+      final data = await _channel.invokeMethod<Uint8List>('readPngFromClipboard');
+      return data;
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
 }

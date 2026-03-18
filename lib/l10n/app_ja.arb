@@ -205,6 +205,7 @@
     }
   },
   "chatSelectedMediaFallback": "画像",
+  "chatPasteImageAction": "画像を貼り付け",
   "chatTrustRetryWindowReset": "毎日のリセット後",
   "chatTrustRetryWindowHours": "{hours}時間後",
   "@chatTrustRetryWindowHours": {

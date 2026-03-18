@@ -50,6 +50,7 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "copyPngToClipboard" -> copyPngToClipboard(call.arguments, result)
+                "readPngFromClipboard" -> readPngFromClipboard(result)
                 else -> result.notImplemented()
             }
         }
@@ -151,6 +152,30 @@ class MainActivity : FlutterActivity() {
             result.success(null)
         } catch (error: Exception) {
             result.error("clipboard_error", "Failed to copy PNG to clipboard", error.localizedMessage)
+        }
+    }
+
+    private fun readPngFromClipboard(result: MethodChannel.Result) {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = clipboard.primaryClip
+        if (clip == null || clip.itemCount == 0) {
+            result.success(null)
+            return
+        }
+
+        val item = clip.getItemAt(0)
+        val imageUri = item.uri ?: run {
+            result.success(null)
+            return
+        }
+
+        try {
+            val bytes = contentResolver.openInputStream(imageUri)?.use { input ->
+                input.readBytes()
+            }
+            result.success(bytes)
+        } catch (_: Exception) {
+            result.success(null)
         }
     }
 

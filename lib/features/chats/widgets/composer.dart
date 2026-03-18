@@ -3,9 +3,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 import '../../../models/sticker.dart';
+import '../../../services/clipboard_image_service.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 
 class Composer extends StatelessWidget {
@@ -19,6 +21,7 @@ class Composer extends StatelessWidget {
     required this.onSend,
     required this.onPickMedia,
     required this.onClearMedia,
+    required this.onPastedMedia,
     required this.onStickerSelected,
   });
 
@@ -30,7 +33,74 @@ class Composer extends StatelessWidget {
   final VoidCallback onSend;
   final VoidCallback onPickMedia;
   final VoidCallback onClearMedia;
+  final ValueChanged<Uint8List> onPastedMedia;
   final ValueChanged<Sticker> onStickerSelected;
+
+  void _insertPastedText(String pastedText) {
+    final currentValue = messageController.value;
+    final currentSelection = currentValue.selection;
+    final insertionSelection = currentSelection.isValid
+        ? currentSelection
+        : TextSelection.collapsed(offset: currentValue.text.length);
+    final start = insertionSelection.start.clamp(0, currentValue.text.length)
+        as int;
+    final end = insertionSelection.end.clamp(0, currentValue.text.length)
+        as int;
+    final newText = currentValue.text.replaceRange(start, end, pastedText);
+    final caretOffset = start + pastedText.length;
+
+    messageController.value = currentValue.copyWith(
+      text: newText,
+      selection: TextSelection.collapsed(offset: caretOffset),
+      composing: TextRange.empty,
+    );
+    onChanged(newText);
+  }
+
+  List<ContextMenuButtonItem> _buildContextMenuItems(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final items = editableTextState.contextMenuButtonItems
+        .where((item) => item.type != ContextMenuButtonType.paste)
+        .toList(growable: true);
+
+    final pasteItem = ContextMenuButtonItem(
+      type: ContextMenuButtonType.paste,
+      onPressed: () async {
+        ContextMenuController.removeAny();
+        final pastedText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+        if (pastedText == null || pastedText.isEmpty) {
+          return;
+        }
+        _insertPastedText(pastedText);
+      },
+    );
+
+    final pasteImageItem = ContextMenuButtonItem(
+      label: l10n.chatPasteImageAction,
+      onPressed: () async {
+        ContextMenuController.removeAny();
+        final pastedImage = await ClipboardImageService.readPng();
+        if (pastedImage == null || pastedImage.isEmpty) {
+          return;
+        }
+        onPastedMedia(pastedImage);
+      },
+    );
+
+    final liveTextIndex = items.indexWhere(
+      (item) => item.type == ContextMenuButtonType.liveTextInput,
+    );
+    if (liveTextIndex == -1) {
+      items.addAll([pasteItem, pasteImageItem]);
+    } else {
+      items.insert(liveTextIndex, pasteItem);
+      items.insert(liveTextIndex + 1, pasteImageItem);
+    }
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +202,15 @@ class Composer extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w300,
                     ),
+                    contextMenuBuilder: (context, editableTextState) {
+                      return AdaptiveTextSelectionToolbar.buttonItems(
+                        anchors: editableTextState.contextMenuAnchors,
+                        buttonItems: _buildContextMenuItems(
+                          context,
+                          editableTextState,
+                        ),
+                      );
+                    },
                     decoration: InputDecoration(
                       hintText: l10n.chatMessageHint,
                       hintStyle: const TextStyle(

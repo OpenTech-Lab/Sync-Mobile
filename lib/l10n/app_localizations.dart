@@ -924,6 +924,12 @@ abstract class AppLocalizations {
   /// **'Image'**
   String get chatSelectedMediaFallback;
 
+  /// No description provided for @chatPasteImageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste Image'**
+  String get chatPasteImageAction;
+
   /// No description provided for @chatTrustRetryWindowReset.
   ///
   /// In en, this message translates to:

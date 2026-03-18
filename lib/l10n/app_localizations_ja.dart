@@ -444,6 +444,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatSelectedMediaFallback => '画像';
 
   @override
+  String get chatPasteImageAction => '画像を貼り付け';
+
+  @override
   String get chatTrustRetryWindowReset => '毎日のリセット後';
 
   @override

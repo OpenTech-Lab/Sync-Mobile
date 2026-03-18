@@ -444,6 +444,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSelectedMediaFallback => 'Image';
 
   @override
+  String get chatPasteImageAction => 'Paste Image';
+
+  @override
   String get chatTrustRetryWindowReset => 'after the daily reset';
 
   @override
@@ -1411,6 +1414,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get chatSelectedMediaFallback => '圖片';
+
+  @override
+  String get chatPasteImageAction => '貼上圖片';
 
   @override
   String get chatTrustRetryWindowReset => '每日重置後';

@@ -90,6 +90,8 @@ import UserNotifications
       switch call.method {
       case "copyPngToClipboard":
         self.copyPngToClipboard(call: call, result: result)
+      case "readPngFromClipboard":
+        self.readPngFromClipboard(result: result)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -136,6 +138,20 @@ import UserNotifications
 
     DispatchQueue.main.async {
       UIPasteboard.general.setData(typedData.data, forPasteboardType: "public.png")
+      result(nil)
+    }
+  }
+
+  private func readPngFromClipboard(result: @escaping FlutterResult) {
+    DispatchQueue.main.async {
+      if let data = UIPasteboard.general.data(forPasteboardType: "public.png") {
+        result(FlutterStandardTypedData(bytes: data))
+        return
+      }
+      if let image = UIPasteboard.general.image, let data = image.pngData() {
+        result(FlutterStandardTypedData(bytes: data))
+        return
+      }
       result(nil)
     }
   }

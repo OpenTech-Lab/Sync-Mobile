@@ -444,6 +444,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSelectedMediaFallback => 'Image';
 
   @override
+  String get chatPasteImageAction => 'Paste Image';
+
+  @override
   String get chatTrustRetryWindowReset => 'after the daily reset';
 
   @override

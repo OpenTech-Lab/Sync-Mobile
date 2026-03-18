@@ -174,6 +174,7 @@
   "chatAddFriendInputHint": "好友連結或使用者 ID",
   "chatMarkReadPartial": "已標記 {success}/{total} 個對話為已讀",
   "chatSelectedMediaFallback": "圖片",
+  "chatPasteImageAction": "貼上圖片",
   "chatTrustRetryWindowReset": "每日重置後",
   "chatTrustRetryWindowHours": "{hours} 小時後",
   "@chatTrustRetryWindowHours": {
