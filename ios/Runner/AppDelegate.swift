@@ -143,16 +143,51 @@ import UserNotifications
   }
 
   private func readPngFromClipboard(result: @escaping FlutterResult) {
+    // UIPasteboard must be accessed on the main thread.
     DispatchQueue.main.async {
-      if let data = UIPasteboard.general.data(forPasteboardType: "public.png") {
-        result(FlutterStandardTypedData(bytes: data))
-        return
+      let rawPngData = UIPasteboard.general.data(forPasteboardType: "public.png")
+      let pasteboardImage = UIPasteboard.general.image
+
+      // Resize/compress on a background thread to avoid blocking the UI.
+      DispatchQueue.global(qos: .userInitiated).async {
+        var image: UIImage? = nil
+        if let data = rawPngData {
+          image = UIImage(data: data)
+        }
+        if image == nil, let img = pasteboardImage {
+          image = img
+        }
+        guard let image = image else {
+          DispatchQueue.main.async { result(nil) }
+          return
+        }
+        let resized = self.resizeImageIfNeeded(image, maxDimension: 1200)
+        // Prefer JPEG for photos — vastly smaller than PNG for the same visual quality.
+        let data = resized.jpegData(compressionQuality: 0.75) ?? resized.pngData()
+        DispatchQueue.main.async {
+          if let data = data {
+            result(FlutterStandardTypedData(bytes: data))
+          } else {
+            result(nil)
+          }
+        }
       }
-      if let image = UIPasteboard.general.image, let data = image.pngData() {
-        result(FlutterStandardTypedData(bytes: data))
-        return
-      }
-      result(nil)
+    }
+  }
+
+  private func resizeImageIfNeeded(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+    let size = image.size
+    guard size.width > maxDimension || size.height > maxDimension else {
+      return image
+    }
+    let ratio = min(maxDimension / size.width, maxDimension / size.height)
+    let newSize = CGSize(
+      width: (size.width * ratio).rounded(),
+      height: (size.height * ratio).rounded()
+    )
+    let renderer = UIGraphicsImageRenderer(size: newSize)
+    return renderer.image { _ in
+      image.draw(in: CGRect(origin: .zero, size: newSize))
     }
   }
 
