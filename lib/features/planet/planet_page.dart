@@ -308,9 +308,14 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                     itemBuilder: (ctx, index) {
                       final item = data.news[index];
                       final summary = (item.summary ?? '').trim();
-                      final dateText = DateFormat(
-                        'yyyy-MM-dd HH:mm',
-                      ).format(item.publishedAt.toLocal());
+                      final fmt = DateFormat('yyyy-MM-dd HH:mm');
+                      final dateText = fmt.format(item.publishedAt.toLocal());
+                      final updatedAt = item.updatedAt;
+                      final isUpdated = updatedAt != null &&
+                          updatedAt.isAfter(item.publishedAt);
+                      final updatedText = isUpdated
+                          ? fmt.format(updatedAt.toLocal())
+                          : null;
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -326,13 +331,28 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            Text(
-                              dateText,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppPalette.neutral500,
-                                fontWeight: FontWeight.w300,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  dateText,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppPalette.neutral500,
+                                    fontWeight: FontWeight.w300,
+                                  ),
+                                ),
+                                if (updatedText != null) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '· updated $updatedText',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppPalette.neutral500,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 6),
                             if (summary.isNotEmpty)
@@ -620,9 +640,11 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
             }
 
             final item = snapshot.data!;
-            final dateText = DateFormat(
-              'yyyy-MM-dd HH:mm',
-            ).format(item.publishedAt.toLocal());
+            final fmt = DateFormat('yyyy-MM-dd HH:mm');
+            final dateText = fmt.format(item.publishedAt.toLocal());
+            final detailUpdatedAt = item.updatedAt;
+            final detailIsUpdated = detailUpdatedAt != null &&
+                detailUpdatedAt.isAfter(item.publishedAt);
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
@@ -645,6 +667,17 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
                     fontWeight: FontWeight.w300,
                   ),
                 ),
+                if (detailIsUpdated) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'updated ${fmt.format(detailUpdatedAt!.toLocal())}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppPalette.neutral500,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
                 if ((item.summary ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Text(
