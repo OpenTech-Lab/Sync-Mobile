@@ -35,54 +35,35 @@ end
 post_install do |installer|
   # Fix "Multiple commands produce libsuper_native_extensions.a".
   #
-  # The cargokit Rust build-phase and the pod's native static-library
-  # target both write to ${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a.
-  # Furthermore libtool (Create Static Library) overwrites the Rust .a with
-  # an ObjC-only archive, losing Rust symbols.  To solve both problems we:
+  # The Rust build-phase (cargokit / super_native_extensions) declares
+  # libsuper_native_extensions.a in its output_paths. CocoaPods' native
+  # static-library target for the same pod also produces a .a with the same
+  # name, and Xcode rejects two commands that claim the same product.
   #
-  #   1. After the Rust build, move the Rust .a to a dedicated sibling
-  #      directory (super_native_extensions_rust/) so it survives libtool.
-  #   2. Rewrite the script phase's output_paths to the new location so
-  #      Xcode no longer sees two commands producing the same file.
-  #   3. Rewrite -force_load in every generated xcconfig that references the
-  #      old path, using ${PODS_CONFIGURATION_BUILD_DIR} which resolves
-  #      identically in both pod-target and Runner contexts.
-  rust_dest_var = '${PODS_CONFIGURATION_BUILD_DIR}/super_native_extensions_rust'
-  rust_lib_var  = "#{rust_dest_var}/libsuper_native_extensions.a"
-
+  # Keep the script phase, but replace the conflicting output entry with a
+  # stamp file that the phase touches at the end. This preserves deterministic
+  # build ordering without rewriting the library path CocoaPods later expects
+  # during archive linkage.
   installer.pods_project.targets.each do |target|
-    # ── Step 1+2: redirect the Rust build phase ──
     target.build_phases.each do |phase|
       next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
-      next unless phase.name&.include?('Build SuperNativeExtensions')
+      next unless phase.name&.include?('Build SuperNativeExtensions') ||
+                  (phase.output_paths || []).any? { |path| path.include?('libsuper_native_extensions') }
 
-      phase.output_paths = [rust_lib_var]
-
-      unless phase.shell_script.to_s.include?('super_native_extensions_rust')
-        phase.shell_script = phase.shell_script.to_s.rstrip + "\n" + <<~'RELOC'
-          # ── relocate Rust lib to avoid duplicate-product conflict ──
-          _sne_rust_dest="${PODS_CONFIGURATION_BUILD_DIR}/super_native_extensions_rust"
-          mkdir -p "$_sne_rust_dest"
-          if [ -f "${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a" ]; then
-            mv "${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a" \
-               "$_sne_rust_dest/libsuper_native_extensions.a"
-          fi
-        RELOC
+      original_output_paths = phase.output_paths || []
+      deduped_output_paths = original_output_paths.reject do |path|
+        path.include?('libsuper_native_extensions')
       end
-    end
+      next if deduped_output_paths.length == original_output_paths.length
 
-    # ── Step 3: rewrite -force_load in generated xcconfigs ──
-    target.build_configurations.each do |config|
-      xcconfig_ref = config.base_configuration_reference
-      next unless xcconfig_ref
-      xcconfig_path = xcconfig_ref.real_path.to_s
-      next unless File.exist?(xcconfig_path)
-      content = File.read(xcconfig_path)
-      old_flag = '-force_load ${BUILT_PRODUCTS_DIR}/libsuper_native_extensions.a'
-      new_flag = "-force_load #{rust_lib_var}"
-      if content.include?(old_flag)
-        File.write(xcconfig_path, content.gsub(old_flag, new_flag))
-      end
+      stamp_path = '$(DERIVED_FILE_DIR)/super_native_extensions_build.stamp'
+      deduped_output_paths << stamp_path unless deduped_output_paths.include?(stamp_path)
+      phase.output_paths = deduped_output_paths
+
+      next if phase.shell_script.to_s.include?('super_native_extensions_build.stamp')
+
+      phase.shell_script = phase.shell_script.to_s.rstrip +
+        "\ntouch \"${DERIVED_FILE_DIR}/super_native_extensions_build.stamp\"\n"
     end
   end
 
