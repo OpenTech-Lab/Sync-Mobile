@@ -61,7 +61,6 @@ class Composer extends StatelessWidget {
     BuildContext context,
     EditableTextState editableTextState,
   ) {
-    final l10n = AppLocalizations.of(context)!;
     final items = editableTextState.contextMenuButtonItems
         .where((item) => item.type != ContextMenuButtonType.paste)
         .toList(growable: true);
@@ -70,23 +69,16 @@ class Composer extends StatelessWidget {
       type: ContextMenuButtonType.paste,
       onPressed: () async {
         ContextMenuController.removeAny();
-        final pastedText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-        if (pastedText == null || pastedText.isEmpty) {
-          return;
-        }
-        _insertPastedText(pastedText);
-      },
-    );
-
-    final pasteImageItem = ContextMenuButtonItem(
-      label: l10n.chatPasteImageAction,
-      onPressed: () async {
-        ContextMenuController.removeAny();
+        // Image takes priority; fall back to text.
         final pastedImage = await ClipboardImageService.readPng();
-        if (pastedImage == null || pastedImage.isEmpty) {
+        if (pastedImage != null && pastedImage.isNotEmpty) {
+          onPastedMedia(pastedImage);
           return;
         }
-        onPastedMedia(pastedImage);
+        final pastedText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+        if (pastedText != null && pastedText.isNotEmpty) {
+          _insertPastedText(pastedText);
+        }
       },
     );
 
@@ -94,10 +86,9 @@ class Composer extends StatelessWidget {
       (item) => item.type == ContextMenuButtonType.liveTextInput,
     );
     if (liveTextIndex == -1) {
-      items.addAll([pasteItem, pasteImageItem]);
+      items.add(pasteItem);
     } else {
       items.insert(liveTextIndex, pasteItem);
-      items.insert(liveTextIndex + 1, pasteImageItem);
     }
     return items;
   }
