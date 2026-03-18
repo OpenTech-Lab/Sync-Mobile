@@ -16,6 +16,7 @@
   "languageSystem": "System",
   "languageEnglish": "English",
   "languageTraditionalChinese": "Traditional Chinese",
+  "languageJapanese": "Japanese",
   "welcomeTitle": "Welcome to Sync",
   "welcomeSubtitle": "Connect to your planet server to get started.",
   "serverUrlLabel": "SERVER URL",

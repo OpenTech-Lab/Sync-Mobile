@@ -1,0 +1,515 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Sync",
+  "loadingSync": "同期中",
+  "errorTitle": "エラー",
+  "errorNetwork": "インターネット接続を確認して、もう一度お試しください。",
+  "errorServer": "サーバーに問題が発生しています。しばらくしてからもう一度お試しください。",
+  "errorPermission": "この操作を行う権限がありません。問題が続く場合は管理者にお問い合わせください。",
+  "errorGeneric": "エラーが発生しました。もう一度お試しください。",
+  "restartAppHint": "アプリを再起動してください",
+  "tabHome": "ホーム",
+  "tabPlanet": "プラネット",
+  "tabChats": "チャット",
+  "tabSettings": "設定",
+  "languageLabel": "言語",
+  "languageSystem": "システム",
+  "languageEnglish": "English",
+  "languageTraditionalChinese": "繁体字中国語",
+  "languageJapanese": "日本語",
+  "welcomeTitle": "Syncへようこそ",
+  "welcomeSubtitle": "プラネットサーバーに接続して始めましょう。",
+  "serverUrlLabel": "サーバーURL",
+  "serverUrlHint": "https://my-planet.example.com",
+  "quickConnectLabel": "クイック接続",
+  "checkingConnection": "確認中…",
+  "checkConnectionAction": "接 続 確 認",
+  "continueAction": "続 け る",
+  "connectionFailed": "接続に失敗しました。",
+  "connectedStatus": "接続済み",
+  "secureStatus": "セキュア",
+  "publicStatus": "公開",
+  "latencyValue": "{ms} ms",
+  "@latencyValue": {
+    "placeholders": {
+      "ms": {
+        "type": "String"
+      }
+    }
+  },
+  "planetCardHost": "ホスト",
+  "planetCardCountry": "国",
+  "planetCardProtocol": "プロトコル",
+  "planetCardLatency": "遅延",
+  "planetRegistrationLabel": "REGISTRATION",
+  "planetRegistrationApprovalRequired": "承認が必要",
+  "authTagline": "あなたのプライベートメッセンジャー",
+  "signInTab": "サインイン",
+  "signUpTab": "サインアップ",
+  "accountFoundForServer": "このサーバーのアカウントが見つかりました",
+  "resetPasswordTitle": "パスワードをリセット",
+  "resetPasswordSentHint": "そのメールが登録されていれば、リセットリンクが送信されました。",
+  "resetPasswordEnterEmailHint": "メールアドレスを入力してください。リセットリンクをお送りします。",
+  "emailLabel": "メール",
+  "passwordLabel": "パスワード",
+  "usernameLabel": "ユーザー名",
+  "passwordMin8Label": "パスワード・8文字以上",
+  "actionClose": "閉じる",
+  "actionSend": "送 信",
+  "forgotPassword": "パスワードを忘れた方",
+  "signingInProgress": "サインイン中…",
+  "signInAction": "サ イ ン イ ン",
+  "authQrTitle": "QRでサインイン",
+  "authQrHint": "スマートフォンでSyncを開き、マイプロフィールからこのコードをスキャンしてください。",
+  "authQrWaitingForScan": "スマートフォンの承認待ち…",
+  "authQrExpired": "QRの有効期限が切れました。更新してください。",
+  "authQrUnavailable": "QRログインを利用できません。更新してください。",
+  "authQrPressRefresh": "更新ボタンを押してください",
+  "authQrRefresh": "QRを更新",
+  "creatingAccountProgress": "アカウント作成中…",
+  "createAccountAction": "ア カ ウ ン ト 作 成",
+  "myProfileTitle": "マイプロフィール",
+  "friendsTitle": "友達（{count}）",
+  "@friendsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noFriendsYet": "まだ友達がいません",
+  "openChatsHint": "チャットを開いて会話を始めましょう",
+  "homeConnectedPlanetsTitle": "接続済みプラネット",
+  "planetOtherPlanetsTitle": "他のプラネット",
+  "homeConnectedPlanetsEmpty": "接続済みプラネットがありません",
+  "homeConnectedPlanetsLoading": "接続済みプラネットを読み込み中…",
+  "homeConnectedPlanetsLoadFailed": "接続済みプラネットの読み込みに失敗しました",
+  "homePlanetMembers": "{count}人のメンバー",
+  "@homePlanetMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "friendRemoved": "友達を削除しました",
+  "friendAdded": "友達を追加しました",
+  "planetLoading": "プラネットデータを読み込み中…",
+  "planetLoadFailed": "プラネットデータの読み込みに失敗しました。",
+  "planetReconnectAction": "再接続",
+  "planetReconnectInProgress": "再接続中",
+  "planetReconnectSuccess": "プラネットに再接続しました。",
+  "planetReconnectFailed": "プラネットへの再接続に失敗しました。",
+  "planetNewsTitle": "ニュース",
+  "planetNewsEmpty": "まだニュースはありません",
+  "planetNewsDetailTitle": "ニュース",
+  "planetStickersTitle": "プラネットスタンプ",
+  "planetStickerDownload": "ダウンロード",
+  "planetStickerDownloaded": "ダウンロード済み",
+  "planetStickerDownloading": "ダウンロード中…",
+  "planetStickerDownloadFailed": "スタンプのダウンロードに失敗しました。",
+  "planetStickerDownloadedToast": "{name}をローカルスタンプにダウンロードしました。",
+  "@planetStickerDownloadedToast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "planetStickerGroupCount": "{count}個のスタンプ",
+  "@planetStickerGroupCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planetStickerGroupDownloadedToast": "{group}スタンプパックをダウンロードしました。",
+  "@planetStickerGroupDownloadedToast": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsMyPlanet": "マイプラネット",
+  "settingsAppearance": "外観",
+  "settingsTheme": "テーマ",
+  "settingsTypingStyleMode": "タイピングスタイルモード",
+  "settingsTypingStyleModeHint": "タイピングアニメーションでメッセージを表示",
+  "settingsTypingStyleSpeed": "タイピング速度",
+  "settingsTypingStyleSpeedHint": "小さいほど速い",
+  "settingsTypingStyleSpeedValue": "{ms}ms / 文字",
+  "@settingsTypingStyleSpeedValue": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "themeLight": "ライト",
+  "themeSystem": "システム",
+  "themeDark": "ダーク",
+  "settingsEncryptedBackups": "暗号化バックアップ",
+  "settingsEnableBackups": "バックアップを有効にする",
+  "settingsBackupSubtitle": "プラネットサーバーでエンドツーエンド暗号化",
+  "settingsCreateBackup": "バックアップを作成",
+  "settingsRestore": "復元",
+  "settingsDeleteBackupData": "バックアップデータを削除",
+  "settingsLocalData": "削除",
+  "settingsDeleteAllPlanetData": "このプラネットのすべてのデータを削除",
+  "settingsDeleteAllPlanetDataMessage": "ローカルデータ（チャット、友達、設定）とサーバー上の暗号化バックアップを永久に削除します。この操作は取り消せません。",
+  "settingsDeleteAllPlanetDataConfirm": "す べ て 削 除",
+  "settingsDeleteAllLocalChats": "すべてのローカルチャットデータを削除",
+  "settingsDeleteAllAppData": "すべてのアプリデータを削除",
+  "settingsSignOut": "サインアウト",
+  "chatToday": "今日",
+  "chatUnreadHeader": "未読",
+  "chatChatsHeader": "チャット",
+  "chatRowDelete": "削除",
+  "chatRowHide": "非表示",
+  "chatNoChatsYet": "チャットがまだありません。",
+  "chatNoMessagesYet": "メッセージがまだありません。\nこんにちはと言いましょう！",
+  "chatSearchHint": "検索…",
+  "chatMessageHint": "メッセージ…",
+  "chatAttachImageTooltip": "画像を添付",
+  "chatStickersTooltip": "スタンプ",
+  "chatNoStickersYet": "スタンプがまだありません。",
+  "chatStickersHeader": "スタンプ",
+  "chatMore": "もっと見る",
+  "chatMarkAllRead": "すべて既読にする",
+  "chatMarkedAllAsRead": "すべて既読にしました",
+  "chatTypingIndicator": "{name}が入力中…",
+  "@chatTypingIndicator": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatDefaultPartner": "相手",
+  "chatDefaultTitle": "チャット",
+  "chatAddFriendHeader": "友達を追加",
+  "chatAddFriendTitle": "友達リンクまたはユーザーIDを貼り付け",
+  "chatAddFriendFormatHint": "対応形式：https://server.tld/<user-id>",
+  "chatAddFriendInputHint": "友達リンクまたはユーザーID",
+  "chatMarkReadPartial": "{success}/{total}の会話を既読にしました",
+  "@chatMarkReadPartial": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSelectedMediaFallback": "画像",
+  "chatTrustRetryWindowReset": "毎日のリセット後",
+  "chatTrustRetryWindowHours": "{hours}時間後",
+  "@chatTrustRetryWindowHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustRetryWindowMinutes": "{minutes}分後",
+  "@chatTrustRetryWindowMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatTrustDailyLimitToast": "1日のメッセージ上限に達しました（{used}/{limit}）。{retryWindow}に再送信できます。またはレベルアップして上限を上げてください。",
+  "@chatTrustDailyLimitToast": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      },
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitToastGeneric": "1日のメッセージ上限に達しました。{retryWindow}に再送信できます。またはレベルアップして上限を上げてください。",
+  "@chatTrustDailyLimitToastGeneric": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatTrustDailyLimitInline": "上限到達・{retryWindow}に再試行・またはレベルアップ",
+  "@chatTrustDailyLimitInline": {
+    "placeholders": {
+      "retryWindow": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMessageDetailTitleMine": "あなたのメッセージ",
+  "chatMessageDetailTitleOther": "メッセージ",
+  "chatCopiedToClipboard": "クリップボードにコピーしました",
+  "chatAttachmentViewerTitle": "添付ファイル",
+  "chatDownloadAttachmentTooltip": "添付ファイルをダウンロード",
+  "chatAttachmentDownloaded": "添付ファイルをダウンロードしました",
+  "chatAttachmentDownloadFailed": "添付ファイルのダウンロードに失敗しました",
+  "chatQuickNewHeader": "新規",
+  "chatQuickNewRoom": "新しいルーム",
+  "chatQuickFriendOrStart": "友達 / チャット開始",
+  "chatQuickScanFriendQr": "友達のQRをスキャン",
+  "chatCreateRoomHeader": "ルーム",
+  "chatCreateRoomTitle": "プライベートルームを作成",
+  "chatCreateRoomNameLabel": "ルーム名",
+  "chatCreateRoomNameHint": "週末の計画",
+  "chatCreateRoomMembersLabel": "メンバー",
+  "chatCreateRoomNoFriends": "先に友達を追加するか、ルームを作成してから招待してください。",
+  "chatCreateRoomAction": "作 成",
+  "chatRoomCreated": "ルームを作成しました",
+  "chatClearHistory": "削除",
+  "chatDefaultRoom": "ルーム",
+  "chatScanFriendQrInstruction": "友達のQRコードにカメラを向けてください",
+  "chatTargetCancelFriend": "友達をキャンセル",
+  "chatTargetAddFriend": "友 達 追 加",
+  "chatTargetFriend": "友達",
+  "chatTargetStartChat": "チ ャ ッ ト 開 始",
+  "chatTargetFriendSince": "友達になった日",
+  "chatTargetMessagesSent": "送信したメッセージ",
+  "chatTargetAbout": "プロフィール",
+  "chatExportHistory": "チャット履歴をエクスポート",
+  "chatExportCopyAction": "クリップボードにコピー",
+  "chatExportSaveAction": ".txtとして保存",
+  "chatExportCopied": "チャット履歴をコピーしました",
+  "chatExportSaved": "チャット履歴を保存しました",
+  "chatExportFailed": "チャット履歴のエクスポートに失敗しました",
+  "chatNotes": "メモ",
+  "chatNotesHint": "メモを書く…",
+  "chatTodos": "ToDo",
+  "chatTodosHint": "ToDoを追加…",
+  "chatTodosAddAction": "追加",
+  "chatTodosEmptyHint": "ToDoがまだありません",
+  "settingsMissingAccessTokenBackup": "バックアップのアクセストークンがありません。",
+  "settingsMissingAccessTokenRestore": "復元のアクセストークンがありません。",
+  "settingsDeleteBackupTitle": "バックアップデータを削除",
+  "settingsDeleteBackupMessage": "このデバイスの暗号化バックアップファイルを削除します。\nこの操作は取り消せません。",
+  "settingsDeleteBackupConfirm": "バ ッ ク ア ッ プ 削 除",
+  "settingsMissingAccessTokenBackupDelete": "バックアップ削除のアクセストークンがありません。",
+  "settingsAutoBackupSchedule": "自動バックアップは24時間ごと、または{threshold}件の新しいメッセージの後に実行されます（どちらか早い方）。",
+  "@settingsAutoBackupSchedule": {
+    "placeholders": {
+      "threshold": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoBackupThreshold": "自動バックアップのしきい値",
+  "settingsAutoBackupDecreaseTooltip": "しきい値を下げる",
+  "settingsAutoBackupIncreaseTooltip": "しきい値を上げる",
+  "settingsMessagesUnit": "件",
+  "settingsDeleteLocalChatsTitle": "ローカルチャットデータを削除",
+  "settingsDeleteLocalChatsMessage": "このデバイスに保存されているすべてのチャット履歴を削除します。\nサーバー側のデータは変更されません。",
+  "settingsDeleteLocalChatsConfirm": "ロ ー カ ル チ ャ ッ ト 削 除",
+  "settingsDeleteAllAppDataTitle": "すべてのアプリデータを削除",
+  "settingsDeleteAllAppDataMessage": "チャット履歴、設定、キャッシュデータを含むすべてのローカルデータを永久に削除します。\nサーバー側のデータは変更されません。",
+  "settingsDeleteAllAppDataConfirm": "す べ て 削 除",
+  "settingsSignOutMessage": "このアカウントからサインアウトします。\nローカルメッセージはデバイスに残ります。",
+  "settingsSignOutConfirm": "サ イ ン ア ウ ト",
+  "settingsDeleteAccount": "このプラネットからアカウントを削除",
+  "settingsDeleteAccountMessage": "このプラネットからアカウントが永久に削除されます。すべてのローカルデータとサーバーバックアップも削除されます。この操作は取り消せません。",
+  "settingsDeleteAccountConfirm": "ア カ ウ ン ト 削 除",
+  "settingsDangerousActions": "危険な操作",
+  "settingsDangerousActionsHint": "ローカルチャットの削除、アプリデータのクリア、またはサインアウト",
+  "settingsDeletionCountdown": "削除は{countdown}後に実行されます。",
+  "@settingsDeletionCountdown": {
+    "placeholders": {
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDeletionExecuting": "削除を実行しています。",
+  "settingsPlanetUnknownName": "不明なプラネット",
+  "settingsPlanetNoDescription": "まだプラネットの説明がありません。",
+  "settingsOnline": "オンライン",
+  "settingsOffline": "オフライン",
+  "settingsNotificationsOn": "通知オン",
+  "settingsNotificationsOff": "通知オフ",
+  "settingsResidents": "住人",
+  "settingsStickers": "スタンプ",
+  "settingsEncrypted": "暗号化済み",
+  "settingsCreated": "作成日",
+  "profileTitle": "プロフィール",
+  "profileNoDescriptionYet": "まだ説明がありません",
+  "profileFriendLinkCopied": "友達リンクをコピーしました",
+  "profileCopyFriendLink": "友達リンクをコピー",
+  "profileTrustSectionTitle": "GUILD",
+  "profileGuildLevel": "レベル {level}",
+  "@profileGuildLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileGuildRank": "ランク {rank}",
+  "@profileGuildRank": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "profileTrustProgressLabel": "アクティブ日数 {activeDays}",
+  "@profileTrustProgressLabel": {
+    "placeholders": {
+      "activeDays": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustNextLevel": "レベル{level}まであと{days}日",
+  "@profileTrustNextLevel": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "profileTrustMaxLevel": "最高レベルを解除済み",
+  "profileTrustMessagesLabel": "今日のメッセージ",
+  "profileTrustAttachmentsLabel": "今日の添付ファイル",
+  "profileTrustUnlimited": "無制限",
+  "profileTrustUsage": "{used} / {limit}",
+  "@profileTrustUsage": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "profileFriendQrTitle": "友達QR",
+  "profileFriendQrHint": "サーバーURLとIDが含まれています",
+  "profileQrPayloadCopied": "QRペイロードをコピーしました",
+  "profileCopyQrPayload": "QRペイロードをコピー",
+  "profileDeviceLoginSectionTitle": "デバイスログイン",
+  "profileDeviceLoginPageTitle": "スキャンしてログインを承認",
+  "profileDeviceLoginAction": "別のデバイスのログインを承認",
+  "profileDeviceLoginHint": "スマートフォンでデスクトップまたはブラウザのログインを承認",
+  "profileDeviceLoginScanHint": "デスクトップまたはブラウザに表示されたQRコードにカメラを向けてください",
+  "profileDeviceLoginApproved": "ログインを承認しました",
+  "profileDeviceLoginFailed": "ログインの承認に失敗しました",
+  "profileAboutYouLabel": "あなたについて",
+  "profileAboutYouTitle": "自己紹介を書いてください",
+  "profileDescriptionHint": "他の人に知ってほしいことを書いてください…",
+  "profileDescriptionExceeded": "100語の制限を超えました",
+  "profileWordCount": "{words} / 100",
+  "@profileWordCount": {
+    "placeholders": {
+      "words": {
+        "type": "int"
+      }
+    }
+  },
+  "profileUsernameValidationError": "ユーザー名は2〜32文字で、任意の言語、記号、スペースを使用できます",
+  "profileUsernameUpdated": "ユーザー名を更新しました",
+  "profileUsernameUpdateFailed": "ユーザー名の更新に失敗しました",
+  "profileDescriptionWordLimitError": "説明は100語以内にしてください",
+  "profileDescriptionUpdated": "説明を更新しました",
+  "profileDescriptionUpdateFailed": "説明の更新に失敗しました",
+  "profileAvatarTooLarge": "アバターが大きすぎます（最大256KB）。より小さい画像を選択してください。",
+  "profileAvatarUploadFailed": "アバターのアップロードに失敗しました",
+  "profileAvatarUpdated": "アバターを更新しました",
+  "profileUsernameDialogTitle": "ユーザー名",
+  "profileUsernameHint": "2〜32文字、任意の言語・記号・スペース対応",
+  "homeUnreadSummary": "{count}件の未読メッセージ",
+  "@homeUnreadSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeViewProfile": "プロフィールを見る",
+  "homeUsernameDialogTitle": "ユーザー名",
+  "homeUsernameHint": "2〜32文字、a-z A-Z 0-9 . _ -",
+  "chatHomeTitle": "Syncチャット",
+  "chatHomeServerLabel": "サーバー：{server}",
+  "@chatHomeServerLabel": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHomeRealtimeStatus": "リアルタイム：{status}",
+  "@chatHomeRealtimeStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "chatHomeDisconnected": "切断",
+  "chatHomePushInitialized": "プッシュ：初期化済み",
+  "chatHomePushPending": "プッシュ：保留中",
+  "chatHomePartnerHint": "相手のユーザーUUID",
+  "chatHomeOpenAction": "開く",
+  "chatHomeRefreshUnread": "未読を更新",
+  "chatHomeActiveUnread": "アクティブな相手の未読：{count}",
+  "@chatHomeActiveUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHomeEnterPartnerPrompt": "会話を読み込むには相手のUUIDを入力してください。",
+  "chatHomeFailedToLoadMessages": "メッセージの読み込みに失敗しました。",
+  "chatHomeLoadOlder": "古いメッセージを読み込む",
+  "chatHomeSelectedImage": "選択した画像",
+  "chatHomeRemoveMediaTooltip": "メディアを削除",
+  "chatHomeTyping": "入力中…",
+  "actionBack": "戻る",
+  "actionCopy": "コピー",
+  "actionEdit": "編集",
+  "actionSave": "保 存",
+  "actionCancel": "キャンセル",
+  "actionNext": "次 へ",
+  "chatSentASticker": "スタンプを送信しました",
+  "chatSentAnAttachment": "添付ファイルを送信しました",
+  "profileTrustFriendAddsLabel": "今日の友達追加",
+  "profileTrustChallengeStateFrozen": "アカウントが凍結されています。アクセスを復元するにはサポートにお問い合わせください。",
+  "profileTrustChallengeStateChallenged": "アカウントは審査中です。一部の操作が制限される場合があります。",
+  "profileTrustMilestoneRankUp": "ランクアップ！",
+  "profileTrustMilestoneUnlockAttachmentType": "新しい添付ファイルタイプが解除されました！",
+  "profileTrustMilestoneLevelUp": "レベルアップ！",
+  "profileTrustMilestoneRankDetail": "{rank}ランクに到達しました。",
+  "@profileTrustMilestoneRankDetail": {
+    "placeholders": {
+      "rank": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneUnlockDetail": "{type}の添付ファイルを送信できるようになりました。",
+  "@profileTrustMilestoneUnlockDetail": {
+    "placeholders": {
+      "type": { "type": "String" }
+    }
+  },
+  "profileTrustMilestoneLevelDetail": "レベル{level}に到達しました。",
+  "@profileTrustMilestoneLevelDetail": {
+    "placeholders": {
+      "level": { "type": "String" }
+    }
+  }
+}

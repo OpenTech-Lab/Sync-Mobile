@@ -4,13 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAppLocaleKey = 'app_locale';
 
-enum AppLocaleOption { system, english, traditionalChinese }
+enum AppLocaleOption { system, english, japanese, traditionalChinese }
 
 extension AppLocaleOptionX on AppLocaleOption {
   Locale? toLocale() {
     return switch (this) {
       AppLocaleOption.system => null,
       AppLocaleOption.english => const Locale('en'),
+      AppLocaleOption.japanese => const Locale('ja'),
       AppLocaleOption.traditionalChinese => const Locale('zh', 'TW'),
     };
   }
@@ -19,6 +20,7 @@ extension AppLocaleOptionX on AppLocaleOption {
     return switch (this) {
       AppLocaleOption.system => 'system',
       AppLocaleOption.english => 'en',
+      AppLocaleOption.japanese => 'ja',
       AppLocaleOption.traditionalChinese => 'zh_TW',
     };
   }
@@ -26,6 +28,7 @@ extension AppLocaleOptionX on AppLocaleOption {
   static AppLocaleOption fromStorageValue(String? value) {
     return switch (value) {
       'en' => AppLocaleOption.english,
+      'ja' => AppLocaleOption.japanese,
       'zh_TW' => AppLocaleOption.traditionalChinese,
       _ => AppLocaleOption.system,
     };

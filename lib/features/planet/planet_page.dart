@@ -213,12 +213,10 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
     final realtimeState = ref.watch(realtimeSyncControllerProvider).value;
-    final notifState = ref.watch(notificationControllerProvider).value;
     final planetPageState = ref.watch(planetPageControllerProvider);
     final stickerCache = ref.watch(stickerControllerProvider).value ?? const [];
     final isConnected =
         realtimeState?.status == RealtimeConnectionStatus.connected;
-    final notifActive = notifState?.initialized == true;
     final data = planetPageState.valueOrNull ?? PlanetPageData.empty;
     final hasCachedData = planetPageState.valueOrNull != null;
     final isLoading = planetPageState.isLoading && !hasCachedData;
@@ -232,7 +230,6 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
           planetInfo: currentPlanet,
           stickerCount: stickerCount,
           isConnected: isConnected,
-          notificationsActive: notifActive,
           isReconnecting: _isReconnectInFlight,
           onReconnect: _reconnect,
           inkColor: inkColor,

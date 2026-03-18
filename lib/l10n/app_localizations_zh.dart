@@ -57,6 +57,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageTraditionalChinese => 'Traditional Chinese';
 
   @override
+  String get languageJapanese => 'Japanese';
+
+  @override
   String get welcomeTitle => 'Welcome to Sync';
 
   @override
@@ -1021,6 +1024,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get languageTraditionalChinese => '繁體中文';
+
+  @override
+  String get languageJapanese => '日本語';
 
   @override
   String get welcomeTitle => '歡迎使用 Sync';

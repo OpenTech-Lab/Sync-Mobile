@@ -16,6 +16,7 @@
   "languageSystem": "系統",
   "languageEnglish": "English",
   "languageTraditionalChinese": "繁體中文",
+  "languageJapanese": "日本語",
   "welcomeTitle": "歡迎使用 Sync",
   "welcomeSubtitle": "連線到你的 Planet 伺服器以開始使用。",
   "serverUrlLabel": "伺服器網址",

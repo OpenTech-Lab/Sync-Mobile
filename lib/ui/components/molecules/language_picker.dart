@@ -21,6 +21,7 @@ class LanguagePicker extends ConsumerWidget {
       return switch (option) {
         AppLocaleOption.system => l10n.languageSystem,
         AppLocaleOption.english => l10n.languageEnglish,
+        AppLocaleOption.japanese => l10n.languageJapanese,
         AppLocaleOption.traditionalChinese => l10n.languageTraditionalChinese,
       };
     }
@@ -143,6 +144,17 @@ class LanguagePicker extends ConsumerWidget {
                     ref
                         .read(appLocaleProvider.notifier)
                         .setOption(AppLocaleOption.english);
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+                _LanguageOptionRow(
+                  label: l10n.languageJapanese,
+                  selected: selected == AppLocaleOption.japanese,
+                  inkColor: inkColor,
+                  onTap: () {
+                    ref
+                        .read(appLocaleProvider.notifier)
+                        .setOption(AppLocaleOption.japanese);
                     Navigator.of(sheetContext).pop();
                   },
                 ),

@@ -11,7 +11,6 @@ class PlanetOverviewSection extends StatelessWidget {
     required this.planetInfo,
     required this.stickerCount,
     required this.isConnected,
-    required this.notificationsActive,
     required this.isReconnecting,
     required this.onReconnect,
     required this.inkColor,
@@ -21,7 +20,6 @@ class PlanetOverviewSection extends StatelessWidget {
   final PlanetInfo? planetInfo;
   final int stickerCount;
   final bool isConnected;
-  final bool notificationsActive;
   final bool isReconnecting;
   final VoidCallback? onReconnect;
   final Color inkColor;
@@ -44,7 +42,6 @@ class PlanetOverviewSection extends StatelessWidget {
           stickerCount: stickerCount,
           memberCount: _planetResidentCountFromData(planetInfo: planetInfo),
           isConnected: isConnected,
-          notifActive: notificationsActive,
           serverCreatedDate: _serverCreatedDateFromData(planetInfo: planetInfo),
           isReconnecting: isReconnecting,
           onReconnect: onReconnect,
@@ -131,7 +128,6 @@ class _PlanetCard extends StatelessWidget {
     required this.stickerCount,
     required this.memberCount,
     required this.isConnected,
-    required this.notifActive,
     required this.serverCreatedDate,
     required this.isReconnecting,
     required this.onReconnect,
@@ -144,7 +140,6 @@ class _PlanetCard extends StatelessWidget {
   final int stickerCount;
   final int memberCount;
   final bool isConnected;
-  final bool notifActive;
   final String serverCreatedDate;
   final bool isReconnecting;
   final VoidCallback? onReconnect;
@@ -177,14 +172,6 @@ class _PlanetCard extends StatelessWidget {
             _InlineStatus(
               active: isConnected,
               label: isConnected ? l10n.settingsOnline : l10n.settingsOffline,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 12),
-            _InlineStatus(
-              active: notifActive,
-              label: notifActive
-                  ? l10n.settingsNotificationsOn
-                  : l10n.settingsNotificationsOff,
               mutedColor: mutedColor,
             ),
             if (!isConnected) ...[

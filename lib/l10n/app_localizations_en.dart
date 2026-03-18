@@ -57,6 +57,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageTraditionalChinese => 'Traditional Chinese';
 
   @override
+  String get languageJapanese => 'Japanese';
+
+  @override
   String get welcomeTitle => 'Welcome to Sync';
 
   @override
