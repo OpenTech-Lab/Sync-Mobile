@@ -1,17 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/jwt_service.dart';
 import '../services/message_e2ee_service.dart';
 import '../services/remote_user_profile_service.dart';
+import '../services/remote_safety_service.dart';
 import '../services/server_scope.dart';
 import '../services/server_health_service.dart';
 import '../services/server_preferences.dart';
 import '../services/session_storage.dart';
 import '../services/user_profile_preferences.dart';
+import '../features/safety/safety_policy.dart';
 
-enum AppStage { onboarding, login, home }
+enum AppStage { onboarding, login, safetyTerms, home }
 
 enum ConnectionStatus { idle, validating, success, failure }
 
@@ -27,6 +30,7 @@ class AppState {
     required this.planetInfo,
     required this.isSubmitting,
     required this.authError,
+    this.safetyState,
   });
 
   final String? serverUrl;
@@ -39,6 +43,7 @@ class AppState {
   final PlanetInfo? planetInfo;
   final bool isSubmitting;
   final String? authError;
+  final UserSafetyState? safetyState;
 
   AppStage get stage {
     if (serverUrl == null || serverUrl!.isEmpty) {
@@ -46,6 +51,9 @@ class AppState {
     }
     if (accessToken == null || accessToken!.isEmpty) {
       return AppStage.login;
+    }
+    if (safetyState?.requiresTermsAcceptance == true) {
+      return AppStage.safetyTerms;
     }
     return AppStage.home;
   }
@@ -65,6 +73,8 @@ class AppState {
     bool? isSubmitting,
     String? authError,
     bool clearAuthError = false,
+    UserSafetyState? safetyState,
+    bool clearSafetyState = false,
   }) {
     return AppState(
       serverUrl: serverUrl ?? this.serverUrl,
@@ -79,6 +89,7 @@ class AppState {
       planetInfo: clearPlanetInfo ? null : planetInfo ?? this.planetInfo,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       authError: clearAuthError ? null : authError ?? this.authError,
+      safetyState: clearSafetyState ? null : safetyState ?? this.safetyState,
     );
   }
 }
@@ -113,6 +124,7 @@ class AppController extends AsyncNotifier<AppState> {
   final _messageE2eeService = MessageE2eeService();
   final _userProfilePreferences = UserProfilePreferences();
   final _remoteUserProfileService = RemoteUserProfileService();
+  final _remoteSafetyService = RemoteSafetyService();
 
   bool _isAuthIdentityInvalidError(Object error) {
     final raw = error.toString();
@@ -168,6 +180,7 @@ class AppController extends AsyncNotifier<AppState> {
             currentUserId,
           );
     var currentUsername = tokenDisplayName ?? storedDisplayName;
+    UserSafetyState? safetyState;
 
     if (currentUserId != null && tokenDisplayName != null) {
       await _userProfilePreferences.writeDisplayName(
@@ -186,6 +199,7 @@ class AppController extends AsyncNotifier<AppState> {
           baseUrl: serverUrl,
           accessToken: accessToken,
         );
+        safetyState = profile.safety;
         currentUsername = profile.username.trim().isEmpty
             ? currentUsername
             : profile.username.trim();
@@ -215,6 +229,7 @@ class AppController extends AsyncNotifier<AppState> {
           accessToken = null;
           currentUserId = null;
           currentUsername = null;
+          safetyState = null;
         }
       }
     }
@@ -250,6 +265,7 @@ class AppController extends AsyncNotifier<AppState> {
             ),
       isSubmitting: false,
       authError: null,
+      safetyState: safetyState,
     );
   }
 
@@ -356,6 +372,7 @@ class AppController extends AsyncNotifier<AppState> {
         baseUrl: current.serverUrl!,
         deviceAuthPublicKey: deviceAuthPublicKey,
         altchaPayload: altchaPayload,
+        acceptedTermsVersion: currentSafetyTermsVersion,
       );
       await _sessionStorage.writeTokens(
         serverUrl: current.serverUrl!,
@@ -365,6 +382,7 @@ class AppController extends AsyncNotifier<AppState> {
 
       final userId = _jwtService.tryReadUserId(tokens.accessToken);
       var username = _jwtService.tryReadDisplayName(tokens.accessToken);
+      UserSafetyState? safetyState;
       if (current.serverUrl != null && userId != null) {
         await _serverPreferences.writeSavedUserId(current.serverUrl!, userId);
         try {
@@ -372,6 +390,7 @@ class AppController extends AsyncNotifier<AppState> {
             baseUrl: current.serverUrl!,
             accessToken: tokens.accessToken,
           );
+          safetyState = profile.safety;
           username = profile.username.trim().isEmpty
               ? username
               : profile.username.trim();
@@ -401,6 +420,7 @@ class AppController extends AsyncNotifier<AppState> {
           savedUserId: userId,
           isSubmitting: false,
           clearAuthError: true,
+          safetyState: safetyState,
         ),
       );
 
@@ -449,6 +469,7 @@ class AppController extends AsyncNotifier<AppState> {
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
+        clearSafetyState: true,
       ),
     );
   }
@@ -473,6 +494,7 @@ class AppController extends AsyncNotifier<AppState> {
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
+        clearSafetyState: true,
       ),
     );
   }
@@ -509,8 +531,50 @@ class AppController extends AsyncNotifier<AppState> {
         connectionStatus: ConnectionStatus.idle,
         clearConnectionError: true,
         clearAuthError: true,
+        clearSafetyState: true,
       ),
     );
+  }
+
+  Future<void> acceptSafetyTerms() async {
+    final current = state.value;
+    final serverUrl = current?.serverUrl?.trim();
+    if (current == null ||
+        serverUrl == null ||
+        serverUrl.isEmpty ||
+        current.isSubmitting) {
+      return;
+    }
+
+    final freshToken = await ensureFreshAccessToken() ?? current.accessToken;
+    if (freshToken == null || freshToken.trim().isEmpty) {
+      return;
+    }
+
+    state = AsyncData(
+      current.copyWith(isSubmitting: true, clearAuthError: true),
+    );
+
+    try {
+      final safety = await _remoteSafetyService.acceptTerms(
+        baseUrl: serverUrl,
+        accessToken: freshToken,
+        acceptedTermsVersion:
+            current.safetyState?.currentTermsVersion ??
+            currentSafetyTermsVersion,
+      );
+      state = AsyncData(
+        current.copyWith(
+          isSubmitting: false,
+          clearAuthError: true,
+          safetyState: safety,
+        ),
+      );
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(isSubmitting: false, authError: error.toString()),
+      );
+    }
   }
 
   String _normalizeBaseUrl(String raw) {

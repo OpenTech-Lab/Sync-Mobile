@@ -56,12 +56,14 @@ class AuthService {
     required String baseUrl,
     required String deviceAuthPublicKey,
     String? altchaPayload,
+    int? acceptedTermsVersion,
   }) async {
-    final body = <String, String>{
-      'device_auth_pubkey': deviceAuthPublicKey,
-    };
+    final body = <String, dynamic>{'device_auth_pubkey': deviceAuthPublicKey};
     if (altchaPayload != null) {
       body['altcha_payload'] = altchaPayload;
+    }
+    if (acceptedTermsVersion != null) {
+      body['accepted_terms_version'] = acceptedTermsVersion;
     }
 
     final response = await _postAuth(
@@ -104,14 +106,18 @@ class AuthService {
     required String email,
     required String password,
     String? altchaPayload,
+    int? acceptedTermsVersion,
   }) async {
-    final body = <String, String>{
+    final body = <String, dynamic>{
       'username': username,
       'email': email,
       'password': password,
     };
     if (altchaPayload != null) {
       body['altcha_payload'] = altchaPayload;
+    }
+    if (acceptedTermsVersion != null) {
+      body['accepted_terms_version'] = acceptedTermsVersion;
     }
 
     final response = await _postAuth(
@@ -130,13 +136,14 @@ class AuthService {
     required String email,
     required String password,
     String? altchaPayload,
+    int? acceptedTermsVersion,
   }) async {
-    final body = <String, String>{
-      'email': email,
-      'password': password,
-    };
+    final body = <String, dynamic>{'email': email, 'password': password};
     if (altchaPayload != null) {
       body['altcha_payload'] = altchaPayload;
+    }
+    if (acceptedTermsVersion != null) {
+      body['accepted_terms_version'] = acceptedTermsVersion;
     }
 
     final response = await _postAuth(
@@ -373,7 +380,7 @@ class AuthService {
   Future<http.Response> _postAuth({
     required String baseUrl,
     required String path,
-    required Map<String, String> body,
+    required Map<String, dynamic> body,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final candidates = _candidateAuthBaseUrls(normalized);

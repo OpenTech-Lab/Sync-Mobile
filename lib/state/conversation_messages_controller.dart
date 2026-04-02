@@ -8,6 +8,7 @@ import '../models/local_chat_message.dart';
 import '../services/backup_preferences.dart';
 import '../services/local_chat_repository.dart';
 import '../services/message_e2ee_service.dart';
+import '../services/objectionable_content_filter.dart';
 import '../services/remote_chat_service.dart';
 import '../services/remote_user_profile_service.dart';
 import 'hidden_conversation_ids_controller.dart';
@@ -339,6 +340,7 @@ class ConversationMessagesController
     if (trimmed.isEmpty) {
       return;
     }
+    ensureUserGeneratedTextAllowed('Message', trimmed);
 
     final sent = _isRoomConversation
         ? await _remoteChatService.sendRoomMessage(

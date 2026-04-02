@@ -7,6 +7,7 @@ import 'ui/theme/dark_theme.dart';
 import 'ui/theme/light_theme.dart';
 import 'features/auth/login_page.dart';
 import 'features/onboarding/onboarding_page.dart';
+import 'features/safety/safety_terms_page.dart';
 import 'features/shell/main_shell.dart';
 import 'services/altcha_service.dart';
 import 'state/app_controller.dart';
@@ -55,7 +56,9 @@ class SyncMobileApp extends ConsumerWidget {
       },
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),
-        error: (error, _) => const _ErrorScreen(message: 'Failed to start. Please restart the app.'),
+        error: (error, _) => const _ErrorScreen(
+          message: 'Failed to start. Please restart the app.',
+        ),
         data: (state) {
           switch (state.stage) {
             case AppStage.onboarding:
@@ -83,11 +86,20 @@ class SyncMobileApp extends ConsumerWidget {
                       .fetchAltchaChallenge(state.serverUrl!);
                   return solveAltchaChallenge(challenge);
                 },
-                onAutoLogin: ({altchaPayload}) => ref
-                    .read(appControllerProvider.notifier)
-                    .loginWithDeviceIdentity(altchaPayload: altchaPayload),
+                onAutoLogin: ({altchaPayload, required acceptedTermsVersion}) =>
+                    ref
+                        .read(appControllerProvider.notifier)
+                        .loginWithDeviceIdentity(altchaPayload: altchaPayload),
                 onBackToUrl: () =>
                     ref.read(appControllerProvider.notifier).resetServerUrl(),
+              );
+            case AppStage.safetyTerms:
+              return SafetyTermsScreen(
+                isSubmitting: state.isSubmitting,
+                onAccept: () => ref
+                    .read(appControllerProvider.notifier)
+                    .acceptSafetyTerms(),
+                onSignOut: ref.read(appControllerProvider.notifier).logout,
               );
             case AppStage.home:
               return MainShell(

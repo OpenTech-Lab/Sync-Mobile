@@ -623,7 +623,8 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
           widget.onOpenChat?.call(widget.friendId);
           return;
         }
-        if (action != ChatTargetProfileAction.cancelFriend) {
+        if (action != ChatTargetProfileAction.cancelFriend &&
+            action != ChatTargetProfileAction.blockUser) {
           return;
         }
         await prefs.removeFriendId(widget.serverUrl, widget.friendId);

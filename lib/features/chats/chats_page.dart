@@ -740,6 +740,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         showAppToast(context, _l10n.friendRemoved);
         return;
       }
+      if (action == ChatTargetProfileAction.blockUser ||
+          action == ChatTargetProfileAction.unblockUser) {
+        ref.invalidate(friendIdsProvider);
+        return;
+      }
       if (action == ChatTargetProfileAction.addFriend && mounted) {
         await prefs.addFriendId(widget.serverUrl, resolved.partnerId);
         ref.invalidate(friendIdsProvider);
@@ -1427,6 +1432,21 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         _l10n.friendAdded,
         duration: const Duration(milliseconds: 900),
       );
+      return;
+    }
+    if (action == ChatTargetProfileAction.blockUser) {
+      await ref
+          .read(userProfilePreferencesProvider)
+          .removeFriendId(widget.serverUrl, partnerId);
+      ref.invalidate(friendIdsProvider);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _activePartnerId = null);
+      return;
+    }
+    if (action == ChatTargetProfileAction.unblockUser) {
+      ref.invalidate(friendIdsProvider);
       return;
     }
     if (action == ChatTargetProfileAction.cancelFriend) {

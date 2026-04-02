@@ -1,3 +1,28 @@
+class UserSafetyState {
+  const UserSafetyState({
+    required this.currentTermsVersion,
+    required this.acceptedTermsVersion,
+    required this.termsAcceptedAt,
+    required this.requiresTermsAcceptance,
+  });
+
+  final int currentTermsVersion;
+  final int acceptedTermsVersion;
+  final DateTime? termsAcceptedAt;
+  final bool requiresTermsAcceptance;
+
+  factory UserSafetyState.fromJson(Map<String, dynamic> json) {
+    return UserSafetyState(
+      currentTermsVersion: _readIntValue(json['current_terms_version']),
+      acceptedTermsVersion: _readIntValue(json['accepted_terms_version']),
+      termsAcceptedAt: DateTime.tryParse(
+        (json['terms_accepted_at'] as String?)?.trim() ?? '',
+      )?.toUtc(),
+      requiresTermsAcceptance: json['requires_terms_acceptance'] == true,
+    );
+  }
+}
+
 class UserProfile {
   const UserProfile({
     required this.id,
@@ -5,6 +30,7 @@ class UserProfile {
     required this.avatarBase64,
     required this.description,
     required this.messagePublicKey,
+    this.safety,
     this.guild,
   });
 
@@ -13,6 +39,7 @@ class UserProfile {
   final String? avatarBase64;
   final String? description;
   final String? messagePublicKey;
+  final UserSafetyState? safety;
   final UserGuildSnapshot? guild;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -22,6 +49,9 @@ class UserProfile {
       avatarBase64: (json['avatar_base64'] as String?)?.trim(),
       description: (json['description'] as String?)?.trim(),
       messagePublicKey: (json['message_public_key'] as String?)?.trim(),
+      safety: json['safety'] is Map<String, dynamic>
+          ? UserSafetyState.fromJson(json['safety'] as Map<String, dynamic>)
+          : null,
       guild: json['guild'] is Map<String, dynamic>
           ? UserGuildSnapshot.fromJson(json['guild'] as Map<String, dynamic>)
           : null,
@@ -117,28 +147,34 @@ class UserGuildSnapshot {
 
   factory UserGuildSnapshot.fromJson(Map<String, dynamic> json) {
     return UserGuildSnapshot(
-      activeDays: _readInt(json['active_days']),
-      level: _readInt(json['level']),
-      contributionScore: _readInt(json['contribution_score']),
+      activeDays: _readIntValue(json['active_days']),
+      level: _readIntValue(json['level']),
+      contributionScore: _readIntValue(json['contribution_score']),
       rank: (json['rank'] as String?)?.trim() ?? '',
-      nextLevelActiveDays: _readNullableInt(json['next_level_active_days']),
-      levelProgressPercent: _readInt(json['level_progress_percent']),
+      nextLevelActiveDays: _readNullableIntValue(
+        json['next_level_active_days'],
+      ),
+      levelProgressPercent: _readIntValue(json['level_progress_percent']),
       dailyOutboundMessagesEnforced:
           json['daily_outbound_messages_enforced'] == true,
-      dailyOutboundMessagesLimit: _readNullableInt(
+      dailyOutboundMessagesLimit: _readNullableIntValue(
         json['daily_outbound_messages_limit'],
       ),
-      dailyOutboundMessagesSent: _readInt(json['daily_outbound_messages_sent']),
-      dailyOutboundMessagesRemaining: _readNullableInt(
+      dailyOutboundMessagesSent: _readIntValue(
+        json['daily_outbound_messages_sent'],
+      ),
+      dailyOutboundMessagesRemaining: _readNullableIntValue(
         json['daily_outbound_messages_remaining'],
       ),
       dailyAttachmentSendsEnforced:
           json['daily_attachment_sends_enforced'] == true,
-      dailyAttachmentSendLimit: _readNullableInt(
+      dailyAttachmentSendLimit: _readNullableIntValue(
         json['daily_attachment_send_limit'],
       ),
-      dailyAttachmentSendsSent: _readInt(json['daily_attachment_sends_sent']),
-      dailyAttachmentSendsRemaining: _readNullableInt(
+      dailyAttachmentSendsSent: _readIntValue(
+        json['daily_attachment_sends_sent'],
+      ),
+      dailyAttachmentSendsRemaining: _readNullableIntValue(
         json['daily_attachment_sends_remaining'],
       ),
       allowedAttachmentTypes:
@@ -148,9 +184,11 @@ class UserGuildSnapshot {
               .where((value) => value.isNotEmpty)
               .toList(growable: false),
       dailyFriendAddsEnforced: json['daily_friend_adds_enforced'] == true,
-      dailyFriendAddLimit: _readNullableInt(json['daily_friend_add_limit']),
-      dailyFriendAddsSent: _readInt(json['daily_friend_adds_sent']),
-      dailyFriendAddsRemaining: _readNullableInt(
+      dailyFriendAddLimit: _readNullableIntValue(
+        json['daily_friend_add_limit'],
+      ),
+      dailyFriendAddsSent: _readIntValue(json['daily_friend_adds_sent']),
+      dailyFriendAddsRemaining: _readNullableIntValue(
         json['daily_friend_adds_remaining'],
       ),
       challengeState: (json['challenge_state'] as String?)?.trim() ?? 'none',
@@ -162,16 +200,16 @@ class UserGuildSnapshot {
           : null,
     );
   }
+}
 
-  static int _readInt(Object? value) => _readNullableInt(value) ?? 0;
+int _readIntValue(Object? value) => _readNullableIntValue(value) ?? 0;
 
-  static int? _readNullableInt(Object? value) {
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    return null;
+int? _readNullableIntValue(Object? value) {
+  if (value is int) {
+    return value;
   }
+  if (value is num) {
+    return value.toInt();
+  }
+  return null;
 }

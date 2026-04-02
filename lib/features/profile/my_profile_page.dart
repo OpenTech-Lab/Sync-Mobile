@@ -20,6 +20,7 @@ import '../../models/qr_login_payload.dart';
 import '../../services/clipboard_image_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/auth_service.dart';
+import '../../services/objectionable_content_filter.dart';
 import '../../state/app_controller.dart';
 import '../../state/user_profile_controller.dart';
 import 'device_login_qr_scanner_page.dart';
@@ -93,6 +94,13 @@ class MyProfileScreen extends ConsumerWidget {
         );
         return;
       }
+      try {
+        ensureUserGeneratedTextAllowed('Username', result);
+      } on ObjectionableContentException catch (error) {
+        if (!context.mounted) return;
+        showAppToast(context, error.message, variant: AppToastVariant.error);
+        return;
+      }
 
       try {
         final freshToken =
@@ -146,6 +154,13 @@ class MyProfileScreen extends ConsumerWidget {
           l10n.profileDescriptionWordLimitError,
           variant: AppToastVariant.error,
         );
+        return;
+      }
+      try {
+        ensureUserGeneratedTextAllowed('Description', normalized);
+      } on ObjectionableContentException catch (error) {
+        if (!context.mounted) return;
+        showAppToast(context, error.message, variant: AppToastVariant.error);
         return;
       }
 

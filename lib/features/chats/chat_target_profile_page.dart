@@ -7,13 +7,22 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:mobile/services/user_profile_preferences.dart';
 import '../../services/chat_attachment_download_service.dart';
+import '../../services/remote_safety_service.dart';
+import '../../state/app_controller.dart';
 import '../../state/conversation_messages_controller.dart';
+import '../../state/safety_controller.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/molecules/app_dialog.dart';
 
-enum ChatTargetProfileAction { startChat, addFriend, cancelFriend }
+enum ChatTargetProfileAction {
+  startChat,
+  addFriend,
+  cancelFriend,
+  blockUser,
+  unblockUser,
+}
 
 class _FriendTagEditorResult {
   const _FriendTagEditorResult({
@@ -23,6 +32,13 @@ class _FriendTagEditorResult {
 
   final List<String> selectedTags;
   final List<String> deletedTags;
+}
+
+class _ProfileReportDraft {
+  const _ProfileReportDraft({required this.reasonCode, this.reporterNote});
+
+  final String reasonCode;
+  final String? reporterNote;
 }
 
 class ChatTargetProfileScreen extends ConsumerStatefulWidget {
@@ -60,10 +76,12 @@ class ChatTargetProfileScreen extends ConsumerStatefulWidget {
       _ChatTargetProfileScreenState();
 }
 
-class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScreen> {
+class _ChatTargetProfileScreenState
+    extends ConsumerState<ChatTargetProfileScreen> {
   final _preferences = UserProfilePreferences();
   List<String> _friendTags = const <String>[];
   bool _loadingTags = false;
+  bool _submittingSafetyAction = false;
 
   @override
   void initState() {
@@ -145,6 +163,266 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
     await _loadFriendTags();
   }
 
+  Future<String> _effectiveAccessToken() async {
+    final appState = await ref.read(appControllerProvider.future);
+    final freshToken =
+        await ref
+            .read(appControllerProvider.notifier)
+            .ensureFreshAccessToken() ??
+        appState.accessToken;
+    final token = freshToken?.trim();
+    if (token == null || token.isEmpty) {
+      throw StateError('Missing access token.');
+    }
+    return token;
+  }
+
+  Future<bool> _confirmBlockChange({required bool isBlocked}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final dialogColors = AppDialogColors.of(dialogContext);
+        return AppDialog(
+          eyebrow: isBlocked ? 'UNBLOCK USER' : 'BLOCK USER',
+          title: isBlocked
+              ? 'Allow ${widget.displayName} to appear again?'
+              : 'Block ${widget.displayName}?',
+          message: isBlocked
+              ? 'This user can appear in your feed again after you unblock them.'
+              : 'Their content will be removed from your feed immediately and a moderation report will be sent to the developer.',
+          showDividerAboveActions: true,
+          actions: AppDialogActions(
+            children: [
+              AppDialogTextAction(
+                label: 'Cancel',
+                color: dialogColors.muted,
+                onTap: () => Navigator.of(dialogContext).pop(false),
+              ),
+              AppDialogTextAction(
+                label: isBlocked ? 'UNBLOCK' : 'BLOCK',
+                color: isBlocked ? dialogColors.ink : AppPalette.danger700,
+                onTap: () => Navigator.of(dialogContext).pop(true),
+                fontSize: 11,
+                letterSpacing: 2.2,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    return confirmed ?? false;
+  }
+
+  Widget _reasonOption({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        size: 20,
+        color: selected ? AppPalette.neutral500 : AppPalette.neutral300,
+      ),
+      title: Text(label),
+      onTap: onTap,
+    );
+  }
+
+  Future<_ProfileReportDraft?> _showReportDialog() async {
+    String reasonCode = 'abusive_user';
+    final noteController = TextEditingController();
+    final result = await showDialog<_ProfileReportDraft>(
+      context: context,
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+        final ruleColor = isDark
+            ? AppPalette.neutral700
+            : AppPalette.neutral300;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark
+                  ? AppPalette.neutral900
+                  : AppPalette.neutral50,
+              title: Text(
+                'Report profile',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: inkColor,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _reasonOption(
+                      label: 'Abusive or harassing',
+                      selected: reasonCode == 'abusive_user',
+                      onTap: () =>
+                          setDialogState(() => reasonCode = 'abusive_user'),
+                    ),
+                    _reasonOption(
+                      label: 'Hate speech or threats',
+                      selected: reasonCode == 'hate_speech',
+                      onTap: () =>
+                          setDialogState(() => reasonCode = 'hate_speech'),
+                    ),
+                    _reasonOption(
+                      label: 'Sexual or exploitative content',
+                      selected: reasonCode == 'sexual_content',
+                      onTap: () =>
+                          setDialogState(() => reasonCode = 'sexual_content'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: noteController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Optional details',
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: AppPalette.neutral500),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(
+                    _ProfileReportDraft(
+                      reasonCode: reasonCode,
+                      reporterNote: noteController.text.trim().isEmpty
+                          ? null
+                          : noteController.text.trim(),
+                    ),
+                  ),
+                  child: const Text('Submit report'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    noteController.dispose();
+    return result;
+  }
+
+  Future<void> _submitProfileReport() async {
+    final draft = await _showReportDialog();
+    if (!mounted || draft == null) {
+      return;
+    }
+    setState(() => _submittingSafetyAction = true);
+    try {
+      final accessToken = await _effectiveAccessToken();
+      await ref
+          .read(remoteSafetyServiceProvider)
+          .reportUserProfile(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            reportedUserId: widget.userId,
+            reasonCode: draft.reasonCode,
+            reporterNote: draft.reporterNote,
+          );
+      if (!mounted) {
+        return;
+      }
+      showAppToast(context, 'Report submitted.');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error is RemoteSafetyApiException
+          ? error.message
+          : 'Failed to submit report.';
+      showAppToast(context, message, variant: AppToastVariant.error);
+    } finally {
+      if (mounted) {
+        setState(() => _submittingSafetyAction = false);
+      }
+    }
+  }
+
+  Future<void> _toggleBlock({required bool isBlocked}) async {
+    final confirmed = await _confirmBlockChange(isBlocked: isBlocked);
+    if (!mounted || !confirmed) {
+      return;
+    }
+
+    setState(() => _submittingSafetyAction = true);
+    try {
+      final accessToken = await _effectiveAccessToken();
+      final service = ref.read(remoteSafetyServiceProvider);
+      if (isBlocked) {
+        await service.unblockUser(
+          baseUrl: widget.serverUrl,
+          accessToken: accessToken,
+          userId: widget.userId,
+        );
+        await refreshSafetyStateAfterBlock(
+          ref,
+          baseUrl: widget.serverUrl,
+          accessToken: accessToken,
+        );
+        if (!mounted) {
+          return;
+        }
+        showAppToast(context, 'User unblocked.');
+        Navigator.of(context).pop(ChatTargetProfileAction.unblockUser);
+        return;
+      }
+
+      await service.blockUser(
+        baseUrl: widget.serverUrl,
+        accessToken: accessToken,
+        userId: widget.userId,
+        reasonCode: 'abusive_user',
+      );
+      await purgeBlockedUserLocally(
+        ref,
+        serverUrl: widget.serverUrl,
+        userId: widget.userId,
+      );
+      await refreshSafetyStateAfterBlock(
+        ref,
+        baseUrl: widget.serverUrl,
+        accessToken: accessToken,
+      );
+      if (!mounted) {
+        return;
+      }
+      showAppToast(context, 'User blocked.');
+      Navigator.of(context).pop(ChatTargetProfileAction.blockUser);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = error is RemoteSafetyApiException
+          ? error.message
+          : 'Failed to update block status.';
+      showAppToast(context, message, variant: AppToastVariant.error);
+    } finally {
+      if (mounted) {
+        setState(() => _submittingSafetyAction = false);
+      }
+    }
+  }
+
   Future<bool> _confirmCancelFriend() async {
     final l10n = AppLocalizations.of(context)!;
 
@@ -199,8 +477,9 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
     buffer.writeln('Exported: ${_formatExportDate(DateTime.now().toLocal())}');
     buffer.writeln();
     for (final msg in messages.reversed) {
-      final senderLabel =
-          msg.senderId == widget.currentUserId ? 'You' : partnerLabel;
+      final senderLabel = msg.senderId == widget.currentUserId
+          ? 'You'
+          : partnerLabel;
       final time = _formatExportDate(msg.createdAt.toLocal());
       buffer.writeln('[$time] $senderLabel: ${msg.body}');
     }
@@ -256,8 +535,11 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading:
-                      Icon(Icons.save_alt_outlined, color: inkColor, size: 20),
+                  leading: Icon(
+                    Icons.save_alt_outlined,
+                    color: inkColor,
+                    size: 20,
+                  ),
                   title: Text(
                     l10n.chatExportSaveAction,
                     style: TextStyle(
@@ -587,6 +869,8 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final blockedUserIds = ref.watch(blockedUserIdsProvider).asData?.value;
+    final isBlocked = blockedUserIds?.contains(widget.userId) ?? false;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
@@ -749,7 +1033,8 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
                   label: l10n.chatTargetAddFriend,
                   borderColor: ruleColor,
                   textColor: inkColor,
-                  disabled: widget.isFriend,
+                  disabled:
+                      widget.isFriend || isBlocked || _submittingSafetyAction,
                   onTap: () => Navigator.of(
                     context,
                   ).pop(ChatTargetProfileAction.addFriend),
@@ -761,6 +1046,7 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
                   label: l10n.chatTargetStartChat,
                   borderColor: ruleColor,
                   textColor: inkColor,
+                  disabled: isBlocked || _submittingSafetyAction,
                   onTap: () => Navigator.of(
                     context,
                   ).pop(ChatTargetProfileAction.startChat),
@@ -775,6 +1061,25 @@ class _ChatTargetProfileScreenState extends ConsumerState<ChatTargetProfileScree
             borderColor: ruleColor,
             textColor: inkColor,
             onTap: _exportChatHistory,
+          ),
+          const SizedBox(height: 12),
+          OutlineActionButton(
+            label: 'Report profile',
+            borderColor: AppPalette.neutral500.withValues(alpha: 0.35),
+            textColor: inkColor,
+            disabled: _submittingSafetyAction,
+            onTap: _submittingSafetyAction ? null : _submitProfileReport,
+          ),
+          const SizedBox(height: 12),
+          OutlineActionButton(
+            label: isBlocked ? 'Unblock user' : 'Block user',
+            borderColor: AppPalette.danger700.withValues(alpha: 0.45),
+            textColor: AppPalette.danger700,
+            variant: OutlineActionVariant.danger,
+            disabled: _submittingSafetyAction,
+            onTap: _submittingSafetyAction
+                ? null
+                : () => _toggleBlock(isBlocked: isBlocked),
           ),
 
           if (widget.isFriend) ...[

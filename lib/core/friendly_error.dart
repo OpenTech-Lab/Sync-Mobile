@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../l10n/app_localizations.dart';
+import '../services/objectionable_content_filter.dart';
 
 /// Classifies [error] into a short, user-friendly message.
 ///
@@ -10,6 +11,9 @@ import '../l10n/app_localizations.dart';
 /// - Auth / permission       → contact administrator
 /// - Everything else         → generic "try again"
 String friendlyErrorMessage(Object error, AppLocalizations l10n) {
+  if (error is ObjectionableContentException) {
+    return error.message;
+  }
   if (_isNetworkError(error)) {
     return l10n.errorNetwork;
   }

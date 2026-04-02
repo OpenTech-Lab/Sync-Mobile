@@ -3,6 +3,8 @@ import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/components/molecules/altcha_widget.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
+import '../safety/safety_policy.dart';
+import '../safety/safety_terms_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -20,9 +22,14 @@ class LoginScreen extends StatefulWidget {
   final String? savedUserId;
   final bool isSubmitting;
   final String? errorMessage;
+
   /// Fetches + solves the ALTCHA challenge via the dev-aware HTTP client.
   final Future<String?> Function() altchaFetcher;
-  final Future<void> Function({String? altchaPayload}) onAutoLogin;
+  final Future<void> Function({
+    String? altchaPayload,
+    required int acceptedTermsVersion,
+  })
+  onAutoLogin;
   final VoidCallback onBackToUrl;
 
   @override
@@ -32,6 +39,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _started = false;
   bool _altchaResolved = false;
+  bool _agreedToTerms = false;
   String? _altchaPayload;
 
   @override
@@ -140,25 +148,52 @@ class _LoginScreenState extends State<LoginScreen> {
                         _altchaResolved = true;
                         _altchaPayload = payload;
                       });
-                      // Returning users auto-login once ALTCHA resolves.
-                      if (widget.savedUserId != null) {
-                        widget.onAutoLogin(altchaPayload: payload);
-                      }
                     },
                   ),
                 ),
               ),
               const SizedBox(height: 20),
+              CheckboxListTile(
+                value: _agreedToTerms,
+                onChanged: widget.isSubmitting
+                    ? null
+                    : (value) => setState(() => _agreedToTerms = value == true),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'I agree to the Terms of Use and Safety Policy.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300,
+                    color: inkColor,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => showSafetyTermsSheet(context),
+                  child: const Text('View terms'),
+                ),
+              ),
+              const SizedBox(height: 4),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: (widget.isSubmitting || !_altchaResolved)
+                  onTap:
+                      (widget.isSubmitting ||
+                          !_altchaResolved ||
+                          !_agreedToTerms)
                       ? null
-                      : () => widget.onAutoLogin(altchaPayload: _altchaPayload),
+                      : () => widget.onAutoLogin(
+                          altchaPayload: _altchaPayload,
+                          acceptedTermsVersion: currentSafetyTermsVersion,
+                        ),
                   child: Opacity(
-                    opacity: !_altchaResolved ? 0.5 : 1.0,
+                    opacity: (!_altchaResolved || !_agreedToTerms) ? 0.5 : 1.0,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -174,8 +209,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (widget.isSubmitting) const SizedBox(width: 10),
                         Text(
                           widget.isSubmitting
-                              ? (isNewUser ? l10n.creatingAccountProgress : l10n.signingInProgress)
-                              : (isNewUser ? l10n.createAccountAction : l10n.signInAction),
+                              ? (isNewUser
+                                    ? l10n.creatingAccountProgress
+                                    : l10n.signingInProgress)
+                              : (isNewUser
+                                    ? l10n.createAccountAction
+                                    : l10n.signInAction),
                           style: TextStyle(
                             fontSize: widget.isSubmitting ? 13 : 10,
                             letterSpacing: widget.isSubmitting ? 0.2 : 2.2,
