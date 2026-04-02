@@ -14,6 +14,7 @@ import '../../../ui/components/atoms/app_toast.dart';
 import '../../../ui/tokens/colors/app_palette.dart';
 import '../../../services/chat_ui_preferences.dart';
 import '../models/outgoing_draft.dart';
+import 'quick_action_sheet.dart';
 import 'chat_attachment_viewer_page.dart';
 import '../utils/chat_media_cache.dart';
 import '../utils/chat_helpers.dart';
@@ -84,33 +85,78 @@ class MessageBubble extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? AppPalette.neutral900
+              : AppPalette.neutral50,
       builder: (sheetContext) {
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        final inkColor =
+            isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+        final mutedColor = AppPalette.neutral500;
+        final ruleColor =
+            isDark ? AppPalette.neutral700 : AppPalette.neutral300;
         return SafeArea(
           top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.copy_outlined),
-                title: const Text('Copy message'),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await Clipboard.setData(ClipboardData(text: message.body));
-                  if (context.mounted) {
-                    showAppToast(context, l10n.chatExportCopied);
-                  }
-                },
-              ),
-              if (!isMine && onReportMessage != null)
-                ListTile(
-                  leading: const Icon(Icons.flag_outlined),
-                  title: const Text('Report message'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'MESSAGE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.8,
+                    color: mutedColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Divider(height: 1, color: ruleColor),
+                SheetItem(
+                  label: 'Copy message',
+                  inkColor: inkColor,
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    await onReportMessage!(message);
+                    await Clipboard.setData(
+                      ClipboardData(text: message.body),
+                    );
+                    if (context.mounted) {
+                      showAppToast(context, l10n.chatExportCopied);
+                    }
                   },
                 ),
-            ],
+                if (!isMine && onReportMessage != null) ...[
+                  Divider(height: 1, color: ruleColor),
+                  SheetItem(
+                    label: 'Report message',
+                    inkColor: AppPalette.danger700,
+                    onTap: () async {
+                      Navigator.of(sheetContext).pop();
+                      await onReportMessage!(message);
+                    },
+                  ),
+                ],
+                Divider(height: 1, color: ruleColor),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => Navigator.of(sheetContext).pop(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mutedColor,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

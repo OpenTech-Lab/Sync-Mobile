@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/atoms/app_toast.dart';
+import '../../ui/components/molecules/app_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -1329,85 +1330,112 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     final result = await showDialog<_MessageReportDraft>(
       context: context,
       builder: (dialogContext) {
-        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
-        final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-        final ruleColor = isDark
-            ? AppPalette.neutral700
-            : AppPalette.neutral300;
+        final colors = AppDialogColors.of(dialogContext);
         return StatefulBuilder(
           builder: (context, setDialogState) {
             Widget option(String value, String label) {
               final selected = reasonCode == value;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  size: 20,
-                  color: selected
-                      ? AppPalette.neutral500
-                      : AppPalette.neutral300,
-                ),
-                title: Text(label),
+              return InkWell(
                 onTap: () => setDialogState(() => reasonCode = value),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  child: Row(
+                    children: [
+                      Icon(
+                        selected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: selected ? colors.ink : colors.muted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            color: colors.ink,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
 
-            return AlertDialog(
-              backgroundColor: isDark
-                  ? AppPalette.neutral900
-                  : AppPalette.neutral50,
-              title: Text(
-                'Report message',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: inkColor,
-                ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    option('abusive_user', 'Abusive or harassing'),
-                    option('hate_speech', 'Hate speech or threats'),
-                    option('sexual_content', 'Sexual or exploitative content'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: noteController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Optional details',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: ruleColor),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: AppPalette.neutral500),
-                        ),
+            return AppDialog(
+              eyebrow: 'REPORT MESSAGE',
+              title: 'Why are you reporting this message?',
+              showDividerAboveActions: true,
+              body: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  option('abusive_user', 'Abusive or harassing'),
+                  Divider(height: 1, color: colors.rule),
+                  option('hate_speech', 'Hate speech or threats'),
+                  Divider(height: 1, color: colors.rule),
+                  option('sexual_content', 'Sexual or exploitative content'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w300,
+                      color: colors.ink,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Additional details (optional)',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: colors.muted,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: colors.rule),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: colors.ink),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(
-                    _MessageReportDraft(
-                      reasonCode: reasonCode,
-                      reporterNote: noteController.text.trim().isEmpty
-                          ? null
-                          : noteController.text.trim(),
-                    ),
                   ),
-                  child: const Text('Submit report'),
-                ),
-              ],
+                ],
+              ),
+              actions: AppDialogActions(
+                children: [
+                  AppDialogTextAction(
+                    label: 'Cancel',
+                    color: colors.muted,
+                    onTap: () => Navigator.of(dialogContext).pop(),
+                  ),
+                  AppDialogTextAction(
+                    label: 'SUBMIT',
+                    color: AppPalette.danger700,
+                    onTap: () => Navigator.of(dialogContext).pop(
+                      _MessageReportDraft(
+                        reasonCode: reasonCode,
+                        reporterNote: noteController.text.trim().isEmpty
+                            ? null
+                            : noteController.text.trim(),
+                      ),
+                    ),
+                    fontSize: 11,
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
             );
           },
         );
