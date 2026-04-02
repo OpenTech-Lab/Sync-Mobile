@@ -21,11 +21,13 @@ import 'room_detail_page.dart';
 import '../../services/backup_preferences.dart';
 import '../../services/local_chat_repository.dart';
 import '../../services/chat_ui_preferences.dart';
+import '../../services/remote_safety_service.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
 import '../../state/hidden_conversation_ids_controller.dart';
 import '../../state/realtime_sync_controller.dart';
+import '../../state/safety_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
@@ -58,6 +60,13 @@ class ChatsTab extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<ChatsTab> createState() => _ChatsTabState();
+}
+
+class _MessageReportDraft {
+  const _MessageReportDraft({required this.reasonCode, this.reporterNote});
+
+  final String reasonCode;
+  final String? reporterNote;
 }
 
 class _ChatsTabState extends ConsumerState<ChatsTab>
@@ -765,7 +774,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       }
     } catch (error) {
       if (!mounted) return;
-      showAppToast(context, friendlyErrorMessage(error, _l10n), variant: AppToastVariant.error);
+      showAppToast(
+        context,
+        friendlyErrorMessage(error, _l10n),
+        variant: AppToastVariant.error,
+      );
     }
   }
 
@@ -1122,7 +1135,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       await _openPartner(room.conversationId);
     } catch (error) {
       if (!mounted) return;
-      showAppToast(context, friendlyErrorMessage(error, _l10n), variant: AppToastVariant.error);
+      showAppToast(
+        context,
+        friendlyErrorMessage(error, _l10n),
+        variant: AppToastVariant.error,
+      );
     }
   }
 
@@ -1304,6 +1321,137 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       feedback?.toastMessage ?? friendlyErrorMessage(error, _l10n),
       variant: AppToastVariant.error,
     );
+  }
+
+  Future<_MessageReportDraft?> _showMessageReportDialog() async {
+    String reasonCode = 'abusive_user';
+    final noteController = TextEditingController();
+    final result = await showDialog<_MessageReportDraft>(
+      context: context,
+      builder: (dialogContext) {
+        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
+        final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
+        final ruleColor = isDark
+            ? AppPalette.neutral700
+            : AppPalette.neutral300;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Widget option(String value, String label) {
+              final selected = reasonCode == value;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  size: 20,
+                  color: selected
+                      ? AppPalette.neutral500
+                      : AppPalette.neutral300,
+                ),
+                title: Text(label),
+                onTap: () => setDialogState(() => reasonCode = value),
+              );
+            }
+
+            return AlertDialog(
+              backgroundColor: isDark
+                  ? AppPalette.neutral900
+                  : AppPalette.neutral50,
+              title: Text(
+                'Report message',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: inkColor,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    option('abusive_user', 'Abusive or harassing'),
+                    option('hate_speech', 'Hate speech or threats'),
+                    option('sexual_content', 'Sexual or exploitative content'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: noteController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Optional details',
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: ruleColor),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: AppPalette.neutral500),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(
+                    _MessageReportDraft(
+                      reasonCode: reasonCode,
+                      reporterNote: noteController.text.trim().isEmpty
+                          ? null
+                          : noteController.text.trim(),
+                    ),
+                  ),
+                  child: const Text('Submit report'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    noteController.dispose();
+    return result;
+  }
+
+  Future<void> _reportMessage(LocalChatMessage message) async {
+    final draft = await _showMessageReportDialog();
+    if (!mounted || draft == null) {
+      return;
+    }
+
+    try {
+      final accessToken = await _effectiveAccessToken();
+      final isRoom =
+          _activePartnerId != null && isRoomConversationId(_activePartnerId!);
+      await ref
+          .read(remoteSafetyServiceProvider)
+          .reportMessage(
+            baseUrl: widget.serverUrl,
+            accessToken: accessToken,
+            reportedUserId: message.senderId,
+            contentKind: isRoom ? 'room_message' : 'direct_message',
+            contentId: message.id,
+            messageText: message.body,
+            reasonCode: draft.reasonCode,
+            reporterNote: draft.reporterNote,
+          );
+      if (!mounted) {
+        return;
+      }
+      showAppToast(context, 'Message reported.');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final messageText = error is RemoteSafetyApiException
+          ? error.message
+          : 'Failed to submit message report.';
+      showAppToast(context, messageText, variant: AppToastVariant.error);
+    }
   }
 
   Future<void> _retryOutgoingDraft(OutgoingMessageDraft draft) async {
@@ -1795,8 +1943,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       tooltip: _l10n.chatNotes,
                       onPressed: () {
                         final partnerId = _activePartnerId!;
-                        final name = activeDisplayName ??
-                            _l10n.chatDefaultTitle;
+                        final name =
+                            activeDisplayName ?? _l10n.chatDefaultTitle;
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => ConversationNotePage(
@@ -1812,8 +1960,8 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       tooltip: _l10n.chatTodos,
                       onPressed: () {
                         final partnerId = _activePartnerId!;
-                        final name = activeDisplayName ??
-                            _l10n.chatDefaultTitle;
+                        final name =
+                            activeDisplayName ?? _l10n.chatDefaultTitle;
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => ConversationTodosPage(
@@ -1840,7 +1988,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                           error: (err, _) => Center(
                             child: Padding(
                               padding: const EdgeInsets.all(24),
-                              child: Text(friendlyErrorMessage(err, _l10n), textAlign: TextAlign.center),
+                              child: Text(
+                                friendlyErrorMessage(err, _l10n),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                           data: (messages) {
@@ -1958,6 +2109,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                                                 : () => _retryOutgoingDraft(
                                                     draft,
                                                   ),
+                                            onReportMessage:
+                                                message.senderId ==
+                                                    widget.currentUserId
+                                                ? null
+                                                : _reportMessage,
                                             typingStyleModeEnabled:
                                                 typingStyleModeEnabled,
                                             typingStyleSpeedMs:

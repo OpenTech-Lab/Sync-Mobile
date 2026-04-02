@@ -33,6 +33,7 @@ class MessageBubble extends ConsumerWidget {
     this.deliveryState,
     this.statusLabel,
     this.onRetryTap,
+    this.onReportMessage,
     this.typingStyleModeEnabled = false,
     this.typingStyleSpeedMs = ChatUiPreferences.defaultTypingStyleSpeedMs,
     this.animateAsDraft = false,
@@ -50,6 +51,7 @@ class MessageBubble extends ConsumerWidget {
   final OutgoingDeliveryState? deliveryState;
   final String? statusLabel;
   final VoidCallback? onRetryTap;
+  final Future<void> Function(LocalChatMessage message)? onReportMessage;
   final bool typingStyleModeEnabled;
   final int typingStyleSpeedMs;
   final bool animateAsDraft;
@@ -72,6 +74,46 @@ class MessageBubble extends ConsumerWidget {
           suggestedFileName: media.suggestedFileName,
         ),
       ),
+    );
+  }
+
+  Future<void> _showMessageActions(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copy message'),
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  await Clipboard.setData(ClipboardData(text: message.body));
+                  if (context.mounted) {
+                    showAppToast(context, l10n.chatExportCopied);
+                  }
+                },
+              ),
+              if (!isMine && onReportMessage != null)
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined),
+                  title: const Text('Report message'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await onReportMessage!(message);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -221,6 +263,7 @@ class MessageBubble extends ConsumerWidget {
                 ],
                 GestureDetector(
                   onTap: () => _openAttachmentDetail(context, media),
+                  onLongPress: () => _showMessageActions(context, l10n),
                   child: Container(
                     constraints: BoxConstraints(maxWidth: maxBubbleWidth),
                     decoration: BoxDecoration(
@@ -342,14 +385,17 @@ class MessageBubble extends ConsumerWidget {
                         ),
                       ),
                     ],
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image(
-                        image: stickerImage,
-                        width: 128,
-                        height: 128,
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true,
+                    GestureDetector(
+                      onLongPress: () => _showMessageActions(context, l10n),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image(
+                          image: stickerImage,
+                          width: 128,
+                          height: 128,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -555,7 +601,11 @@ class MessageBubble extends ConsumerWidget {
       ),
     );
 
-    bubble = GestureDetector(onTap: () => _openDetail(context), child: bubble);
+    bubble = GestureDetector(
+      onTap: () => _openDetail(context),
+      onLongPress: () => _showMessageActions(context, l10n),
+      child: bubble,
+    );
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,

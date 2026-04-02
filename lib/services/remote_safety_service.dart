@@ -167,6 +167,39 @@ class RemoteSafetyService {
     }
   }
 
+  Future<void> reportMessage({
+    required String baseUrl,
+    required String accessToken,
+    required String reportedUserId,
+    required String contentKind,
+    required String contentId,
+    required String messageText,
+    required String reasonCode,
+    String? reporterNote,
+  }) async {
+    final response = await _post(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      path: '/api/safety/reports',
+      body: {
+        'reported_user_id': reportedUserId,
+        'source': 'user_report',
+        'content_kind': contentKind,
+        'content_id': contentId,
+        'reason_code': reasonCode,
+        'content_excerpt_override': messageText,
+        if (reporterNote != null && reporterNote.trim().isNotEmpty)
+          'reporter_note': reporterNote.trim(),
+      },
+    );
+    if (response.statusCode != 201) {
+      throw _errorFromResponse(
+        response,
+        fallbackMessage: 'Failed to submit message report',
+      );
+    }
+  }
+
   Future<http.Response> _post({
     required String baseUrl,
     required String accessToken,

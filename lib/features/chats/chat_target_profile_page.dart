@@ -218,16 +218,37 @@ class _ChatTargetProfileScreenState
     required String label,
     required bool selected,
     required VoidCallback onTap,
+    required AppDialogColors colors,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        size: 20,
-        color: selected ? AppPalette.neutral500 : AppPalette.neutral300,
-      ),
-      title: Text(label),
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 18,
+              color: selected ? colors.ink : colors.muted,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w300,
+                  color: colors.ink,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -237,82 +258,96 @@ class _ChatTargetProfileScreenState
     final result = await showDialog<_ProfileReportDraft>(
       context: context,
       builder: (dialogContext) {
-        final isDark = Theme.of(dialogContext).brightness == Brightness.dark;
-        final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-        final ruleColor = isDark
-            ? AppPalette.neutral700
-            : AppPalette.neutral300;
+        final colors = AppDialogColors.of(dialogContext);
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: isDark
-                  ? AppPalette.neutral900
-                  : AppPalette.neutral50,
-              title: Text(
-                'Report profile',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: inkColor,
-                ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _reasonOption(
-                      label: 'Abusive or harassing',
-                      selected: reasonCode == 'abusive_user',
-                      onTap: () =>
-                          setDialogState(() => reasonCode = 'abusive_user'),
+            return AppDialog(
+              eyebrow: 'REPORT PROFILE',
+              title: 'Why are you reporting this profile?',
+              showDividerAboveActions: true,
+              body: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _reasonOption(
+                    label: 'Abusive or harassing',
+                    selected: reasonCode == 'abusive_user',
+                    onTap: () =>
+                        setDialogState(() => reasonCode = 'abusive_user'),
+                    colors: colors,
+                  ),
+                  Divider(height: 1, color: colors.rule),
+                  _reasonOption(
+                    label: 'Hate speech or threats',
+                    selected: reasonCode == 'hate_speech',
+                    onTap: () =>
+                        setDialogState(() => reasonCode = 'hate_speech'),
+                    colors: colors,
+                  ),
+                  Divider(height: 1, color: colors.rule),
+                  _reasonOption(
+                    label: 'Sexual or exploitative content',
+                    selected: reasonCode == 'sexual_content',
+                    onTap: () =>
+                        setDialogState(() => reasonCode = 'sexual_content'),
+                    colors: colors,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w300,
+                      color: colors.ink,
                     ),
-                    _reasonOption(
-                      label: 'Hate speech or threats',
-                      selected: reasonCode == 'hate_speech',
-                      onTap: () =>
-                          setDialogState(() => reasonCode = 'hate_speech'),
-                    ),
-                    _reasonOption(
-                      label: 'Sexual or exploitative content',
-                      selected: reasonCode == 'sexual_content',
-                      onTap: () =>
-                          setDialogState(() => reasonCode = 'sexual_content'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: noteController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Optional details',
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: ruleColor),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: AppPalette.neutral500),
-                        ),
+                    decoration: InputDecoration(
+                      hintText: 'Additional details (optional)',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: colors.muted,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: colors.rule),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: colors.ink),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(
-                    _ProfileReportDraft(
-                      reasonCode: reasonCode,
-                      reporterNote: noteController.text.trim().isEmpty
-                          ? null
-                          : noteController.text.trim(),
-                    ),
                   ),
-                  child: const Text('Submit report'),
-                ),
-              ],
+                ],
+              ),
+              actions: AppDialogActions(
+                children: [
+                  AppDialogTextAction(
+                    label: 'Cancel',
+                    color: colors.muted,
+                    onTap: () => Navigator.of(dialogContext).pop(),
+                  ),
+                  AppDialogTextAction(
+                    label: 'SUBMIT',
+                    color: AppPalette.danger700,
+                    onTap: () => Navigator.of(dialogContext).pop(
+                      _ProfileReportDraft(
+                        reasonCode: reasonCode,
+                        reporterNote: noteController.text.trim().isEmpty
+                            ? null
+                            : noteController.text.trim(),
+                      ),
+                    ),
+                    fontSize: 11,
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
             );
           },
         );
