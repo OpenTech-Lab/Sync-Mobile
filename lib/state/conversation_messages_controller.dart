@@ -57,6 +57,8 @@ final conversationMessagesProvider =
       String
     >(ConversationMessagesController.new);
 
+const reportedMessageHiddenPlaceholder = '[Message hidden after report]';
+
 class RoomConversationsController extends AsyncNotifier<List<ChatRoom>> {
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
   RemoteChatService get _remoteChatService =>
@@ -223,6 +225,19 @@ class ConversationMessagesController
 
   Future<void> _unhideConversationIfNeeded() async {
     await ref.read(hiddenConversationIdsProvider.notifier).unhide(arg);
+  }
+
+  Future<void> concealReportedMessage(LocalChatMessage message) async {
+    final repository = ref.read(chatRepositoryProvider);
+    final concealed = message.copyWith(body: reportedMessageHiddenPlaceholder);
+    final current = state.value;
+    if (current != null) {
+      state = AsyncData([
+        for (final item in current) item.id == message.id ? concealed : item,
+      ]);
+    }
+    await repository.replaceMessage(concealed);
+    ref.invalidate(conversationSummariesProvider);
   }
 
   Future<void> syncLatest({

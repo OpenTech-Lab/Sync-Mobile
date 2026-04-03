@@ -13,6 +13,22 @@ class LocalChatMessage {
   final String body;
   final DateTime createdAt;
 
+  LocalChatMessage copyWith({
+    String? id,
+    String? conversationId,
+    String? senderId,
+    String? body,
+    DateTime? createdAt,
+  }) {
+    return LocalChatMessage(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      senderId: senderId ?? this.senderId,
+      body: body ?? this.body,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, Object?> toMap() {
     return {
       'id': id,

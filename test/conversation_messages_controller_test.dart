@@ -39,6 +39,16 @@ class _InMemoryChatRepository implements ChatRepository {
   }
 
   @override
+  Future<void> replaceMessage(LocalChatMessage message) async {
+    final idx = _messages.indexWhere((existing) => existing.id == message.id);
+    if (idx == -1) {
+      _messages.add(message);
+    } else {
+      _messages[idx] = message;
+    }
+  }
+
+  @override
   Future<void> clearConversation(String conversationId) async {
     _messages.removeWhere(
       (message) => message.conversationId == conversationId,
@@ -605,6 +615,61 @@ void main() {
         container.read(hiddenConversationIdsProvider).value,
         isNot(contains(conversationId)),
       );
+    },
+  );
+
+  test(
+    'concealReportedMessage updates local state and survives syncLatest',
+    () async {
+      const partnerId = 'friend-1';
+      final original = LocalChatMessage(
+        id: 'm-1',
+        conversationId: partnerId,
+        senderId: 'other',
+        body: 'report me',
+        createdAt: DateTime.utc(2026, 3, 12, 12, 0),
+      );
+      final repo = _InMemoryChatRepository();
+      await repo.replaceAllMessages([original]);
+      final remote = _FakeRemoteChatService({
+        partnerId: [
+          [original],
+        ],
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .concealReportedMessage(original);
+
+      final concealedState = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      expect(concealedState.single.body, reportedMessageHiddenPlaceholder);
+
+      final concealedStored = await repo.listMessages(conversationId: partnerId);
+      expect(concealedStored.single.body, reportedMessageHiddenPlaceholder);
+
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .syncLatest(
+            baseUrl: 'http://localhost:8080',
+            accessToken: 'token',
+            currentUserId: 'me',
+          );
+
+      final syncedState = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      expect(syncedState.single.body, reportedMessageHiddenPlaceholder);
     },
   );
 }

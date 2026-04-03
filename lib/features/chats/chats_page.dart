@@ -1467,6 +1467,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
             reasonCode: draft.reasonCode,
             reporterNote: draft.reporterNote,
           );
+      await ref
+          .read(conversationMessagesProvider(message.conversationId).notifier)
+          .concealReportedMessage(message);
       if (!mounted) {
         return;
       }
