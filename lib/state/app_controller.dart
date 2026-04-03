@@ -45,6 +45,12 @@ class AppState {
   final String? authError;
   final UserSafetyState? safetyState;
 
+  bool get isAdmin {
+    final token = accessToken;
+    if (token == null || token.isEmpty) return false;
+    return const JwtService().isAdmin(token);
+  }
+
   AppStage get stage {
     if (serverUrl == null || serverUrl!.isEmpty) {
       return AppStage.onboarding;

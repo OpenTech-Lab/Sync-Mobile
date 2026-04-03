@@ -512,5 +512,24 @@
     "placeholders": {
       "level": { "type": "String" }
     }
-  }
+  },
+  "settingsAdminPanel": "ADMIN PANEL",
+  "settingsAdminPanelHint": "Manage users and moderation actions.",
+  "adminUsersTitle": "Admin Panel",
+  "adminUsersEmpty": "No users found.",
+  "adminUsersErrorLoad": "Failed to load users.",
+  "adminActionYellowCard": "YELLOW CARD",
+  "adminActionClearCard": "CLEAR CARD",
+  "adminActionSuspend": "SUSPEND",
+  "adminActionActivate": "ACTIVATE",
+  "adminYellowCardConfirmTitle": "Issue yellow card?",
+  "adminYellowCardConfirmMessage": "User cannot send messages or add contacts for 3 days.",
+  "adminSuspendConfirmTitle": "Suspend user?",
+  "adminSuspendConfirmMessage": "User will be permanently suspended until manually reactivated.",
+  "adminYellowCardIssued": "Yellow card issued.",
+  "adminYellowCardCleared": "Restriction cleared.",
+  "adminUserSuspended": "User suspended.",
+  "adminUserActivated": "User activated.",
+  "adminStatusYellowCard": "Yellow card",
+  "adminStatusSuspended": "Suspended"
 }

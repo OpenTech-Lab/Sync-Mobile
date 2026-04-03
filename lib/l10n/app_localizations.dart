@@ -116,18 +116,26 @@ abstract class AppLocalizations {
   /// **'ERROR'**
   String get errorTitle;
 
+  /// No description provided for @errorNetwork.
+  ///
   /// In en, this message translates to:
   /// **'Check your internet connection and try again.'**
   String get errorNetwork;
 
+  /// No description provided for @errorServer.
+  ///
   /// In en, this message translates to:
   /// **'The server is having trouble. Please try again later.'**
   String get errorServer;
 
+  /// No description provided for @errorPermission.
+  ///
   /// In en, this message translates to:
   /// **'You don\'t have permission to do this. Contact your administrator if this persists.'**
   String get errorPermission;
 
+  /// No description provided for @errorGeneric.
+  ///
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again.'**
   String get errorGeneric;
@@ -1140,6 +1148,78 @@ abstract class AppLocalizations {
   /// **'ABOUT'**
   String get chatTargetAbout;
 
+  /// No description provided for @chatExportHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Export history'**
+  String get chatExportHistory;
+
+  /// No description provided for @chatExportCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'copy to clipboard'**
+  String get chatExportCopyAction;
+
+  /// No description provided for @chatExportSaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'save as .txt'**
+  String get chatExportSaveAction;
+
+  /// No description provided for @chatExportCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat history copied'**
+  String get chatExportCopied;
+
+  /// No description provided for @chatExportSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat history saved'**
+  String get chatExportSaved;
+
+  /// No description provided for @chatExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export chat history'**
+  String get chatExportFailed;
+
+  /// No description provided for @chatNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get chatNotes;
+
+  /// No description provided for @chatNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note…'**
+  String get chatNotesHint;
+
+  /// No description provided for @chatTodos.
+  ///
+  /// In en, this message translates to:
+  /// **'Todos'**
+  String get chatTodos;
+
+  /// No description provided for @chatTodosHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a todo…'**
+  String get chatTodosHint;
+
+  /// No description provided for @chatTodosAddAction.
+  ///
+  /// In en, this message translates to:
+  /// **'A D D'**
+  String get chatTodosAddAction;
+
+  /// No description provided for @chatTodosEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No todos yet'**
+  String get chatTodosEmptyHint;
+
   /// No description provided for @settingsMissingAccessTokenBackup.
   ///
   /// In en, this message translates to:
@@ -1824,24 +1904,119 @@ abstract class AppLocalizations {
   /// **'You reached level {level}.'**
   String profileTrustMilestoneLevelDetail(String level);
 
-  String get chatExportHistory;
-  String get chatExportCopyAction;
-  String get chatExportSaveAction;
-  String get chatExportCopied;
-  String get chatExportSaved;
-  String get chatExportFailed;
+  /// No description provided for @settingsAdminPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'ADMIN PANEL'**
+  String get settingsAdminPanel;
 
-  String get chatNotes;
+  /// No description provided for @settingsAdminPanelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage users and moderation actions.'**
+  String get settingsAdminPanelHint;
 
-  String get chatNotesHint;
+  /// No description provided for @adminUsersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Panel'**
+  String get adminUsersTitle;
 
-  String get chatTodos;
+  /// No description provided for @adminUsersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No users found.'**
+  String get adminUsersEmpty;
 
-  String get chatTodosHint;
+  /// No description provided for @adminUsersErrorLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load users.'**
+  String get adminUsersErrorLoad;
 
-  String get chatTodosAddAction;
+  /// No description provided for @adminActionYellowCard.
+  ///
+  /// In en, this message translates to:
+  /// **'YELLOW CARD'**
+  String get adminActionYellowCard;
 
-  String get chatTodosEmptyHint;
+  /// No description provided for @adminActionClearCard.
+  ///
+  /// In en, this message translates to:
+  /// **'CLEAR CARD'**
+  String get adminActionClearCard;
+
+  /// No description provided for @adminActionSuspend.
+  ///
+  /// In en, this message translates to:
+  /// **'SUSPEND'**
+  String get adminActionSuspend;
+
+  /// No description provided for @adminActionActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIVATE'**
+  String get adminActionActivate;
+
+  /// No description provided for @adminYellowCardConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue yellow card?'**
+  String get adminYellowCardConfirmTitle;
+
+  /// No description provided for @adminYellowCardConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'User cannot send messages or add contacts for 3 days.'**
+  String get adminYellowCardConfirmMessage;
+
+  /// No description provided for @adminSuspendConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend user?'**
+  String get adminSuspendConfirmTitle;
+
+  /// No description provided for @adminSuspendConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'User will be permanently suspended until manually reactivated.'**
+  String get adminSuspendConfirmMessage;
+
+  /// No description provided for @adminYellowCardIssued.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow card issued.'**
+  String get adminYellowCardIssued;
+
+  /// No description provided for @adminYellowCardCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Restriction cleared.'**
+  String get adminYellowCardCleared;
+
+  /// No description provided for @adminUserSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'User suspended.'**
+  String get adminUserSuspended;
+
+  /// No description provided for @adminUserActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'User activated.'**
+  String get adminUserActivated;
+
+  /// No description provided for @adminStatusYellowCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow card'**
+  String get adminStatusYellowCard;
+
+  /// No description provided for @adminStatusSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get adminStatusSuspended;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

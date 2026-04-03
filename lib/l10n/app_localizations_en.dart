@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorServer => 'The server is having trouble. Please try again later.';
 
   @override
-  String get errorPermission => "You don't have permission to do this. Contact your administrator if this persists.";
+  String get errorPermission => 'You don\'t have permission to do this. Contact your administrator if this persists.';
 
   @override
   String get errorGeneric => 'Something went wrong. Please try again.';
@@ -562,6 +562,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTargetAbout => 'ABOUT';
 
   @override
+  String get chatExportHistory => 'Export history';
+
+  @override
+  String get chatExportCopyAction => 'copy to clipboard';
+
+  @override
+  String get chatExportSaveAction => 'save as .txt';
+
+  @override
+  String get chatExportCopied => 'Chat history copied';
+
+  @override
+  String get chatExportSaved => 'Chat history saved';
+
+  @override
+  String get chatExportFailed => 'Failed to export chat history';
+
+  @override
+  String get chatNotes => 'Notes';
+
+  @override
+  String get chatNotesHint => 'Write a note…';
+
+  @override
+  String get chatTodos => 'Todos';
+
+  @override
+  String get chatTodosHint => 'Add a todo…';
+
+  @override
+  String get chatTodosAddAction => 'A D D';
+
+  @override
+  String get chatTodosEmptyHint => 'No todos yet';
+
+  @override
   String get settingsMissingAccessTokenBackup => 'Missing access token for backup.';
 
   @override
@@ -940,38 +976,59 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chatExportHistory => 'Export history';
+  String get settingsAdminPanel => 'ADMIN PANEL';
 
   @override
-  String get chatExportCopyAction => 'copy to clipboard';
+  String get settingsAdminPanelHint => 'Manage users and moderation actions.';
 
   @override
-  String get chatExportSaveAction => 'save as .txt';
+  String get adminUsersTitle => 'Admin Panel';
 
   @override
-  String get chatExportCopied => 'Chat history copied';
+  String get adminUsersEmpty => 'No users found.';
 
   @override
-  String get chatExportSaved => 'Chat history saved';
+  String get adminUsersErrorLoad => 'Failed to load users.';
 
   @override
-  String get chatExportFailed => 'Failed to export chat history';
+  String get adminActionYellowCard => 'YELLOW CARD';
 
   @override
-  String get chatNotes => 'Notes';
+  String get adminActionClearCard => 'CLEAR CARD';
 
   @override
-  String get chatNotesHint => 'Write a note…';
+  String get adminActionSuspend => 'SUSPEND';
 
   @override
-  String get chatTodos => 'Todos';
+  String get adminActionActivate => 'ACTIVATE';
 
   @override
-  String get chatTodosHint => 'Add a todo…';
+  String get adminYellowCardConfirmTitle => 'Issue yellow card?';
 
   @override
-  String get chatTodosAddAction => 'A D D';
+  String get adminYellowCardConfirmMessage => 'User cannot send messages or add contacts for 3 days.';
 
   @override
-  String get chatTodosEmptyHint => 'No todos yet';
+  String get adminSuspendConfirmTitle => 'Suspend user?';
+
+  @override
+  String get adminSuspendConfirmMessage => 'User will be permanently suspended until manually reactivated.';
+
+  @override
+  String get adminYellowCardIssued => 'Yellow card issued.';
+
+  @override
+  String get adminYellowCardCleared => 'Restriction cleared.';
+
+  @override
+  String get adminUserSuspended => 'User suspended.';
+
+  @override
+  String get adminUserActivated => 'User activated.';
+
+  @override
+  String get adminStatusYellowCard => 'Yellow card';
+
+  @override
+  String get adminStatusSuspended => 'Suspended';
 }

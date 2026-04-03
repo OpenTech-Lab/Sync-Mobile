@@ -512,5 +512,24 @@
     "placeholders": {
       "level": { "type": "String" }
     }
-  }
+  },
+  "settingsAdminPanel": "管理パネル",
+  "settingsAdminPanelHint": "ユーザー管理とモデレーション。",
+  "adminUsersTitle": "管理パネル",
+  "adminUsersEmpty": "ユーザーが見つかりませんでした。",
+  "adminUsersErrorLoad": "ユーザーの読み込みに失敗しました。",
+  "adminActionYellowCard": "イエローカード",
+  "adminActionClearCard": "制限解除",
+  "adminActionSuspend": "停止",
+  "adminActionActivate": "有効化",
+  "adminYellowCardConfirmTitle": "イエローカードを発行しますか？",
+  "adminYellowCardConfirmMessage": "このユーザーは3日間、メッセージの送信と連絡先の追加ができなくなります。",
+  "adminSuspendConfirmTitle": "ユーザーを停止しますか？",
+  "adminSuspendConfirmMessage": "手動で再有効化するまで、このユーザーは永久に停止されます。",
+  "adminYellowCardIssued": "イエローカードを発行しました。",
+  "adminYellowCardCleared": "制限を解除しました。",
+  "adminUserSuspended": "ユーザーを停止しました。",
+  "adminUserActivated": "ユーザーを有効化しました。",
+  "adminStatusYellowCard": "イエローカード",
+  "adminStatusSuspended": "停止中"
 }

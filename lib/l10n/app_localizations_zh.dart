@@ -24,7 +24,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorServer => 'The server is having trouble. Please try again later.';
 
   @override
-  String get errorPermission => "You don't have permission to do this. Contact your administrator if this persists.";
+  String get errorPermission => 'You don\'t have permission to do this. Contact your administrator if this persists.';
 
   @override
   String get errorGeneric => 'Something went wrong. Please try again.';
@@ -562,6 +562,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTargetAbout => 'ABOUT';
 
   @override
+  String get chatExportHistory => 'Export history';
+
+  @override
+  String get chatExportCopyAction => 'copy to clipboard';
+
+  @override
+  String get chatExportSaveAction => 'save as .txt';
+
+  @override
+  String get chatExportCopied => 'Chat history copied';
+
+  @override
+  String get chatExportSaved => 'Chat history saved';
+
+  @override
+  String get chatExportFailed => 'Failed to export chat history';
+
+  @override
+  String get chatNotes => 'Notes';
+
+  @override
+  String get chatNotesHint => 'Write a note…';
+
+  @override
+  String get chatTodos => 'Todos';
+
+  @override
+  String get chatTodosHint => 'Add a todo…';
+
+  @override
+  String get chatTodosAddAction => 'A D D';
+
+  @override
+  String get chatTodosEmptyHint => 'No todos yet';
+
+  @override
   String get settingsMissingAccessTokenBackup => 'Missing access token for backup.';
 
   @override
@@ -940,40 +976,61 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chatExportHistory => 'Export history';
+  String get settingsAdminPanel => 'ADMIN PANEL';
 
   @override
-  String get chatExportCopyAction => 'copy to clipboard';
+  String get settingsAdminPanelHint => 'Manage users and moderation actions.';
 
   @override
-  String get chatExportSaveAction => 'save as .txt';
+  String get adminUsersTitle => 'Admin Panel';
 
   @override
-  String get chatExportCopied => 'Chat history copied';
+  String get adminUsersEmpty => 'No users found.';
 
   @override
-  String get chatExportSaved => 'Chat history saved';
+  String get adminUsersErrorLoad => 'Failed to load users.';
 
   @override
-  String get chatExportFailed => 'Failed to export chat history';
+  String get adminActionYellowCard => 'YELLOW CARD';
 
   @override
-  String get chatNotes => 'Notes';
+  String get adminActionClearCard => 'CLEAR CARD';
 
   @override
-  String get chatNotesHint => 'Write a note…';
+  String get adminActionSuspend => 'SUSPEND';
 
   @override
-  String get chatTodos => 'Todos';
+  String get adminActionActivate => 'ACTIVATE';
 
   @override
-  String get chatTodosHint => 'Add a todo…';
+  String get adminYellowCardConfirmTitle => 'Issue yellow card?';
 
   @override
-  String get chatTodosAddAction => 'A D D';
+  String get adminYellowCardConfirmMessage => 'User cannot send messages or add contacts for 3 days.';
 
   @override
-  String get chatTodosEmptyHint => 'No todos yet';
+  String get adminSuspendConfirmTitle => 'Suspend user?';
+
+  @override
+  String get adminSuspendConfirmMessage => 'User will be permanently suspended until manually reactivated.';
+
+  @override
+  String get adminYellowCardIssued => 'Yellow card issued.';
+
+  @override
+  String get adminYellowCardCleared => 'Restriction cleared.';
+
+  @override
+  String get adminUserSuspended => 'User suspended.';
+
+  @override
+  String get adminUserActivated => 'User activated.';
+
+  @override
+  String get adminStatusYellowCard => 'Yellow card';
+
+  @override
+  String get adminStatusSuspended => 'Suspended';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1534,6 +1591,42 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get chatTargetAbout => '關於';
 
   @override
+  String get chatExportHistory => '匯出聊天記錄';
+
+  @override
+  String get chatExportCopyAction => '複製到剪貼簿';
+
+  @override
+  String get chatExportSaveAction => '儲存為 .txt';
+
+  @override
+  String get chatExportCopied => '聊天記錄已複製';
+
+  @override
+  String get chatExportSaved => '聊天記錄已儲存';
+
+  @override
+  String get chatExportFailed => '匯出聊天記錄失敗';
+
+  @override
+  String get chatNotes => '備忘錄';
+
+  @override
+  String get chatNotesHint => '寫下備忘…';
+
+  @override
+  String get chatTodos => '待辦事項';
+
+  @override
+  String get chatTodosHint => '新增待辦…';
+
+  @override
+  String get chatTodosAddAction => '新增';
+
+  @override
+  String get chatTodosEmptyHint => '尚無待辦事項';
+
+  @override
   String get settingsMissingAccessTokenBackup => '建立備份缺少存取權杖。';
 
   @override
@@ -1906,38 +1999,59 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get chatExportHistory => '匯出聊天記錄';
+  String get settingsAdminPanel => '管理面板';
 
   @override
-  String get chatExportCopyAction => '複製到剪貼簿';
+  String get settingsAdminPanelHint => '管理使用者與審核操作。';
 
   @override
-  String get chatExportSaveAction => '儲存為 .txt';
+  String get adminUsersTitle => '管理面板';
 
   @override
-  String get chatExportCopied => '聊天記錄已複製';
+  String get adminUsersEmpty => '找不到使用者。';
 
   @override
-  String get chatExportSaved => '聊天記錄已儲存';
+  String get adminUsersErrorLoad => '載入使用者失敗。';
 
   @override
-  String get chatExportFailed => '匯出聊天記錄失敗';
+  String get adminActionYellowCard => '黃牌警告';
 
   @override
-  String get chatNotes => '備忘錄';
+  String get adminActionClearCard => '解除限制';
 
   @override
-  String get chatNotesHint => '寫下備忘…';
+  String get adminActionSuspend => '停用帳號';
 
   @override
-  String get chatTodos => '待辦事項';
+  String get adminActionActivate => '啟用帳號';
 
   @override
-  String get chatTodosHint => '新增待辦…';
+  String get adminYellowCardConfirmTitle => '確定發出黃牌？';
 
   @override
-  String get chatTodosAddAction => '新增';
+  String get adminYellowCardConfirmMessage => '此使用者將在 3 天內無法傳送訊息或新增聯絡人。';
 
   @override
-  String get chatTodosEmptyHint => '尚無待辦事項';
+  String get adminSuspendConfirmTitle => '確定停用帳號？';
+
+  @override
+  String get adminSuspendConfirmMessage => '此使用者將被永久停用，直到手動重新啟用為止。';
+
+  @override
+  String get adminYellowCardIssued => '已發出黃牌警告。';
+
+  @override
+  String get adminYellowCardCleared => '已解除限制。';
+
+  @override
+  String get adminUserSuspended => '已停用帳號。';
+
+  @override
+  String get adminUserActivated => '已啟用帳號。';
+
+  @override
+  String get adminStatusYellowCard => '黃牌';
+
+  @override
+  String get adminStatusSuspended => '已停用';
 }

@@ -10,6 +10,7 @@ import '../../state/conversation_messages_controller.dart';
 import '../../state/deferred_deletion_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
+import 'admin_users_page.dart';
 import 'blocked_users_page.dart';
 import '../safety/safety_terms_page.dart';
 import '../../ui/components/atoms/app_toast.dart';
@@ -48,6 +49,7 @@ class SettingsTab extends ConsumerWidget {
     final bgColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
     final inkColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
     final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final isAdmin = ref.watch(appControllerProvider).value?.isAdmin ?? false;
 
     final themeModes = [
       (ThemeMode.light, l10n.themeLight),
@@ -542,6 +544,23 @@ class SettingsTab extends ConsumerWidget {
                 ),
               ),
             ),
+
+            if (isAdmin) ...[
+              const SizedBox(height: 32),
+              _SectionHeader(label: 'Admin', ruleColor: ruleColor),
+              _SettingsNavRow(
+                label: l10n.settingsAdminPanel,
+                subtitle: l10n.settingsAdminPanelHint,
+                inkColor: inkColor,
+                borderColor: ruleColor,
+                leading: Icon(Icons.shield_outlined, size: 20, color: inkColor),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AdminUsersPage(serverUrl: serverUrl),
+                  ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 32),
             // ── About ────────────────────────────────────────────────────

@@ -439,5 +439,24 @@
     "placeholders": {
       "level": { "type": "String" }
     }
-  }
+  },
+  "settingsAdminPanel": "管理面板",
+  "settingsAdminPanelHint": "管理使用者與審核操作。",
+  "adminUsersTitle": "管理面板",
+  "adminUsersEmpty": "找不到使用者。",
+  "adminUsersErrorLoad": "載入使用者失敗。",
+  "adminActionYellowCard": "黃牌警告",
+  "adminActionClearCard": "解除限制",
+  "adminActionSuspend": "停用帳號",
+  "adminActionActivate": "啟用帳號",
+  "adminYellowCardConfirmTitle": "確定發出黃牌？",
+  "adminYellowCardConfirmMessage": "此使用者將在 3 天內無法傳送訊息或新增聯絡人。",
+  "adminSuspendConfirmTitle": "確定停用帳號？",
+  "adminSuspendConfirmMessage": "此使用者將被永久停用，直到手動重新啟用為止。",
+  "adminYellowCardIssued": "已發出黃牌警告。",
+  "adminYellowCardCleared": "已解除限制。",
+  "adminUserSuspended": "已停用帳號。",
+  "adminUserActivated": "已啟用帳號。",
+  "adminStatusYellowCard": "黃牌",
+  "adminStatusSuspended": "已停用"
 }

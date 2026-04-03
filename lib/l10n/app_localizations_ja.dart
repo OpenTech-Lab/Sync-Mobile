@@ -287,7 +287,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String planetStickerGroupDownloadedToast(String group) {
-    return '${group}スタンプパックをダウンロードしました。';
+    return '$groupスタンプパックをダウンロードしました。';
   }
 
   @override
@@ -451,27 +451,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String chatTrustRetryWindowHours(int hours) {
-    return '${hours}時間後';
+    return '$hours時間後';
   }
 
   @override
   String chatTrustRetryWindowMinutes(int minutes) {
-    return '${minutes}分後';
+    return '$minutes分後';
   }
 
   @override
   String chatTrustDailyLimitToast(int used, int limit, String retryWindow) {
-    return '1日のメッセージ上限に達しました（$used/$limit）。${retryWindow}に再送信できます。またはレベルアップして上限を上げてください。';
+    return '1日のメッセージ上限に達しました（$used/$limit）。$retryWindowに再送信できます。またはレベルアップして上限を上げてください。';
   }
 
   @override
   String chatTrustDailyLimitToastGeneric(String retryWindow) {
-    return '1日のメッセージ上限に達しました。${retryWindow}に再送信できます。またはレベルアップして上限を上げてください。';
+    return '1日のメッセージ上限に達しました。$retryWindowに再送信できます。またはレベルアップして上限を上げてください。';
   }
 
   @override
   String chatTrustDailyLimitInline(String retryWindow) {
-    return '上限到達・${retryWindow}に再試行・またはレベルアップ';
+    return '上限到達・$retryWindowに再試行・またはレベルアップ';
   }
 
   @override
@@ -562,6 +562,42 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chatTargetAbout => 'プロフィール';
 
   @override
+  String get chatExportHistory => 'チャット履歴をエクスポート';
+
+  @override
+  String get chatExportCopyAction => 'クリップボードにコピー';
+
+  @override
+  String get chatExportSaveAction => '.txtとして保存';
+
+  @override
+  String get chatExportCopied => 'チャット履歴をコピーしました';
+
+  @override
+  String get chatExportSaved => 'チャット履歴を保存しました';
+
+  @override
+  String get chatExportFailed => 'チャット履歴のエクスポートに失敗しました';
+
+  @override
+  String get chatNotes => 'メモ';
+
+  @override
+  String get chatNotesHint => 'メモを書く…';
+
+  @override
+  String get chatTodos => 'ToDo';
+
+  @override
+  String get chatTodosHint => 'ToDoを追加…';
+
+  @override
+  String get chatTodosAddAction => '追加';
+
+  @override
+  String get chatTodosEmptyHint => 'ToDoがまだありません';
+
+  @override
   String get settingsMissingAccessTokenBackup => 'バックアップのアクセストークンがありません。';
 
   @override
@@ -637,7 +673,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String settingsDeletionCountdown(String countdown) {
-    return '削除は${countdown}後に実行されます。';
+    return '削除は$countdown後に実行されます。';
   }
 
   @override
@@ -705,7 +741,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String profileTrustNextLevel(int days, int level) {
-    return 'レベル${level}まであと${days}日';
+    return 'レベル$levelまであと$days日';
   }
 
   @override
@@ -810,7 +846,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String homeUnreadSummary(int count) {
-    return '${count}件の未読メッセージ';
+    return '$count件の未読メッセージ';
   }
 
   @override
@@ -920,52 +956,73 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String profileTrustMilestoneRankDetail(String rank) {
-    return '${rank}ランクに到達しました。';
+    return '$rankランクに到達しました。';
   }
 
   @override
   String profileTrustMilestoneUnlockDetail(String type) {
-    return '${type}の添付ファイルを送信できるようになりました。';
+    return '$typeの添付ファイルを送信できるようになりました。';
   }
 
   @override
   String profileTrustMilestoneLevelDetail(String level) {
-    return 'レベル${level}に到達しました。';
+    return 'レベル$levelに到達しました。';
   }
 
   @override
-  String get chatExportHistory => 'チャット履歴をエクスポート';
+  String get settingsAdminPanel => '管理パネル';
 
   @override
-  String get chatExportCopyAction => 'クリップボードにコピー';
+  String get settingsAdminPanelHint => 'ユーザー管理とモデレーション。';
 
   @override
-  String get chatExportSaveAction => '.txtとして保存';
+  String get adminUsersTitle => '管理パネル';
 
   @override
-  String get chatExportCopied => 'チャット履歴をコピーしました';
+  String get adminUsersEmpty => 'ユーザーが見つかりませんでした。';
 
   @override
-  String get chatExportSaved => 'チャット履歴を保存しました';
+  String get adminUsersErrorLoad => 'ユーザーの読み込みに失敗しました。';
 
   @override
-  String get chatExportFailed => 'チャット履歴のエクスポートに失敗しました';
+  String get adminActionYellowCard => 'イエローカード';
 
   @override
-  String get chatNotes => 'メモ';
+  String get adminActionClearCard => '制限解除';
 
   @override
-  String get chatNotesHint => 'メモを書く…';
+  String get adminActionSuspend => '停止';
 
   @override
-  String get chatTodos => 'ToDo';
+  String get adminActionActivate => '有効化';
 
   @override
-  String get chatTodosHint => 'ToDoを追加…';
+  String get adminYellowCardConfirmTitle => 'イエローカードを発行しますか？';
 
   @override
-  String get chatTodosAddAction => '追加';
+  String get adminYellowCardConfirmMessage => 'このユーザーは3日間、メッセージの送信と連絡先の追加ができなくなります。';
 
   @override
-  String get chatTodosEmptyHint => 'ToDoがまだありません';
+  String get adminSuspendConfirmTitle => 'ユーザーを停止しますか？';
+
+  @override
+  String get adminSuspendConfirmMessage => '手動で再有効化するまで、このユーザーは永久に停止されます。';
+
+  @override
+  String get adminYellowCardIssued => 'イエローカードを発行しました。';
+
+  @override
+  String get adminYellowCardCleared => '制限を解除しました。';
+
+  @override
+  String get adminUserSuspended => 'ユーザーを停止しました。';
+
+  @override
+  String get adminUserActivated => 'ユーザーを有効化しました。';
+
+  @override
+  String get adminStatusYellowCard => 'イエローカード';
+
+  @override
+  String get adminStatusSuspended => '停止中';
 }
