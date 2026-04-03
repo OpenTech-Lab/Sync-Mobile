@@ -168,6 +168,35 @@ void main() {
       expect(find.text('A few words about yourself'), findsNothing);
     },
   );
+
+  testWidgets(
+    'my profile hides the unreleased approve-login-on-another-device button',
+    (tester) async {
+      const serverUrl = 'https://example.com';
+      const currentUserId = 'current-user-id';
+      final scope = serverDomainKeyFromUrl(serverUrl);
+
+      SharedPreferences.setMockInitialValues({
+        'profile_display_name::$scope::$currentUserId': 'Current User',
+        'profile_description::$scope::$currentUserId': 'About me',
+      });
+
+      await tester.pumpWidget(
+        _buildProfileApp(
+          serverUrl: serverUrl,
+          currentUserId: currentUserId,
+          remote: _FakeRemoteUserProfileService(
+            username: 'Current User',
+            description: 'About me',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Approve Login on Another Device'), findsNothing);
+      expect(find.text('DEVICE LOGIN'), findsNothing);
+    },
+  );
 }
 
 Widget _buildProfileApp({

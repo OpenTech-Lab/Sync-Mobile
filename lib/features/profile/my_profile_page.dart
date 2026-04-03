@@ -565,7 +565,7 @@ class MyProfileScreen extends ConsumerWidget {
               textColor: AppPalette.neutral500,
             ),
           ),
-          if (isMobileDevice) ...[
+          if (isMobileDevice && kDeviceLoginApprovalEnabled) ...[
             const SizedBox(height: 28),
             Divider(height: 1, color: ruleColor),
             const SizedBox(height: 16),
