@@ -86,7 +86,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final isSuccess = widget.connectionStatus == ConnectionStatus.success;
     final isFailure = widget.connectionStatus == ConnectionStatus.failure;
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
         child: ListView(
@@ -257,6 +259,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ],
           ],
         ),
+      ),
       ),
     );
   }
