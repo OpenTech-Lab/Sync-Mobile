@@ -372,7 +372,6 @@ class AppController extends AsyncNotifier<AppState> {
         baseUrl: current.serverUrl!,
         deviceAuthPublicKey: deviceAuthPublicKey,
         altchaPayload: altchaPayload,
-        acceptedTermsVersion: currentSafetyTermsVersion,
       );
       await _sessionStorage.writeTokens(
         serverUrl: current.serverUrl!,
@@ -391,17 +390,6 @@ class AppController extends AsyncNotifier<AppState> {
             accessToken: tokens.accessToken,
           );
           safetyState = profile.safety;
-          // User already agreed on the login screen. Auto-accept so the terms
-          // screen is not shown a second time after a successful login.
-          if (safetyState?.requiresTermsAcceptance == true) {
-            try {
-              safetyState = await _remoteSafetyService.acceptTerms(
-                baseUrl: current.serverUrl!,
-                accessToken: tokens.accessToken,
-                acceptedTermsVersion: currentSafetyTermsVersion,
-              );
-            } catch (_) {}
-          }
           username = profile.username.trim().isEmpty
               ? username
               : profile.username.trim();

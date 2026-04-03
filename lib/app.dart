@@ -76,10 +76,9 @@ class SyncMobileApp extends ConsumerWidget {
                       .fetchAltchaChallenge(state.serverUrl!);
                   return solveAltchaChallenge(challenge);
                 },
-                onAutoLogin: ({altchaPayload, required acceptedTermsVersion}) =>
-                    ref
-                        .read(appControllerProvider.notifier)
-                        .loginWithDeviceIdentity(altchaPayload: altchaPayload),
+                onAutoLogin: ({altchaPayload}) => ref
+                    .read(appControllerProvider.notifier)
+                    .loginWithDeviceIdentity(altchaPayload: altchaPayload),
                 onBackToUrl: () =>
                     ref.read(appControllerProvider.notifier).resetServerUrl(),
               );

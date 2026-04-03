@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
-import '../../core/extensions/context_extensions.dart';
 import '../../ui/components/molecules/altcha_widget.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
-import '../safety/safety_policy.dart';
-import '../safety/safety_terms_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -26,11 +23,7 @@ class LoginScreen extends StatefulWidget {
 
   /// Fetches + solves the ALTCHA challenge via the dev-aware HTTP client.
   final Future<String?> Function() altchaFetcher;
-  final Future<void> Function({
-    String? altchaPayload,
-    required int acceptedTermsVersion,
-  })
-  onAutoLogin;
+  final Future<void> Function({String? altchaPayload}) onAutoLogin;
   final VoidCallback onBackToUrl;
 
   @override
@@ -40,7 +33,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _started = false;
   bool _altchaResolved = false;
-  bool _agreedToTerms = false;
   String? _altchaPayload;
 
   @override
@@ -154,57 +146,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // CheckboxListTile(
-              //   value: _agreedToTerms,
-              //   onChanged: widget.isSubmitting
-              //       ? null
-              //       : (value) => setState(() => _agreedToTerms = value == true),
-              //   controlAffinity: ListTileControlAffinity.leading,
-              //   contentPadding: EdgeInsets.zero,
-              //   title: Text(
-              //     'I agree to the Terms of Use and Safety Policy.',
-              //     style: context.appTypography.body.copyWith(
-              //       color: context.colors.onSurface,
-              //       height: 1.4,
-              //     ),
-              //   ),
-              // ),
-              // Align(
-              //   alignment: Alignment.centerLeft,
-              //   child: TextButton(
-              //     onPressed: () => showSafetyTermsSheet(context),
-              //     style: TextButton.styleFrom(
-              //       foregroundColor: context.colors.muted,
-              //       padding: const EdgeInsets.symmetric(
-              //         horizontal: 4,
-              //         vertical: 2,
-              //       ),
-              //       minimumSize: Size.zero,
-              //       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              //       textStyle: context.appTypography.label.copyWith(
-              //         decoration: TextDecoration.underline,
-              //       ),
-              //     ),
-              //     child: const Text('View terms'),
-              //   ),
-              // ),
               const SizedBox(height: 4),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap:
-                      (widget.isSubmitting ||
-                          !_altchaResolved ||
-                          !_agreedToTerms)
+                  onTap: (widget.isSubmitting || !_altchaResolved)
                       ? null
-                      : () => widget.onAutoLogin(
-                          altchaPayload: _altchaPayload,
-                          acceptedTermsVersion: currentSafetyTermsVersion,
-                        ),
+                      : () => widget.onAutoLogin(altchaPayload: _altchaPayload),
                   child: Opacity(
-                    opacity: (!_altchaResolved || !_agreedToTerms) ? 0.5 : 1.0,
+                    opacity: !_altchaResolved ? 0.5 : 1.0,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

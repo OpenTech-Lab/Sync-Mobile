@@ -80,62 +80,84 @@ class _AltchaWidgetState extends State<AltchaWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: switch (_status) {
         _Status.solving => Row(
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.8,
-                  color: mutedColor,
-                ),
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.8,
+                color: mutedColor,
               ),
-              const SizedBox(width: 12),
-              Text(
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
                 'Verifying you\'re human…',
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, color: mutedColor),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         _Status.verified => Row(
-            children: [
-              Icon(Icons.check_circle_outline, size: 18, color: textColor),
-              const SizedBox(width: 12),
-              Text(
+          children: [
+            Icon(Icons.check_circle_outline, size: 18, color: textColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
                 'Verified',
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, color: textColor),
               ),
-              const Spacer(),
-              Text(
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
                 'Protected by ALTCHA',
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
                 style: TextStyle(
                   fontSize: 10,
                   color: mutedColor,
                   letterSpacing: 0.3,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         _Status.error => Row(
-            children: [
-              const Icon(Icons.error_outline, size: 18, color: AppPalette.danger700),
-              const SizedBox(width: 12),
-              Text(
-                'Verification failed. ',
-                style: const TextStyle(fontSize: 13, color: AppPalette.danger700),
-              ),
-              GestureDetector(
-                onTap: _solve,
-                child: Text(
-                  'Retry',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: textColor,
-                    decoration: TextDecoration.underline,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 18,
+              color: AppPalette.danger700,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                children: [
+                  const Text(
+                    'Verification failed.',
+                    style: TextStyle(fontSize: 13, color: AppPalette.danger700),
                   ),
-                ),
+                  GestureDetector(
+                    onTap: _solve,
+                    child: Text(
+                      'Retry',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textColor,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         _Status.disabled => const SizedBox.shrink(),
       },
     );
