@@ -4,14 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAppLocaleKey = 'app_locale';
 const _kSystemFallbackLocale = Locale('en');
-const _kAutomaticSupportedLocales = <Locale>[Locale('en'), Locale('ja')];
+const _kAutomaticSupportedLocales = <Locale>[Locale('en'), Locale('ja'), Locale('zh', 'TW')];
 
 enum AppLocaleOption {
   system,
   english,
   japanese,
-  // TODO: Restore Traditional Chinese locale selection in a future release.
-  // traditionalChinese,
+  traditionalChinese,
 }
 
 extension AppLocaleOptionX on AppLocaleOption {
@@ -20,7 +19,7 @@ extension AppLocaleOptionX on AppLocaleOption {
       AppLocaleOption.system => null,
       AppLocaleOption.english => const Locale('en'),
       AppLocaleOption.japanese => const Locale('ja'),
-      // AppLocaleOption.traditionalChinese => const Locale('zh', 'TW'),
+      AppLocaleOption.traditionalChinese => const Locale('zh', 'TW'),
     };
   }
 
@@ -29,7 +28,7 @@ extension AppLocaleOptionX on AppLocaleOption {
       AppLocaleOption.system => 'system',
       AppLocaleOption.english => 'en',
       AppLocaleOption.japanese => 'ja',
-      // AppLocaleOption.traditionalChinese => 'zh_TW',
+      AppLocaleOption.traditionalChinese => 'zh_TW',
     };
   }
 
@@ -37,8 +36,7 @@ extension AppLocaleOptionX on AppLocaleOption {
     return switch (value) {
       'en' => AppLocaleOption.english,
       'ja' => AppLocaleOption.japanese,
-      // 'zh_TW' => AppLocaleOption.traditionalChinese,
-      'zh_TW' => AppLocaleOption.system,
+      'zh_TW' => AppLocaleOption.traditionalChinese,
       _ => AppLocaleOption.system,
     };
   }
