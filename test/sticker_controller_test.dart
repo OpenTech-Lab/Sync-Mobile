@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/sticker.dart';
@@ -34,6 +36,20 @@ class _InMemoryStickerCacheService extends StickerCacheService {
   @override
   Future<void> write(String serverUrl, List<Sticker> stickers) async {
     _cacheByServer[serverUrl] = List<Sticker>.from(stickers);
+  }
+}
+
+class _DeferredStickerService extends StickerService {
+  _DeferredStickerService(this._completer);
+
+  final Completer<List<Sticker>> _completer;
+
+  @override
+  Future<List<Sticker>> syncAll({
+    required String baseUrl,
+    required String accessToken,
+  }) {
+    return _completer.future;
   }
 }
 
@@ -98,5 +114,39 @@ void main() {
     final state = container.read(stickerControllerProvider).value!;
     expect(state, hasLength(1));
     expect(state.first.id, 'cached');
+  });
+
+  test('sync completes after active server changes mid-flight', () async {
+    const nextServerUrl = 'http://localhost:9090';
+    final activeServerUrlState = StateProvider<String?>((_) => serverUrl);
+    final cache = _InMemoryStickerCacheService();
+    final completer = Completer<List<Sticker>>();
+    final remote = _DeferredStickerService(completer);
+
+    final container = ProviderContainer(
+      overrides: [
+        activeServerUrlProvider.overrideWith(
+          (ref) => ref.watch(activeServerUrlState),
+        ),
+        stickerCacheServiceProvider.overrideWithValue(cache),
+        stickerServiceProvider.overrideWithValue(remote),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(stickerControllerProvider.future);
+    final syncFuture = container.read(stickerControllerProvider.notifier).sync(
+          baseUrl: serverUrl,
+          accessToken: 'token',
+        );
+
+    container.read(activeServerUrlState.notifier).state = nextServerUrl;
+    await container.read(stickerControllerProvider.future);
+
+    completer.complete([sticker('late')]);
+
+    await expectLater(syncFuture, completes);
+    expect(await cache.read(serverUrl), hasLength(1));
+    expect((await cache.read(serverUrl)).first.id, 'late');
   });
 }

@@ -10,6 +10,7 @@ import '../../state/conversation_messages_controller.dart';
 import '../../state/deferred_deletion_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
+import '../safety/safety_terms_page.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
 import '../../ui/components/molecules/app_dialog.dart';
@@ -526,6 +527,68 @@ class SettingsTab extends ConsumerWidget {
                 ),
             ],
 
+            const SizedBox(height: 32),
+            // ── About ────────────────────────────────────────────────────
+            _SectionHeader(label: 'About', ruleColor: ruleColor),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: ruleColor),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: InkWell(
+                onTap: () => showSafetyTermsSheet(context),
+                borderRadius: BorderRadius.circular(10),
+                splashColor: inkColor.withValues(alpha: 0.12),
+                highlightColor: inkColor.withValues(alpha: 0.06),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 13,
+                  ),
+                  child: Row(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedLicense,
+                        color: inkColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'TERMS & SAFETY POLICY',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 1.5,
+                                color: inkColor,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'View terms of use, content policy, and your rights',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w300,
+                                color: AppPalette.neutral500,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
+                        color: AppPalette.neutral500,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 32),
             _SectionHeader(
               label: l10n.settingsDangerousActions,

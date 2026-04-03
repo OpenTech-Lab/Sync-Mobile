@@ -37,22 +37,12 @@ class SyncMobileApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en'), Locale('zh', 'TW')],
+      supportedLocales: AppLocalizations.supportedLocales,
       localeResolutionCallback: (deviceLocale, supportedLocales) {
         if (selectedLocale != null) {
           return selectedLocale;
         }
-        if (deviceLocale == null) {
-          return const Locale('en');
-        }
-        for (final locale in supportedLocales) {
-          if (locale.languageCode == deviceLocale.languageCode &&
-              (locale.countryCode == null ||
-                  locale.countryCode == deviceLocale.countryCode)) {
-            return locale;
-          }
-        }
-        return const Locale('en');
+        return resolveAutomaticAppLocale(deviceLocale);
       },
       home: appStateAsync.when(
         loading: () => const _LoadingScreen(),

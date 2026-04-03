@@ -35,47 +35,49 @@ final stickerControllerProvider =
     );
 
 class StickerController extends AsyncNotifier<List<Sticker>> {
-  StickerService get _service => ref.read(stickerServiceProvider);
-  StickerCacheService get _cache => ref.read(stickerCacheServiceProvider);
-
   @override
   Future<List<Sticker>> build() {
     final serverUrl = ref.watch(activeServerUrlProvider);
     if (serverUrl == null) {
       return Future.value(const <Sticker>[]);
     }
-    return _cache.read(serverUrl);
+    final cache = ref.read(stickerCacheServiceProvider);
+    return cache.read(serverUrl);
   }
 
   Future<void> sync({
     required String baseUrl,
     required String accessToken,
   }) async {
+    final service = ref.read(stickerServiceProvider);
+    final cache = ref.read(stickerCacheServiceProvider);
+
     try {
-      final stickers = await _service.syncAll(
+      final stickers = await service.syncAll(
         baseUrl: baseUrl,
         accessToken: accessToken,
       );
-      await _cache.write(baseUrl, stickers);
+      await cache.write(baseUrl, stickers);
       state = AsyncData(stickers);
     } catch (_) {
-      final cached = await _cache.read(baseUrl);
+      final cached = await cache.read(baseUrl);
       state = AsyncData(cached);
     }
   }
 
   Future<void> downloadToLocal(Sticker sticker) async {
     final serverUrl = ref.read(activeServerUrlProvider);
+    final cache = ref.read(stickerCacheServiceProvider);
     if (serverUrl == null) {
       return;
     }
-    final current = await _cache.read(serverUrl);
+    final current = await cache.read(serverUrl);
     final next = <Sticker>[
       for (final item in current)
         if (item.id != sticker.id) item,
       sticker,
     ];
-    await _cache.write(serverUrl, next);
+    await cache.write(serverUrl, next);
     state = AsyncData(next);
   }
 }

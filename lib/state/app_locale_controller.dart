@@ -3,8 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAppLocaleKey = 'app_locale';
+const _kSystemFallbackLocale = Locale('en');
+const _kAutomaticSupportedLocales = <Locale>[Locale('en'), Locale('ja')];
 
-enum AppLocaleOption { system, english, japanese, traditionalChinese }
+enum AppLocaleOption {
+  system,
+  english,
+  japanese,
+  // TODO: Restore Traditional Chinese locale selection in a future release.
+  // traditionalChinese,
+}
 
 extension AppLocaleOptionX on AppLocaleOption {
   Locale? toLocale() {
@@ -12,7 +20,7 @@ extension AppLocaleOptionX on AppLocaleOption {
       AppLocaleOption.system => null,
       AppLocaleOption.english => const Locale('en'),
       AppLocaleOption.japanese => const Locale('ja'),
-      AppLocaleOption.traditionalChinese => const Locale('zh', 'TW'),
+      // AppLocaleOption.traditionalChinese => const Locale('zh', 'TW'),
     };
   }
 
@@ -21,7 +29,7 @@ extension AppLocaleOptionX on AppLocaleOption {
       AppLocaleOption.system => 'system',
       AppLocaleOption.english => 'en',
       AppLocaleOption.japanese => 'ja',
-      AppLocaleOption.traditionalChinese => 'zh_TW',
+      // AppLocaleOption.traditionalChinese => 'zh_TW',
     };
   }
 
@@ -29,10 +37,27 @@ extension AppLocaleOptionX on AppLocaleOption {
     return switch (value) {
       'en' => AppLocaleOption.english,
       'ja' => AppLocaleOption.japanese,
-      'zh_TW' => AppLocaleOption.traditionalChinese,
+      // 'zh_TW' => AppLocaleOption.traditionalChinese,
+      'zh_TW' => AppLocaleOption.system,
       _ => AppLocaleOption.system,
     };
   }
+}
+
+Locale resolveAutomaticAppLocale(Locale? deviceLocale) {
+  if (deviceLocale == null) {
+    return _kSystemFallbackLocale;
+  }
+
+  for (final locale in _kAutomaticSupportedLocales) {
+    if (locale.languageCode == deviceLocale.languageCode &&
+        (locale.countryCode == null ||
+            locale.countryCode == deviceLocale.countryCode)) {
+      return locale;
+    }
+  }
+
+  return _kSystemFallbackLocale;
 }
 
 class AppLocaleNotifier extends Notifier<AppLocaleOption> {

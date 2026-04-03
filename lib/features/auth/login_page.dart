@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+import '../../core/extensions/context_extensions.dart';
 import '../../ui/components/molecules/altcha_widget.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import '../../ui/components/molecules/language_picker.dart';
@@ -162,10 +163,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(
                   'I agree to the Terms of Use and Safety Policy.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300,
-                    color: inkColor,
+                  style: context.appTypography.body.copyWith(
+                    color: context.colors.onSurface,
                     height: 1.4,
                   ),
                 ),
@@ -174,6 +173,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerLeft,
                 child: TextButton(
                   onPressed: () => showSafetyTermsSheet(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.colors.muted,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: context.appTypography.label.copyWith(
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                   child: const Text('View terms'),
                 ),
               ),

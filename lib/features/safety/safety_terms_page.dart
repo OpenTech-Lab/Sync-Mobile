@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
-import '../../ui/tokens/colors/app_palette.dart';
+import '../../core/extensions/context_extensions.dart';
 import 'safety_policy.dart';
 
 Future<void> showSafetyTermsSheet(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final backgroundColor = isDark ? AppPalette.neutral900 : AppPalette.neutral50;
-  final textColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-  final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+  final colors = context.colors;
+  final typography = context.appTypography;
+  final ruleColor = colors.border;
 
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: backgroundColor,
+    backgroundColor: colors.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
     builder: (sheetContext) {
       return SafeArea(
@@ -24,14 +23,7 @@ Future<void> showSafetyTermsSheet(BuildContext context) {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  safetyTermsTitle,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    color: textColor,
-                  ),
-                ),
+                Text(safetyTermsTitle, style: typography.title),
                 const SizedBox(height: 12),
                 Divider(height: 1, color: ruleColor),
                 const SizedBox(height: 12),
@@ -42,25 +34,14 @@ Future<void> showSafetyTermsSheet(BuildContext context) {
                         MarkdownStyleSheet.fromTheme(
                           Theme.of(sheetContext),
                         ).copyWith(
-                          p: TextStyle(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: textColor,
-                            fontWeight: FontWeight.w300,
-                          ),
-                          h1: TextStyle(
-                            fontSize: 20,
-                            height: 1.4,
-                            color: textColor,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          h2: TextStyle(
+                          p: typography.body.copyWith(height: 1.6),
+                          h1: typography.display.copyWith(height: 1.4),
+                          h2: typography.label.copyWith(
                             fontSize: 14,
                             height: 1.5,
-                            color: textColor,
                             fontWeight: FontWeight.w500,
                           ),
-                          listBullet: TextStyle(color: textColor),
+                          listBullet: typography.body,
                         ),
                   ),
                 ),
@@ -94,29 +75,22 @@ class _SafetyTermsScreenState extends State<SafetyTermsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark
-        ? AppPalette.neutral900
-        : AppPalette.neutral50;
-    final textColor = isDark ? AppPalette.neutral100 : AppPalette.neutral800;
-    final ruleColor = isDark ? AppPalette.neutral700 : AppPalette.neutral300;
+    final colors = context.colors;
+    final typography = context.appTypography;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: colors.background,
         surfaceTintColor: Colors.transparent,
-        title: Text(
-          safetyTermsTitle,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w300,
-            color: textColor,
-          ),
-        ),
+        title: Text(safetyTermsTitle, style: typography.body),
         actions: [
           TextButton(
             onPressed: widget.isSubmitting ? null : widget.onSignOut,
+            style: TextButton.styleFrom(
+              foregroundColor: colors.muted,
+              textStyle: typography.label,
+            ),
             child: const Text('Sign out'),
           ),
         ],
@@ -129,57 +103,83 @@ class _SafetyTermsScreenState extends State<SafetyTermsScreen> {
             children: [
               Text(
                 'Review and agree before entering chats, rooms, or profiles.',
-                style: TextStyle(
-                  fontSize: 13,
+                style: typography.body.copyWith(
+                  color: colors.muted,
                   height: 1.6,
-                  color: AppPalette.neutral500,
-                  fontWeight: FontWeight.w300,
                 ),
               ),
               const SizedBox(height: 16),
-              Divider(height: 1, color: ruleColor),
+              Divider(height: 1, color: colors.border),
               const SizedBox(height: 12),
               Expanded(
                 child: Markdown(
                   data: safetyTermsMarkdown,
                   styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
                       .copyWith(
-                        p: TextStyle(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: textColor,
-                          fontWeight: FontWeight.w300,
-                        ),
-                        h1: TextStyle(
-                          fontSize: 20,
-                          height: 1.4,
-                          color: textColor,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        h2: TextStyle(
+                        p: typography.body.copyWith(height: 1.6),
+                        h1: typography.display.copyWith(height: 1.4),
+                        h2: typography.label.copyWith(
                           fontSize: 14,
                           height: 1.5,
-                          color: textColor,
                           fontWeight: FontWeight.w500,
                         ),
-                        listBullet: TextStyle(color: textColor),
+                        listBullet: typography.body,
                       ),
                 ),
               ),
               const SizedBox(height: 12),
-              CheckboxListTile(
-                value: _agreed,
-                onChanged: widget.isSubmitting
+              GestureDetector(
+                onTap: widget.isSubmitting
                     ? null
-                    : (value) => setState(() => _agreed = value == true),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'I agree to the Terms of Use and Safety Policy.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: textColor,
-                    fontWeight: FontWeight.w300,
+                    : () => setState(() => _agreed = !_agreed),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _agreed
+                        ? colors.onSurface.withValues(alpha: 0.06)
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: _agreed ? colors.onSurface : colors.border,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color:
+                              _agreed ? colors.onSurface : Colors.transparent,
+                          border: Border.all(
+                            color: _agreed ? colors.onSurface : colors.border,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: _agreed
+                            ? Icon(
+                                Icons.check,
+                                size: 13,
+                                color: colors.surface,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'I agree to the Terms of Use and Safety Policy.',
+                          style: typography.body.copyWith(
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
