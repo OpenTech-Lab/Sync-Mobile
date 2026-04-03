@@ -154,40 +154,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              CheckboxListTile(
-                value: _agreedToTerms,
-                onChanged: widget.isSubmitting
-                    ? null
-                    : (value) => setState(() => _agreedToTerms = value == true),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'I agree to the Terms of Use and Safety Policy.',
-                  style: context.appTypography.body.copyWith(
-                    color: context.colors.onSurface,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => showSafetyTermsSheet(context),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.colors.muted,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: context.appTypography.label.copyWith(
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                  child: const Text('View terms'),
-                ),
-              ),
+              // CheckboxListTile(
+              //   value: _agreedToTerms,
+              //   onChanged: widget.isSubmitting
+              //       ? null
+              //       : (value) => setState(() => _agreedToTerms = value == true),
+              //   controlAffinity: ListTileControlAffinity.leading,
+              //   contentPadding: EdgeInsets.zero,
+              //   title: Text(
+              //     'I agree to the Terms of Use and Safety Policy.',
+              //     style: context.appTypography.body.copyWith(
+              //       color: context.colors.onSurface,
+              //       height: 1.4,
+              //     ),
+              //   ),
+              // ),
+              // Align(
+              //   alignment: Alignment.centerLeft,
+              //   child: TextButton(
+              //     onPressed: () => showSafetyTermsSheet(context),
+              //     style: TextButton.styleFrom(
+              //       foregroundColor: context.colors.muted,
+              //       padding: const EdgeInsets.symmetric(
+              //         horizontal: 4,
+              //         vertical: 2,
+              //       ),
+              //       minimumSize: Size.zero,
+              //       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              //       textStyle: context.appTypography.label.copyWith(
+              //         decoration: TextDecoration.underline,
+              //       ),
+              //     ),
+              //     child: const Text('View terms'),
+              //   ),
+              // ),
               const SizedBox(height: 4),
               Divider(height: 1, thickness: 1, color: ruleColor),
               const SizedBox(height: 20),
