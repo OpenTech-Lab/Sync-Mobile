@@ -301,6 +301,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     unawaited(_closeActiveConversationWithAnimation());
   }
 
+  void _clearActiveConversationSelection() {
+    if (_typingSignalSent) {
+      _sendTypingSignal(false);
+      _typingSignalSent = false;
+    }
+    _typingIdleTimer?.cancel();
+    _setBackGestureInProgress(false);
+    setState(() => _activePartnerId = null);
+    widget.onPartnerChanged(null);
+  }
+
   Future<void> _closeActiveConversationWithAnimation() async {
     if (_activePartnerId == null || _isClosingActiveConversation) {
       return;
@@ -312,13 +323,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     if (!mounted) {
       return;
     }
-    if (_typingSignalSent) {
-      _sendTypingSignal(false);
-      _typingSignalSent = false;
-    }
-    _typingIdleTimer?.cancel();
-    setState(() => _activePartnerId = null);
-    widget.onPartnerChanged(null);
+    _clearActiveConversationSelection();
     _isClosingActiveConversation = false;
   }
 
@@ -1621,7 +1626,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       if (!mounted) {
         return;
       }
-      setState(() => _activePartnerId = null);
+      _clearActiveConversationSelection();
       return;
     }
     if (action == ChatTargetProfileAction.unblockUser) {
