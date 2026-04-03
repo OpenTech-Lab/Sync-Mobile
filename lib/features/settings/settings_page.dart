@@ -10,6 +10,7 @@ import '../../state/conversation_messages_controller.dart';
 import '../../state/deferred_deletion_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/theme_mode_controller.dart';
+import 'blocked_users_page.dart';
 import '../safety/safety_terms_page.dart';
 import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/components/atoms/outline_action_button.dart';
@@ -528,6 +529,21 @@ class SettingsTab extends ConsumerWidget {
             ],
 
             const SizedBox(height: 32),
+            _SectionHeader(label: 'Safety', ruleColor: ruleColor),
+            _SettingsNavRow(
+              label: 'BLOCKED USERS',
+              subtitle: 'Review blocked users and remove them from the list.',
+              inkColor: inkColor,
+              borderColor: ruleColor,
+              leading: Icon(Icons.block_outlined, size: 20, color: inkColor),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BlockedUsersPage(serverUrl: serverUrl),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
             // ── About ────────────────────────────────────────────────────
             _SectionHeader(label: 'About', ruleColor: ruleColor),
             Container(
@@ -611,6 +627,83 @@ class SettingsTab extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsNavRow extends StatelessWidget {
+  const _SettingsNavRow({
+    required this.label,
+    required this.subtitle,
+    required this.inkColor,
+    required this.borderColor,
+    required this.leading,
+    required this.onTap,
+  });
+
+  final String label;
+  final String subtitle;
+  final Color inkColor;
+  final Color borderColor;
+  final Widget leading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          splashColor: inkColor.withValues(alpha: 0.12),
+          highlightColor: inkColor.withValues(alpha: 0.06),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                leading,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.5,
+                          color: inkColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w300,
+                          color: AppPalette.neutral500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedArrowRight01,
+                  color: AppPalette.neutral500,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -868,10 +961,7 @@ class _PendingDeletionCard extends StatelessWidget {
             GestureDetector(
               onTap: onCancel,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Text(
                   l10n.actionCancel,
                   style: const TextStyle(
