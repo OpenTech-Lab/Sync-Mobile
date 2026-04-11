@@ -5,7 +5,7 @@ const String safetyTermsTitle = 'Terms of Use and Safety Policy';
 const String safetyTermsMarkdown = '''
 Last updated: April 2026
 
-By using Sync, you agree to these Terms and our End User License Agreement (EULA) below. If you do not agree, please do not use the app. Sync is available worldwide except in China and Russia.
+By using Sync, you agree to these Terms and our End User License Agreement (EULA) below. If you do not agree, please do not use the app. Sync is available except in part countries because of local regulations or other restrictions.
 
 ---
 
@@ -72,7 +72,7 @@ The following are strictly prohibited:
 - Spam, scams, or impersonation
 - Any content that violates applicable laws
 
-### 12. User-Generated Content Moderation (Apple Guideline 1.2 Compliance)
+### 12. User-Generated Content Moderation
 
 Sync provides the following safeguards for all user-generated content:
 
