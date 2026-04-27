@@ -17,13 +17,19 @@ class CallScreen extends ConsumerStatefulWidget {
 class _CallScreenState extends ConsumerState<CallScreen> {
   final _localRenderer = RTCVideoRenderer();
   final _remoteRenderer = RTCVideoRenderer();
+  bool _renderersReady = false;
 
   @override
   void initState() {
     super.initState();
     WakelockPlus.enable();
-    _localRenderer.initialize();
-    _remoteRenderer.initialize();
+    _initRenderers();
+  }
+
+  Future<void> _initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
+    if (mounted) setState(() => _renderersReady = true);
   }
 
   @override
@@ -38,18 +44,21 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   Widget build(BuildContext context) {
     final callInfo = ref.watch(callControllerProvider).value;
 
+    ref.listen(callControllerProvider, (_, next) {
+      final info = next.value;
+      if (info?.localStream != null) _localRenderer.srcObject = info!.localStream;
+      if (info?.remoteStream != null) _remoteRenderer.srcObject = info!.remoteStream;
+    });
+
     if (callInfo == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();
       });
-      return const SizedBox.shrink();
+      return const Scaffold(backgroundColor: Colors.black);
     }
 
-    if (callInfo.localStream != null) {
-      _localRenderer.srcObject = callInfo.localStream;
-    }
-    if (callInfo.remoteStream != null) {
-      _remoteRenderer.srcObject = callInfo.remoteStream;
+    if (!_renderersReady) {
+      return const Scaffold(backgroundColor: Colors.black);
     }
 
     final isVideo = callInfo.callType == CallType.video;
