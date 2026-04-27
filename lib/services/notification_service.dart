@@ -105,6 +105,20 @@ class NotificationService {
     }
   }
 
+  /// Returns call metadata stored when the user tapped an incoming-call push
+  /// notification while the app was backgrounded (iOS only). Clears the stored
+  /// value after reading so it fires only once per tap.
+  Future<Map<String, dynamic>?> getPendingCallNotification() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return null;
+    try {
+      final result = await _channel.invokeMethod<Map>('getPendingCallNotification');
+      if (result == null) return null;
+      return result.cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> showIncomingMessageNotification({String? avatarBase64}) async {
     if (kIsWeb) {
       return;

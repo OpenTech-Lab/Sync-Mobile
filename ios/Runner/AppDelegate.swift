@@ -64,6 +64,10 @@ import UserNotifications
         result(token)
       case "showLocalNotification":
         self.showLocalNotification(call: call, result: result)
+      case "getPendingCallNotification":
+        let data = UserDefaults.standard.dictionary(forKey: "pending_call_notification")
+        UserDefaults.standard.removeObject(forKey: "pending_call_notification")
+        result(data)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -298,6 +302,17 @@ import UserNotifications
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
+    let userInfo = response.notification.request.content.userInfo
+    if let callId = userInfo["call_id"] as? String, !callId.isEmpty {
+      UserDefaults.standard.set(
+        [
+          "call_id": callId,
+          "caller_id": userInfo["caller_id"] as? String ?? "",
+          "call_type": userInfo["call_type"] as? String ?? "voice",
+        ],
+        forKey: "pending_call_notification"
+      )
+    }
     completionHandler()
   }
 }
