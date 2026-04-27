@@ -33,6 +33,9 @@ import '../../state/sticker_controller.dart';
 import '../../state/typing_style_mode_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
+import '../calls/call_controller.dart';
+import '../calls/call_models.dart';
+import '../calls/call_screen.dart';
 import 'conversation_note_page.dart';
 import 'conversation_todos_page.dart';
 import 'models/outgoing_draft.dart';
@@ -295,6 +298,28 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       return;
     }
     setState(() => _isBackGestureInProgress = value);
+  }
+
+  Future<void> _startCall(CallType callType) async {
+    final partnerId = _activePartnerId;
+    if (partnerId == null) return;
+
+    final displayName =
+        ref.read(userDisplayNameProvider(partnerId)).value ?? partnerId;
+
+    await ref.read(callControllerProvider.notifier).startCall(
+      peerId: partnerId,
+      peerDisplayName: displayName,
+      callType: callType,
+    );
+
+    if (!mounted) return;
+    final callInfo = ref.read(callControllerProvider).value;
+    if (callInfo == null) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CallScreen()),
+    );
   }
 
   void _closeActiveConversation() {
@@ -1973,6 +1998,19 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       ],
                     ),
                   ),
+                  if (_activePartnerId != null &&
+                      !isRoomConversationId(_activePartnerId!)) ...[
+                    IconButton(
+                      icon: const Icon(Icons.call_outlined, size: 20),
+                      tooltip: 'Voice call',
+                      onPressed: () => _startCall(CallType.voice),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.videocam_outlined, size: 20),
+                      tooltip: 'Video call',
+                      onPressed: () => _startCall(CallType.video),
+                    ),
+                  ],
                   if (_activePartnerId != null) ...[
                     IconButton(
                       icon: const Icon(Icons.notes, size: 20),

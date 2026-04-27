@@ -5,7 +5,7 @@ version: 1.0.9+98
 
 # The following defines the version and build number for your application.
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.10.7
 
 # The following section is specific to Flutter packages.
 dependencies:
@@ -31,6 +31,9 @@ dependencies:
   flutter_markdown_plus: ^1.0.7
   hugeicons: ^1.1.5
   crypto: ^3.0.0
+  flutter_webrtc: ^0.10.7
+  permission_handler: ^11.3.1
+  wakelock_plus: ^1.2.8
 
 # The following section is specific to Flutter packages.
 dev_dependencies:

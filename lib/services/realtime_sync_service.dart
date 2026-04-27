@@ -68,6 +68,14 @@ class RealtimeSyncService {
     } catch (_) {}
   }
 
+  void sendCallSignal(Map<String, dynamic> payload) {
+    final channel = _channel;
+    if (channel == null) return;
+    try {
+      channel.sink.add(jsonEncode(payload));
+    } catch (_) {}
+  }
+
   Future<void> dispose() async {
     await disconnect();
     await _events.close();
@@ -261,6 +269,64 @@ class RealtimeSyncService {
         return null;
       }
       return RealtimeEvent.roomMembershipChanged(roomId: roomId);
+    }
+
+    if (type == 'incoming_call') {
+      final callId = decoded['call_id'] as String?;
+      final callerId = decoded['caller_id'] as String?;
+      final callType = decoded['call_type'] as String?;
+      final sdpOffer = decoded['sdp_offer'] as String?;
+      if (callId == null || callerId == null || callType == null || sdpOffer == null) {
+        return null;
+      }
+      return RealtimeEvent.incomingCall(
+        callId: callId,
+        callerId: callerId,
+        callType: callType,
+        sdpOffer: sdpOffer,
+      );
+    }
+
+    if (type == 'call_answered') {
+      final callId = decoded['call_id'] as String?;
+      final calleeId = decoded['callee_id'] as String?;
+      final sdpAnswer = decoded['sdp_answer'] as String?;
+      if (callId == null || calleeId == null || sdpAnswer == null) {
+        return null;
+      }
+      return RealtimeEvent.callAnswered(
+        callId: callId,
+        calleeId: calleeId,
+        sdpAnswer: sdpAnswer,
+      );
+    }
+
+    if (type == 'call_rejected') {
+      final callId = decoded['call_id'] as String?;
+      if (callId == null) return null;
+      return RealtimeEvent.callRejected(callId: callId);
+    }
+
+    if (type == 'call_hangup') {
+      final callId = decoded['call_id'] as String?;
+      if (callId == null) return null;
+      return RealtimeEvent.callHangup(callId: callId);
+    }
+
+    if (type == 'ice_candidate') {
+      final callId = decoded['call_id'] as String?;
+      final fromUserId = decoded['from_user_id'] as String?;
+      final candidate = decoded['candidate'] as String?;
+      if (callId == null || fromUserId == null || candidate == null) {
+        return null;
+      }
+      return RealtimeEvent.iceCandidate(
+        callId: callId,
+        fromUserId: fromUserId,
+        candidate: candidate,
+        sdpMid: decoded['sdp_mid'] as String?,
+        sdpMlineIndex: decoded['sdp_mline_index'] as int?,
+      );
     }
 
     return null;

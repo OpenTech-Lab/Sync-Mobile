@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/calls/call_controller.dart';
 import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
@@ -196,6 +197,49 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
             .read(backupControllerProvider.notifier)
             .maybeAutoBackup(baseUrl: baseUrl, accessToken: accessToken);
       }
+
+      if (event.incomingCallId != null) {
+        final callerId = event.incomingCallCallerId!;
+        final displayName =
+            ref.read(userDisplayNameProvider(callerId)).value ?? callerId;
+        ref.read(callControllerProvider.notifier).handleIncomingCall(
+          callId: event.incomingCallId!,
+          callerId: callerId,
+          callerDisplayName: displayName,
+          callType: event.incomingCallType ?? 'voice',
+          sdpOffer: event.incomingCallSdpOffer!,
+        );
+      }
+
+      if (event.answeredCallId != null) {
+        await ref.read(callControllerProvider.notifier).handleCallAnswered(
+          callId: event.answeredCallId!,
+          sdpAnswer: event.answeredSdpAnswer!,
+        );
+      }
+
+      if (event.rejectedCallId != null) {
+        ref.read(callControllerProvider.notifier).handleCallRejected(
+          callId: event.rejectedCallId!,
+        );
+      }
+
+      if (event.hangupCallId != null) {
+        ref.read(callControllerProvider.notifier).handleRemoteHangup(
+          callId: event.hangupCallId!,
+        );
+      }
+
+      if (event.iceCandidateCallId != null) {
+        await ref.read(callControllerProvider.notifier).handleIceCandidate(
+          callId: event.iceCandidateCallId!,
+          candidateJson: {
+            'candidate': event.iceCandidate,
+            'sdpMid': event.iceSdpMid,
+            'sdpMLineIndex': event.iceSdpMlineIndex,
+          },
+        );
+      }
     });
 
     await service.connect(
@@ -225,6 +269,10 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     ref
         .read(realtimeSyncServiceProvider)
         .sendTyping(partnerId: partnerId, isTyping: isTyping);
+  }
+
+  void sendCallSignal(Map<String, dynamic> payload) {
+    ref.read(realtimeSyncServiceProvider).sendCallSignal(payload);
   }
 
   Future<void> _syncConversationSnapshot({

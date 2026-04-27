@@ -13,6 +13,9 @@ import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
+import '../calls/call_controller.dart';
+import '../calls/call_models.dart';
+import '../calls/incoming_call_screen.dart';
 import '../home/home_page.dart';
 import '../planet/planet_page.dart';
 import '../chats/chats_page.dart';
@@ -171,6 +174,19 @@ class _MainShellState extends ConsumerState<MainShell>
     final unreadCounts =
         ref.watch(unreadCountsProvider).value ?? const <String, int>{};
     final totalUnread = unreadCounts.values.fold(0, (s, v) => s + v);
+
+    // Show IncomingCallScreen when a call arrives in the ringing phase
+    ref.listen<AsyncValue<CallInfo?>>(callControllerProvider, (prev, next) {
+      final info = next.valueOrNull;
+      if (info?.phase == CallPhase.ringing &&
+          prev?.valueOrNull?.phase != CallPhase.ringing) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => IncomingCallScreen(callInfo: info!),
+          ),
+        );
+      }
+    });
 
     final tabs = [
       HomeTab(
