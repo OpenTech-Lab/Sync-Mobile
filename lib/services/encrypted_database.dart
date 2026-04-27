@@ -2,11 +2,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'app_secure_storage.dart';
 import 'server_scope.dart';
 
 @visibleForTesting
@@ -47,16 +47,16 @@ bool isRecoverableDatabaseOpenError(Object error) {
 class EncryptedDatabase {
   EncryptedDatabase({
     required String serverUrl,
-    FlutterSecureStorage? secureStorage,
+    AppSecureStorage? secureStorage,
   }) : _serverUrl = serverUrl,
-       _secureStorage = secureStorage ?? const FlutterSecureStorage();
+       _secureStorage = secureStorage ?? const AppSecureStorage();
 
   static const _legacyDatabaseName = 'sync_local_chat.db';
   static const _databaseVersion = 3;
   static const _legacyDatabaseKeyStorageKey = 'local_chat_db_key';
 
   final String _serverUrl;
-  final FlutterSecureStorage _secureStorage;
+  final AppSecureStorage _secureStorage;
   Database? _database;
   Future<Database>? _openingDatabase;
 

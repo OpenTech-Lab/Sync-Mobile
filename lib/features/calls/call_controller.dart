@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../constants/feature_flags.dart';
 import '../../state/realtime_sync_controller.dart';
 import 'call_models.dart';
 import 'webrtc_call_service.dart';
@@ -13,8 +14,9 @@ final webRtcCallServiceProvider = Provider<WebRtcCallService>((ref) {
   return svc;
 });
 
-final callControllerProvider =
-    AsyncNotifierProvider<CallController, CallInfo?>(CallController.new);
+final callControllerProvider = AsyncNotifierProvider<CallController, CallInfo?>(
+  CallController.new,
+);
 
 class CallController extends AsyncNotifier<CallInfo?> {
   Timer? _noAnswerTimer;
@@ -29,28 +31,35 @@ class CallController extends AsyncNotifier<CallInfo?> {
     required String peerDisplayName,
     required CallType callType,
   }) async {
+    if (!kCallingEnabled) {
+      return;
+    }
+
     final svc = ref.read(webRtcCallServiceProvider);
 
     svc.onIceCandidate = (c) => _sendIceCandidate(c, peerId);
     svc.onRemoteStream = _onRemoteStream;
     svc.onConnectionFailed = hangup;
 
-    final (:localStream, :sdpOffer) =
-        await svc.createOffer(withVideo: callType == CallType.video);
+    final (:localStream, :sdpOffer) = await svc.createOffer(
+      withVideo: callType == CallType.video,
+    );
 
     // Use a placeholder call ID until the server echoes back the real one
     // via the callee's incoming_call event. The server's CallAnswer relay
     // will carry the real call_id which we update in handleCallAnswered.
     const tempCallId = 'pending';
-    state = AsyncData(CallInfo(
-      callId: tempCallId,
-      peerId: peerId,
-      peerDisplayName: peerDisplayName,
-      callType: callType,
-      direction: CallDirection.outgoing,
-      phase: CallPhase.calling,
-      localStream: localStream,
-    ));
+    state = AsyncData(
+      CallInfo(
+        callId: tempCallId,
+        peerId: peerId,
+        peerDisplayName: peerDisplayName,
+        callType: callType,
+        direction: CallDirection.outgoing,
+        phase: CallPhase.calling,
+        localStream: localStream,
+      ),
+    );
 
     ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
       'type': 'call_offer',
@@ -72,6 +81,11 @@ class CallController extends AsyncNotifier<CallInfo?> {
   // ── Incoming call — accept ─────────────────────────────────────────────────
 
   Future<void> acceptCall() async {
+    if (!kCallingEnabled) {
+      rejectCall();
+      return;
+    }
+
     final current = state.valueOrNull;
     if (current == null || current.phase != CallPhase.ringing) return;
 
@@ -86,10 +100,9 @@ class CallController extends AsyncNotifier<CallInfo?> {
       withVideo: current.callType == CallType.video,
     );
 
-    state = AsyncData(current.copyWith(
-      phase: CallPhase.connecting,
-      localStream: localStream,
-    ));
+    state = AsyncData(
+      current.copyWith(phase: CallPhase.connecting, localStream: localStream),
+    );
 
     ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
       'type': 'call_answer',
@@ -160,6 +173,15 @@ class CallController extends AsyncNotifier<CallInfo?> {
     required String callType,
     required String sdpOffer,
   }) {
+    if (!kCallingEnabled) {
+      ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
+        'type': 'call_reject',
+        'call_id': callId,
+        'caller_id': callerId,
+      });
+      return;
+    }
+
     final current = state.valueOrNull;
     // Auto-reject if already in a call
     if (current != null && current.phase != CallPhase.idle) {
@@ -171,15 +193,17 @@ class CallController extends AsyncNotifier<CallInfo?> {
       return;
     }
 
-    state = AsyncData(CallInfo(
-      callId: callId,
-      peerId: callerId,
-      peerDisplayName: callerDisplayName,
-      callType: callType == 'video' ? CallType.video : CallType.voice,
-      direction: CallDirection.incoming,
-      phase: CallPhase.ringing,
-      sdpOffer: sdpOffer,
-    ));
+    state = AsyncData(
+      CallInfo(
+        callId: callId,
+        peerId: callerId,
+        peerDisplayName: callerDisplayName,
+        callType: callType == 'video' ? CallType.video : CallType.voice,
+        direction: CallDirection.incoming,
+        phase: CallPhase.ringing,
+        sdpOffer: sdpOffer,
+      ),
+    );
   }
 
   Future<void> handleCallAnswered({
@@ -192,10 +216,9 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (current == null) return;
 
     await ref.read(webRtcCallServiceProvider).setRemoteAnswer(sdpAnswer);
-    state = AsyncData(current.copyWith(
-      callId: callId,
-      phase: CallPhase.connecting,
-    ));
+    state = AsyncData(
+      current.copyWith(callId: callId, phase: CallPhase.connecting),
+    );
   }
 
   void handleCallRejected({required String callId}) {
@@ -246,9 +269,11 @@ class CallController extends AsyncNotifier<CallInfo?> {
   void _onRemoteStream(dynamic stream) {
     final current = state.valueOrNull;
     if (current == null) return;
-    state = AsyncData(current.copyWith(
-      phase: CallPhase.active,
-      remoteStream: stream as MediaStream,
-    ));
+    state = AsyncData(
+      current.copyWith(
+        phase: CallPhase.active,
+        remoteStream: stream as MediaStream,
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,5 +89,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(partnerChanges.last, isNull);
+  });
+
+  testWidgets('direct chat keeps call buttons visible on Linux desktop', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appControllerProvider.overrideWith(_FakeAppController.new),
+          chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ChatsTab(
+              serverUrl: 'https://example.com',
+              accessToken: 'token',
+              currentUserId: 'owner-id',
+              initialPartnerId: 'friend-a',
+              onPartnerChanged: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final voiceButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.call_outlined),
+    );
+    final videoButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.videocam_outlined),
+    );
+
+    expect(voiceButton.onPressed, isNull);
+    expect(videoButton.onPressed, isNull);
+    expect(find.byIcon(Icons.call_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.videocam_outlined), findsOneWidget);
+
+    debugDefaultTargetPlatformOverride = null;
   });
 }

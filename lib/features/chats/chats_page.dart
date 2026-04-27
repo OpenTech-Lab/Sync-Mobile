@@ -23,6 +23,7 @@ import '../../services/backup_preferences.dart';
 import '../../services/local_chat_repository.dart';
 import '../../services/chat_ui_preferences.dart';
 import '../../services/remote_safety_service.dart';
+import '../../constants/feature_flags.dart';
 import '../../state/app_controller.dart';
 import '../../state/backup_controller.dart';
 import '../../state/conversation_messages_controller.dart';
@@ -301,25 +302,31 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
   }
 
   Future<void> _startCall(CallType callType) async {
+    if (!kCallingEnabled) {
+      return;
+    }
+
     final partnerId = _activePartnerId;
     if (partnerId == null) return;
 
     final displayName =
         ref.read(userDisplayNameProvider(partnerId)).value ?? partnerId;
 
-    await ref.read(callControllerProvider.notifier).startCall(
-      peerId: partnerId,
-      peerDisplayName: displayName,
-      callType: callType,
-    );
+    await ref
+        .read(callControllerProvider.notifier)
+        .startCall(
+          peerId: partnerId,
+          peerDisplayName: displayName,
+          callType: callType,
+        );
 
     if (!mounted) return;
     final callInfo = ref.read(callControllerProvider).value;
     if (callInfo == null) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const CallScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const CallScreen()));
   }
 
   void _closeActiveConversation() {
@@ -1918,6 +1925,9 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     final typingStyleSpeedMs =
         ref.watch(typingStyleSpeedControllerProvider).value ??
         ChatUiPreferences.defaultTypingStyleSpeedMs;
+    final isDirectConversation =
+        _activePartnerId != null && !isRoomConversationId(_activePartnerId!);
+    final callsAvailable = isDirectConversation && kCallingEnabled;
     final isTargetTyping =
         _activePartnerId != null &&
         !isRoomConversationId(_activePartnerId!) &&
@@ -1998,17 +2008,24 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                       ],
                     ),
                   ),
-                  if (_activePartnerId != null &&
-                      !isRoomConversationId(_activePartnerId!)) ...[
+                  if (isDirectConversation) ...[
                     IconButton(
                       icon: const Icon(Icons.call_outlined, size: 20),
-                      tooltip: 'Voice call',
-                      onPressed: () => _startCall(CallType.voice),
+                      tooltip: callsAvailable
+                          ? 'Voice call'
+                          : 'Voice call unavailable on this platform',
+                      onPressed: callsAvailable
+                          ? () => _startCall(CallType.voice)
+                          : null,
                     ),
                     IconButton(
                       icon: const Icon(Icons.videocam_outlined, size: 20),
-                      tooltip: 'Video call',
-                      onPressed: () => _startCall(CallType.video),
+                      tooltip: callsAvailable
+                          ? 'Video call'
+                          : 'Video call unavailable on this platform',
+                      onPressed: callsAvailable
+                          ? () => _startCall(CallType.video)
+                          : null,
                     ),
                   ],
                   if (_activePartnerId != null) ...[

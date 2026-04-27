@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // Compile-time feature flags.
 //
 // Flip these to `true` to enable in-development features without touching
@@ -14,3 +16,10 @@ const bool kMilestoneAnimationsEnabled = true;
 /// Keep the QR-based "approve login on another device" flow hidden for the
 /// current mobile release while the feature remains unreleased.
 const bool kDeviceLoginApprovalEnabled = false;
+
+/// Linux desktop currently disables calling because the packaged
+/// flutter_webrtc Linux plugin aborts during startup audio initialization.
+bool get kCallingEnabled =>
+    !kIsWeb &&
+    defaultTargetPlatform != TargetPlatform.linux &&
+    defaultTargetPlatform != TargetPlatform.fuchsia;

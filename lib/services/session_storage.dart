@@ -1,14 +1,13 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
+import 'app_secure_storage.dart';
 import 'server_scope.dart';
 
 class SessionStorage {
-  const SessionStorage([this._storage = const FlutterSecureStorage()]);
+  const SessionStorage([this._storage = const AppSecureStorage()]);
 
   static const _legacyAccessTokenKey = 'access_token';
   static const _legacyRefreshTokenKey = 'refresh_token';
 
-  final FlutterSecureStorage _storage;
+  final AppSecureStorage _storage;
 
   String _accessTokenKey(String serverUrl) =>
       scopedStorageKey(_legacyAccessTokenKey, serverUrl);

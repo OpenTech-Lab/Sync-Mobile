@@ -3,21 +3,21 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/local_chat_message.dart';
+import 'app_secure_storage.dart';
 import 'backup_crypto_service.dart';
 
 class EncryptedBackupService {
-  EncryptedBackupService([FlutterSecureStorage? storage])
-    : _storage = storage ?? const FlutterSecureStorage();
+  EncryptedBackupService([AppSecureStorage? storage])
+    : _storage = storage ?? const AppSecureStorage();
 
   static const _backupKeyStorageKey = 'local_backup_encryption_key';
   static const _backupFileName = 'sync_local_backup.enc';
 
-  final FlutterSecureStorage _storage;
+  final AppSecureStorage _storage;
   final _crypto = BackupCryptoService();
 
   Future<String> backupMessages(List<LocalChatMessage> messages) async {

@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'app_secure_storage.dart';
 
 class MessageE2eeService {
   MessageE2eeService({
-    FlutterSecureStorage? secureStorage,
+    AppSecureStorage? secureStorage,
     Cryptography? cryptography,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  }) : _secureStorage = secureStorage ?? const AppSecureStorage(),
        _cryptography = cryptography ?? Cryptography.instance,
        _cipher = AesGcm.with256bits(),
        // PBKDF2 is kept only for the one-time password-based seed derivation.
@@ -31,7 +32,7 @@ class MessageE2eeService {
   /// Legacy algorithm tag produced by older clients (PBKDF2-based).
   static const _legacyAlg = 'x25519_aes_gcm_256';
 
-  final FlutterSecureStorage _secureStorage;
+  final AppSecureStorage _secureStorage;
   final Cryptography _cryptography;
   final Cipher _cipher;
   final Pbkdf2 _passwordKdf;
@@ -67,7 +68,9 @@ class MessageE2eeService {
     final cached = _cachedPublicKeyBase64;
     if (cached != null) return cached;
     final pair = await _getLocalKeyPair();
-    return pair != null ? base64Encode((await pair.extractPublicKey()).bytes) : null;
+    return pair != null
+        ? base64Encode((await pair.extractPublicKey()).bytes)
+        : null;
   }
 
   Future<String> ensurePublicKeyBase64({
@@ -326,7 +329,10 @@ class MessageE2eeService {
     );
     final secret = SecretKey(utf8.encode(password));
     // PBKDF2 is appropriate here: we are stretching a user-supplied password.
-    final derived = await _passwordKdf.deriveKey(secretKey: secret, nonce: salt);
+    final derived = await _passwordKdf.deriveKey(
+      secretKey: secret,
+      nonce: salt,
+    );
     return derived.extractBytes();
   }
 
