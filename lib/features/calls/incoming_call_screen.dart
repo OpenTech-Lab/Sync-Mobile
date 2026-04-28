@@ -58,7 +58,7 @@ class IncomingCallScreen extends ConsumerWidget {
                     label: 'Decline',
                     onTap: () {
                       ref.read(callControllerProvider.notifier).rejectCall();
-                      Navigator.of(context).pop();
+                      // ref.listen above pops this screen when state → null
                     },
                   ),
 
