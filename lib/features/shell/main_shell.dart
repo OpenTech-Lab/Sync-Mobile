@@ -13,6 +13,7 @@ import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
 import '../../state/unread_counts_controller.dart';
+import '../../state/user_profile_controller.dart';
 import '../calls/call_controller.dart';
 import '../calls/call_models.dart';
 import '../calls/incoming_call_screen.dart';
@@ -90,6 +91,7 @@ class _MainShellState extends ConsumerState<MainShell>
             baseUrl: widget.serverUrl,
             accessToken: effectiveToken,
           );
+      unawaited(_checkPendingCallNotification());
     });
   }
 
@@ -132,12 +134,12 @@ class _MainShellState extends ConsumerState<MainShell>
         await ref
             .read(backupControllerProvider.notifier)
             .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: token);
+        unawaited(_checkPendingCallNotification());
       });
       return;
     }
 
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       _realtimeSyncNotifier.disconnect();
     }
@@ -148,6 +150,20 @@ class _MainShellState extends ConsumerState<MainShell>
     WidgetsBinding.instance.removeObserver(this);
     _realtimeSyncNotifier.disconnect();
     super.dispose();
+  }
+
+  Future<void> _checkPendingCallNotification() async {
+    final pending = await ref
+        .read(realtimeNotificationServiceProvider)
+        .getPendingCallNotification();
+    if (pending == null || !mounted) return;
+    final callerId = (pending['caller_id'] as String?) ?? '';
+    final callerName =
+        ref.read(userDisplayNameProvider(callerId)).value ?? callerId;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Missed call from $callerName')),
+    );
   }
 
   void _onTabTapped(int index) {
