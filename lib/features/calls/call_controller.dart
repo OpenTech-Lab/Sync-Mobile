@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:http/http.dart' as http;
 
 import '../../constants/feature_flags.dart';
 import '../../state/realtime_sync_controller.dart';
@@ -40,6 +42,8 @@ class CallController extends AsyncNotifier<CallInfo?> {
     svc.onIceCandidate = (c) => _sendIceCandidate(c, peerId);
     svc.onRemoteStream = _onRemoteStream;
     svc.onConnectionFailed = hangup;
+
+    await _applyIceServers(svc);
 
     final (:localStream, :sdpOffer) = await svc.createOffer(
       withVideo: callType == CallType.video,
@@ -94,6 +98,8 @@ class CallController extends AsyncNotifier<CallInfo?> {
     svc.onIceCandidate = (c) => _sendIceCandidate(c, current.peerId);
     svc.onRemoteStream = _onRemoteStream;
     svc.onConnectionFailed = hangup;
+
+    await _applyIceServers(svc);
 
     final (:localStream, :sdpAnswer) = await svc.createAnswer(
       sdpOffer: current.sdpOffer!,
@@ -251,6 +257,33 @@ class CallController extends AsyncNotifier<CallInfo?> {
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  /// Fetches ICE server config from the API and applies it to [svc].
+  /// Falls back to STUN-only on any error so calls still work without TURN.
+  Future<void> _applyIceServers(WebRtcCallService svc) async {
+    final ctrl = ref.read(realtimeSyncControllerProvider.notifier);
+    final baseUrl = ctrl.baseUrl;
+    final tokenFn = ctrl.accessTokenProvider;
+    if (baseUrl == null || tokenFn == null) return;
+    final token = await tokenFn();
+    if (token == null || token.isEmpty) return;
+    try {
+      final uri = Uri.parse('$baseUrl/api/calls/ice-servers');
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final servers = (body['ice_servers'] as List)
+            .cast<Map<String, dynamic>>();
+        if (servers.isNotEmpty) {
+          svc.iceServers = servers;
+        }
+      }
+    } catch (_) {
+      // Non-fatal: fall back to the default STUN-only config already set.
+    }
+  }
 
   void _sendIceCandidate(RTCIceCandidate candidate, String peerId) {
     final current = state.valueOrNull;

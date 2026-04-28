@@ -2,7 +2,10 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class WebRtcCallService {
-  static const List<Map<String, dynamic>> _iceServers = [
+  /// ICE servers used for the next peer connection. Set this before calling
+  /// [createOffer] or [createAnswer]. Defaults to Google's public STUN servers
+  /// so calls still work if the server has no TURN configured.
+  List<Map<String, dynamic>> iceServers = const [
     {'urls': 'stun:stun.l.google.com:19302'},
     {'urls': 'stun:stun1.l.google.com:19302'},
   ];
@@ -34,7 +37,7 @@ class WebRtcCallService {
 
   Future<RTCPeerConnection> _createPeerConnection() async {
     final config = {
-      'iceServers': _iceServers,
+      'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
     };
     final pc = await createPeerConnection(config);

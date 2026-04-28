@@ -59,6 +59,15 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
   StreamSubscription<RealtimeEvent>? _subscription;
   final Set<String> _conversationSyncInFlight = <String>{};
 
+  String? _baseUrl;
+  Future<String?> Function()? _accessTokenProvider;
+
+  /// The server base URL from the most recent [connect] call.
+  String? get baseUrl => _baseUrl;
+
+  /// Live access-token provider from the most recent [connect] call.
+  Future<String?> Function()? get accessTokenProvider => _accessTokenProvider;
+
   @override
   Future<RealtimeSyncState> build() async {
     return const RealtimeSyncState(
@@ -73,6 +82,8 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
   }) async {
+    _baseUrl = baseUrl;
+    _accessTokenProvider = accessTokenProvider;
     final service = ref.read(realtimeSyncServiceProvider);
 
     await _subscription?.cancel();
