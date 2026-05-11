@@ -135,6 +135,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                       ref.read(callControllerProvider.notifier).toggleMute(),
                 ),
                 const SizedBox(width: 24),
+                _ControlButton(
+                  icon: callInfo.isSpeakerOn
+                      ? Icons.volume_up
+                      : Icons.volume_down,
+                  onTap: () =>
+                      ref.read(callControllerProvider.notifier).toggleSpeaker(),
+                ),
+                const SizedBox(width: 24),
                 _HangupButton(
                   onTap: () =>
                       ref.read(callControllerProvider.notifier).hangup(),

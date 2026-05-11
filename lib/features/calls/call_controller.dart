@@ -108,8 +108,15 @@ class CallController extends AsyncNotifier<CallInfo?> {
       withVideo: current.callType == CallType.video,
     );
 
+    // Re-read state after the async gap: _onRemoteStream may have fired
+    // during createAnswer (onTrack fires when remote description is set)
+    // and already advanced the phase to active.
+    final latest = state.valueOrNull ?? current;
     state = AsyncData(
-      current.copyWith(phase: CallPhase.connecting, localStream: localStream),
+      latest.copyWith(
+        localStream: localStream,
+        phase: latest.phase == CallPhase.active ? CallPhase.active : CallPhase.connecting,
+      ),
     );
 
     ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
@@ -174,6 +181,14 @@ class CallController extends AsyncNotifier<CallInfo?> {
     final next = !current.isCameraOff;
     ref.read(webRtcCallServiceProvider).setCameraEnabled(!next);
     state = AsyncData(current.copyWith(isCameraOff: next));
+  }
+
+  void toggleSpeaker() {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final next = !current.isSpeakerOn;
+    ref.read(webRtcCallServiceProvider).setSpeaker(next);
+    state = AsyncData(current.copyWith(isSpeakerOn: next));
   }
 
   // ── Inbound signaling handlers ─────────────────────────────────────────────

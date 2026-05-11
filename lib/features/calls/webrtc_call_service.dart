@@ -142,6 +142,10 @@ class WebRtcCallService {
     _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
   }
 
+  void setSpeaker(bool on) {
+    Helper.setSpeakerphoneOn(on);
+  }
+
   Future<void> dispose() async {
     onIceCandidate = null;
     onRemoteStream = null;

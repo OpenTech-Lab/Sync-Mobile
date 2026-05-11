@@ -25,6 +25,7 @@ class CallInfo {
     this.remoteStream,
     this.isMuted = false,
     this.isCameraOff = false,
+    this.isSpeakerOn = false,
     this.sdpOffer,
   });
 
@@ -38,6 +39,7 @@ class CallInfo {
   final MediaStream? remoteStream;
   final bool isMuted;
   final bool isCameraOff;
+  final bool isSpeakerOn;
   final String? sdpOffer;
 
   CallInfo copyWith({
@@ -47,6 +49,7 @@ class CallInfo {
     MediaStream? remoteStream,
     bool? isMuted,
     bool? isCameraOff,
+    bool? isSpeakerOn,
   }) {
     return CallInfo(
       callId: callId ?? this.callId,
@@ -59,6 +62,7 @@ class CallInfo {
       remoteStream: remoteStream ?? this.remoteStream,
       isMuted: isMuted ?? this.isMuted,
       isCameraOff: isCameraOff ?? this.isCameraOff,
+      isSpeakerOn: isSpeakerOn ?? this.isSpeakerOn,
       sdpOffer: sdpOffer,
     );
   }
