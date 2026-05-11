@@ -68,12 +68,11 @@ class IncomingCallScreen extends ConsumerWidget {
                     color: const Color(0xFF2E7D32),
                     label: 'Accept',
                     onTap: () async {
-                      Navigator.of(context).pop();
                       await ref
                           .read(callControllerProvider.notifier)
                           .acceptCall();
                       if (context.mounted) {
-                        Navigator.of(context).push(
+                        Navigator.of(context).pushReplacement(
                           MaterialPageRoute<void>(
                             builder: (_) => const CallScreen(),
                           ),

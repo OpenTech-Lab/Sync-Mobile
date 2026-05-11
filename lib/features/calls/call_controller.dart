@@ -224,13 +224,17 @@ class CallController extends AsyncNotifier<CallInfo?> {
   }) async {
     _noAnswerTimer?.cancel();
     _noAnswerTimer = null;
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     await ref.read(webRtcCallServiceProvider).setRemoteAnswer(sdpAnswer);
-    state = AsyncData(
-      current.copyWith(callId: callId, phase: CallPhase.connecting),
-    );
+
+    // Re-read state after the async gap: _onRemoteStream may have fired
+    // during setRemoteAnswer and already advanced the phase to active.
+    final latest = state.valueOrNull;
+    if (latest == null) return;
+    if (latest.phase != CallPhase.active) {
+      state = AsyncData(latest.copyWith(callId: callId, phase: CallPhase.connecting));
+    }
     _flushPendingIceCandidates();
   }
 
