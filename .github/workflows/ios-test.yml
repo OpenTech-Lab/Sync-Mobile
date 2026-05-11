@@ -5,12 +5,31 @@ on:
 
 jobs:
   build-ios-ipa:
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select and verify Xcode 26 SDK
+        run: |
+          set -euo pipefail
+
+          if [ -d "/Applications/Xcode_26.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.app/Contents/Developer
+          fi
+
+          xcodebuild -version
+          xcodebuild -showsdks
+
+          SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+          SDK_MAJOR="${SDK_VERSION%%.*}"
+          if [ "$SDK_MAJOR" -lt 26 ]; then
+            echo "App Store Connect requires iOS 26 SDK or later, but CI selected iPhoneOS SDK $SDK_VERSION."
+            echo "Use a macos-26 GitHub runner or install/select Xcode 26+."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
