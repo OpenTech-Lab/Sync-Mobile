@@ -618,6 +618,72 @@ class AppController extends AsyncNotifier<AppState> {
     }
   }
 
+  /// Verifies the session is still valid on app resume.
+  ///
+  /// Returns true if the session is usable (token valid or successfully
+  /// refreshed). Returns false and clears the session when the server
+  /// explicitly rejects the refresh token (auth error), which causes the
+  /// reactive UI to transition to the login screen.
+  ///
+  /// Network errors (no connectivity, timeout) do NOT force a logout — the
+  /// user stays on the home screen and can retry when connectivity returns.
+  Future<bool> verifySessionOnResume() async {
+    final current = state.value;
+    final token = current?.accessToken;
+    if (token == null || token.isEmpty) return false;
+
+    if (!_jwtService.isExpiredOrExpiringSoon(token)) return true;
+
+    final serverUrl = current?.serverUrl;
+    if (serverUrl == null || serverUrl.isEmpty) return false;
+
+    try {
+      final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
+      if (storedRefresh == null || storedRefresh.isEmpty) {
+        await _clearSession(current!, serverUrl);
+        return false;
+      }
+
+      final tokens = await _authService.refresh(
+        baseUrl: serverUrl,
+        refreshToken: storedRefresh,
+      );
+      await _sessionStorage.writeTokens(
+        serverUrl: serverUrl,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+      state = AsyncData(current!.copyWith(accessToken: tokens.accessToken));
+      return true;
+    } catch (error) {
+      // Only force logout when the server explicitly rejected the session.
+      // Network errors contain no HTTP status code in their message.
+      final msg = error.toString();
+      final isServerAuthError =
+          msg.contains('Token refresh failed') ||
+          msg.contains('(401)') ||
+          msg.contains('(403)');
+      if (isServerAuthError) {
+        await _clearSession(current!, serverUrl);
+        return false;
+      }
+      // Network outage — keep the user on the home screen.
+      return true;
+    }
+  }
+
+  Future<void> _clearSession(AppState current, String serverUrl) async {
+    await _sessionStorage.clearTokens(serverUrl);
+    state = AsyncData(
+      current.copyWith(
+        accessToken: '',
+        currentUserId: null,
+        currentUsername: null,
+        clearSafetyState: true,
+      ),
+    );
+  }
+
   void setCurrentUsername(String username) {
     final current = state.value;
     if (current == null) {

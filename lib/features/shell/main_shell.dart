@@ -114,15 +114,20 @@ class _MainShellState extends ConsumerState<MainShell>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       Future(() async {
+        if (!mounted) return;
+        final sessionValid = await ref
+            .read(appControllerProvider.notifier)
+            .verifySessionOnResume();
+        // Session cleared — reactive UI will switch to login; nothing left to do.
+        if (!mounted || !sessionValid) return;
+
         _realtimeSyncNotifier.connect(
           baseUrl: widget.serverUrl,
           accessTokenProvider: _effectiveAccessToken,
           currentUserId: widget.currentUserId,
         );
         final token = await _effectiveAccessToken();
-        if (token == null || token.isEmpty) {
-          return;
-        }
+        if (!mounted || token == null || token.isEmpty) return;
         await ref
             .read(notificationControllerProvider.notifier)
             .initialize(baseUrl: widget.serverUrl, accessToken: token);
