@@ -50,8 +50,7 @@ class WebRtcCallService {
     };
 
     pc.onConnectionState = (state) {
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
         onConnectionFailed?.call();
       }
     };
