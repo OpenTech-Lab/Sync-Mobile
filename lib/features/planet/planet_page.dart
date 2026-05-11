@@ -311,7 +311,8 @@ class _PlanetTabState extends ConsumerState<PlanetTab> {
                       final fmt = DateFormat('yyyy-MM-dd HH:mm');
                       final dateText = fmt.format(item.publishedAt.toLocal());
                       final updatedAt = item.updatedAt;
-                      final isUpdated = updatedAt != null &&
+                      final isUpdated =
+                          updatedAt != null &&
                           updatedAt.isAfter(item.publishedAt);
                       final updatedText = isUpdated
                           ? fmt.format(updatedAt.toLocal())
@@ -643,7 +644,8 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
             final fmt = DateFormat('yyyy-MM-dd HH:mm');
             final dateText = fmt.format(item.publishedAt.toLocal());
             final detailUpdatedAt = item.updatedAt;
-            final detailIsUpdated = detailUpdatedAt != null &&
+            final detailIsUpdated =
+                detailUpdatedAt != null &&
                 detailUpdatedAt.isAfter(item.publishedAt);
 
             return ListView(
@@ -670,7 +672,7 @@ class _PlanetNewsDetailPageState extends State<PlanetNewsDetailPage> {
                 if (detailIsUpdated) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'updated ${fmt.format(detailUpdatedAt!.toLocal())}',
+                    'updated ${fmt.format(detailUpdatedAt.toLocal())}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppPalette.neutral500,

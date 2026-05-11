@@ -15,6 +15,8 @@ class RealtimeEvent {
     this.typingPartnerId,
     this.isTyping,
     this.roomMembershipChangedRoomId,
+    this.createdCallId,
+    this.createdCallCalleeId,
     this.incomingCallId,
     this.incomingCallCallerId,
     this.incomingCallType,
@@ -38,6 +40,8 @@ class RealtimeEvent {
   final String? roomMembershipChangedRoomId;
 
   // Call signaling fields
+  final String? createdCallId;
+  final String? createdCallCalleeId;
   final String? incomingCallId;
   final String? incomingCallCallerId;
   final String? incomingCallType;
@@ -86,6 +90,16 @@ class RealtimeEvent {
       incomingCallCallerId: callerId,
       incomingCallType: callType,
       incomingCallSdpOffer: sdpOffer,
+    );
+  }
+
+  factory RealtimeEvent.callCreated({
+    required String callId,
+    required String calleeId,
+  }) {
+    return RealtimeEvent._(
+      createdCallId: callId,
+      createdCallCalleeId: calleeId,
     );
   }
 

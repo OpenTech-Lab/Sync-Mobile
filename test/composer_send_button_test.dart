@@ -28,6 +28,7 @@ void main() {
               onSend: () => sendCount += 1,
               onPickMedia: () {},
               onClearMedia: () {},
+              onPastedMedia: (_) {},
               onStickerSelected: (_) {},
             ),
           ),

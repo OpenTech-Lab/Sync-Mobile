@@ -59,4 +59,19 @@ void main() {
     expect(event, isA<RealtimeEvent>());
     expect(event!.roomMembershipChangedRoomId, 'room-123');
   });
+
+  test('parses call created acknowledgement event', () {
+    final service = RealtimeSyncService();
+
+    final event = service.tryParseRealtimeEventForTest(
+      payload:
+          '{"type":"call_created","call_id":"call-123","callee_id":"user-2"}',
+      currentUserId: 'user-1',
+    );
+
+    expect(event, isNotNull);
+    expect(event, isA<RealtimeEvent>());
+    expect(event!.createdCallId, 'call-123');
+    expect(event.createdCallCalleeId, 'user-2');
+  });
 }

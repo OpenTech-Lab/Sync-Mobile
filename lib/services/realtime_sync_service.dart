@@ -271,12 +271,24 @@ class RealtimeSyncService {
       return RealtimeEvent.roomMembershipChanged(roomId: roomId);
     }
 
+    if (type == 'call_created') {
+      final callId = decoded['call_id'] as String?;
+      final calleeId = decoded['callee_id'] as String?;
+      if (callId == null || calleeId == null) {
+        return null;
+      }
+      return RealtimeEvent.callCreated(callId: callId, calleeId: calleeId);
+    }
+
     if (type == 'incoming_call') {
       final callId = decoded['call_id'] as String?;
       final callerId = decoded['caller_id'] as String?;
       final callType = decoded['call_type'] as String?;
       final sdpOffer = decoded['sdp_offer'] as String?;
-      if (callId == null || callerId == null || callType == null || sdpOffer == null) {
+      if (callId == null ||
+          callerId == null ||
+          callType == null ||
+          sdpOffer == null) {
         return null;
       }
       return RealtimeEvent.incomingCall(

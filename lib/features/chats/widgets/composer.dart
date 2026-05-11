@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -42,10 +41,8 @@ class Composer extends StatelessWidget {
     final insertionSelection = currentSelection.isValid
         ? currentSelection
         : TextSelection.collapsed(offset: currentValue.text.length);
-    final start = insertionSelection.start.clamp(0, currentValue.text.length)
-        as int;
-    final end = insertionSelection.end.clamp(0, currentValue.text.length)
-        as int;
+    final start = insertionSelection.start.clamp(0, currentValue.text.length);
+    final end = insertionSelection.end.clamp(0, currentValue.text.length);
     final newText = currentValue.text.replaceRange(start, end, pastedText);
     final caretOffset = start + pastedText.length;
 
@@ -75,7 +72,9 @@ class Composer extends StatelessWidget {
           onPastedMedia(pastedImage);
           return;
         }
-        final pastedText = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+        final pastedText = (await Clipboard.getData(
+          Clipboard.kTextPlain,
+        ))?.text;
         if (pastedText != null && pastedText.isNotEmpty) {
           _insertPastedText(pastedText);
         }
@@ -292,8 +291,8 @@ class ComposerSendButton extends StatelessWidget {
             customBorder: const CircleBorder(),
             child: SizedBox(
               key: const ValueKey('composer_send_button'),
-              width: 36,
-              height: 36,
+              width: 48,
+              height: 48,
               child: Center(
                 child: Icon(
                   CupertinoIcons.arrowtriangle_up_fill,

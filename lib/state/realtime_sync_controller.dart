@@ -213,43 +213,55 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         final callerId = event.incomingCallCallerId!;
         final displayName =
             ref.read(userDisplayNameProvider(callerId)).value ?? callerId;
-        ref.read(callControllerProvider.notifier).handleIncomingCall(
-          callId: event.incomingCallId!,
-          callerId: callerId,
-          callerDisplayName: displayName,
-          callType: event.incomingCallType ?? 'voice',
-          sdpOffer: event.incomingCallSdpOffer!,
-        );
+        ref
+            .read(callControllerProvider.notifier)
+            .handleIncomingCall(
+              callId: event.incomingCallId!,
+              callerId: callerId,
+              callerDisplayName: displayName,
+              callType: event.incomingCallType ?? 'voice',
+              sdpOffer: event.incomingCallSdpOffer!,
+            );
+      }
+
+      if (event.createdCallId != null) {
+        ref
+            .read(callControllerProvider.notifier)
+            .handleCallCreated(callId: event.createdCallId!);
       }
 
       if (event.answeredCallId != null) {
-        await ref.read(callControllerProvider.notifier).handleCallAnswered(
-          callId: event.answeredCallId!,
-          sdpAnswer: event.answeredSdpAnswer!,
-        );
+        await ref
+            .read(callControllerProvider.notifier)
+            .handleCallAnswered(
+              callId: event.answeredCallId!,
+              sdpAnswer: event.answeredSdpAnswer!,
+            );
       }
 
       if (event.rejectedCallId != null) {
-        ref.read(callControllerProvider.notifier).handleCallRejected(
-          callId: event.rejectedCallId!,
-        );
+        ref
+            .read(callControllerProvider.notifier)
+            .handleCallRejected(callId: event.rejectedCallId!);
       }
 
       if (event.hangupCallId != null) {
-        ref.read(callControllerProvider.notifier).handleRemoteHangup(
-          callId: event.hangupCallId!,
-        );
+        ref
+            .read(callControllerProvider.notifier)
+            .handleRemoteHangup(callId: event.hangupCallId!);
       }
 
       if (event.iceCandidateCallId != null) {
-        await ref.read(callControllerProvider.notifier).handleIceCandidate(
-          callId: event.iceCandidateCallId!,
-          candidateJson: {
-            'candidate': event.iceCandidate,
-            'sdpMid': event.iceSdpMid,
-            'sdpMLineIndex': event.iceSdpMlineIndex,
-          },
-        );
+        await ref
+            .read(callControllerProvider.notifier)
+            .handleIceCandidate(
+              callId: event.iceCandidateCallId!,
+              candidateJson: {
+                'candidate': event.iceCandidate,
+                'sdpMid': event.iceSdpMid,
+                'sdpMLineIndex': event.iceSdpMlineIndex,
+              },
+            );
       }
     });
 

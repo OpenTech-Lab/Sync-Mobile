@@ -38,7 +38,6 @@ void main() {
             stickerCount: 12,
             isConnected: true,
             isReconnecting: false,
-            notificationsActive: true,
             onReconnect: null,
             inkColor: AppPalette.neutral800,
             ruleColor: AppPalette.neutral300,

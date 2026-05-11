@@ -334,11 +334,9 @@ class ConversationStarter extends ConsumerWidget {
         : ref.watch(userDisplayNameProvider(userId));
     final avatarBase64 = isRoom
         ? null
-        : ref.watch(userAvatarBase64Provider(userId)).when(
-            data: (v) => v,
-            loading: () => null,
-            error: (_, __) => null,
-          );
+        : ref
+              .watch(userAvatarBase64Provider(userId))
+              .when(data: (v) => v, loading: () => null, error: (_, _) => null);
     final displayName = isRoom
         ? _formatConversationTitle(
             (summary?.title?.trim().isNotEmpty ?? false)

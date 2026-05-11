@@ -21,7 +21,10 @@ final callControllerProvider = AsyncNotifierProvider<CallController, CallInfo?>(
 );
 
 class CallController extends AsyncNotifier<CallInfo?> {
+  static const _pendingCallId = 'pending';
+
   Timer? _noAnswerTimer;
+  final List<_PendingIceCandidate> _pendingIceCandidates = [];
 
   @override
   Future<CallInfo?> build() async => null;
@@ -38,6 +41,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     }
 
     final svc = ref.read(webRtcCallServiceProvider);
+    _pendingIceCandidates.clear();
 
     svc.onIceCandidate = (c) => _sendIceCandidate(c, peerId);
     svc.onRemoteStream = _onRemoteStream;
@@ -49,13 +53,11 @@ class CallController extends AsyncNotifier<CallInfo?> {
       withVideo: callType == CallType.video,
     );
 
-    // Use a placeholder call ID until the server echoes back the real one
-    // via the callee's incoming_call event. The server's CallAnswer relay
-    // will carry the real call_id which we update in handleCallAnswered.
-    const tempCallId = 'pending';
+    // The server creates the durable call record after this offer is sent.
+    // Queue ICE until its call_created ack gives us the real UUID.
     state = AsyncData(
       CallInfo(
-        callId: tempCallId,
+        callId: _pendingCallId,
         peerId: peerId,
         peerDisplayName: peerDisplayName,
         callType: callType,
@@ -131,6 +133,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     });
 
     ref.read(webRtcCallServiceProvider).dispose();
+    _pendingIceCandidates.clear();
     state = const AsyncData(null);
   }
 
@@ -142,13 +145,16 @@ class CallController extends AsyncNotifier<CallInfo?> {
     final current = state.valueOrNull;
     if (current == null) return;
 
-    ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
-      'type': 'call_hangup',
-      'call_id': current.callId,
-      'peer_id': current.peerId,
-    });
+    if (current.callId != _pendingCallId) {
+      ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
+        'type': 'call_hangup',
+        'call_id': current.callId,
+        'peer_id': current.peerId,
+      });
+    }
 
     ref.read(webRtcCallServiceProvider).dispose();
+    _pendingIceCandidates.clear();
     state = const AsyncData(null);
   }
 
@@ -225,6 +231,16 @@ class CallController extends AsyncNotifier<CallInfo?> {
     state = AsyncData(
       current.copyWith(callId: callId, phase: CallPhase.connecting),
     );
+    _flushPendingIceCandidates();
+  }
+
+  void handleCallCreated({required String callId}) {
+    final current = state.valueOrNull;
+    if (current == null || current.direction != CallDirection.outgoing) {
+      return;
+    }
+    state = AsyncData(current.copyWith(callId: callId));
+    _flushPendingIceCandidates();
   }
 
   void handleCallRejected({required String callId}) {
@@ -234,6 +250,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (current == null) return;
 
     ref.read(webRtcCallServiceProvider).dispose();
+    _pendingIceCandidates.clear();
     state = const AsyncData(null);
   }
 
@@ -244,6 +261,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (current == null) return;
 
     ref.read(webRtcCallServiceProvider).dispose();
+    _pendingIceCandidates.clear();
     state = const AsyncData(null);
   }
 
@@ -287,11 +305,44 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
   void _sendIceCandidate(RTCIceCandidate candidate, String peerId) {
     final current = state.valueOrNull;
-    if (current == null) return;
+    if (current == null || current.callId == _pendingCallId) {
+      _pendingIceCandidates.add(
+        _PendingIceCandidate(candidate: candidate, peerId: peerId),
+      );
+      return;
+    }
 
+    _sendIceCandidatePayload(
+      callId: current.callId,
+      peerId: peerId,
+      candidate: candidate,
+    );
+  }
+
+  void _flushPendingIceCandidates() {
+    final current = state.valueOrNull;
+    if (current == null || current.callId == _pendingCallId) {
+      return;
+    }
+    final pending = List<_PendingIceCandidate>.of(_pendingIceCandidates);
+    _pendingIceCandidates.clear();
+    for (final item in pending) {
+      _sendIceCandidatePayload(
+        callId: current.callId,
+        peerId: item.peerId,
+        candidate: item.candidate,
+      );
+    }
+  }
+
+  void _sendIceCandidatePayload({
+    required String callId,
+    required String peerId,
+    required RTCIceCandidate candidate,
+  }) {
     ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
       'type': 'ice_candidate',
-      'call_id': current.callId,
+      'call_id': callId,
       'peer_id': peerId,
       'candidate': candidate.candidate,
       'sdp_mid': candidate.sdpMid,
@@ -309,4 +360,11 @@ class CallController extends AsyncNotifier<CallInfo?> {
       ),
     );
   }
+}
+
+class _PendingIceCandidate {
+  const _PendingIceCandidate({required this.candidate, required this.peerId});
+
+  final RTCIceCandidate candidate;
+  final String peerId;
 }

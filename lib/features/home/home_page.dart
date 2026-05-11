@@ -467,11 +467,7 @@ class _HomeFriendRowState extends ConsumerState<_HomeFriendRow> {
     // avatar visible while a refresh is in flight, preventing the blink.
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(widget.friendId))
-        .when(
-          data: (v) => v,
-          loading: () => null,
-          error: (_, __) => null,
-        );
+        .when(data: (v) => v, loading: () => null, error: (_, _) => null);
 
     return _CompactHomeRow(
       rowKey: ValueKey('home_friend_row_${widget.friendId}'),
@@ -862,11 +858,7 @@ class _ProfileCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final avatarBase64 = ref
         .watch(userAvatarBase64Provider(currentUserId))
-        .when(
-          data: (v) => v,
-          loading: () => null,
-          error: (_, __) => null,
-        );
+        .when(data: (v) => v, loading: () => null, error: (_, _) => null);
     final watchedUsername =
         ref.watch(userDisplayNameProvider(currentUserId)).value ??
         currentUsername;
