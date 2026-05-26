@@ -355,7 +355,10 @@ class ConversationMessagesController
     if (trimmed.isEmpty) {
       return;
     }
-    ensureUserGeneratedTextAllowed('Message', trimmed);
+    final textOnly = trimmed
+        .replaceAll(RegExp(r'\[media-data:[A-Za-z0-9+/=]{100,}\]'), '')
+        .trim();
+    ensureUserGeneratedTextAllowed('Message', textOnly);
 
     final sent = _isRoomConversation
         ? await _remoteChatService.sendRoomMessage(

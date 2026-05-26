@@ -9,7 +9,8 @@ scripts/ios/**/*.pem
 scripts/ios/**/*.env
 vars.env
 
-
+# Other
+.gstack
 
 # Miscellaneous
 *.class
