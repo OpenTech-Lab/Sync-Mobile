@@ -374,40 +374,46 @@ class ConversationStarter extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               children: [
-                // avatar
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: !isRoom && avatarBase64 != null
-                      ? Colors.transparent
-                      : avatarColor,
-                  child: isRoom
-                      ? const Icon(
-                          Icons.group_outlined,
-                          size: 18,
-                          color: AppPalette.white,
-                        )
-                      : avatarBase64 == null
-                      ? Text(
-                          userId.length >= 2
-                              ? userId.substring(0, 2).toUpperCase()
-                              : '?',
-                          style: const TextStyle(
+                // avatar — AnimatedSwitcher crossfades when image loads
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: CircleAvatar(
+                    key: ValueKey(
+                      avatarBase64 != null ? 'img_$userId' : 'ini_$userId',
+                    ),
+                    radius: 18,
+                    backgroundColor: !isRoom && avatarBase64 != null
+                        ? Colors.transparent
+                        : avatarColor,
+                    child: isRoom
+                        ? const Icon(
+                            Icons.group_outlined,
+                            size: 18,
                             color: AppPalette.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        )
-                      : ClipOval(
-                          child: SizedBox.expand(
-                            child: Image(
-                              image: AvatarImageCache.resolve(
-                                userId,
-                                avatarBase64,
-                              )!,
-                              fit: BoxFit.cover,
+                          )
+                        : avatarBase64 == null
+                        ? Text(
+                            userId.length >= 2
+                                ? userId.substring(0, 2).toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              color: AppPalette.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          )
+                        : ClipOval(
+                            child: SizedBox.expand(
+                              child: Image(
+                                image: AvatarImageCache.resolve(
+                                  userId,
+                                  avatarBase64,
+                                )!,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

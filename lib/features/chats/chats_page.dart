@@ -241,6 +241,10 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         userId: normalized,
       );
       final prefs = ref.read(userProfilePreferencesProvider);
+      final oldDisplayName = await prefs.readDisplayName(
+        widget.serverUrl,
+        normalized,
+      );
       final oldAvatar = await prefs.readAvatarBase64(
         widget.serverUrl,
         normalized,
@@ -264,7 +268,11 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
         normalized,
         profile.description,
       );
-      ref.invalidate(userDisplayNameProvider(normalized));
+      // Only invalidate when the value actually changed — unconditional
+      // invalidation triggers a loading→data cycle that makes names flash.
+      if (profile.username.trim() != (oldDisplayName ?? '').trim()) {
+        ref.invalidate(userDisplayNameProvider(normalized));
+      }
       // Only invalidate the avatar provider when the image actually changed.
       // An unconditional invalidate causes a loading→data cycle that makes
       // every _MessageAvatar flash back to initials and then re-render.
@@ -2085,7 +2093,7 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
                               ),
                             ),
                           ),
-                          data: (messages) {
+                            data: (messages) {
                             final activePartnerId = _activePartnerId;
                             final draftMessages = activePartnerId == null
                                 ? const <OutgoingMessageDraft>[]

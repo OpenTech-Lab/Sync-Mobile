@@ -12,6 +12,7 @@ import '../../state/chat_visibility_controller.dart';
 import '../../state/notification_controller.dart';
 import '../../state/realtime_sync_controller.dart';
 import '../../state/sticker_controller.dart';
+import '../../state/conversation_messages_controller.dart';
 import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 import '../calls/call_controller.dart';
@@ -140,6 +141,40 @@ class _MainShellState extends ConsumerState<MainShell>
             .read(backupControllerProvider.notifier)
             .maybeAutoBackup(baseUrl: widget.serverUrl, accessToken: token);
         unawaited(_checkPendingCallNotification());
+        // Refresh unread counts for messages missed during disconnection.
+        unawaited(
+          ref.read(unreadCountsProvider.notifier).refresh(
+            baseUrl: widget.serverUrl,
+            accessToken: token,
+          ),
+        );
+        // Backfill any messages that arrived while the WebSocket was down,
+        // then mark the conversation read so unread state stays consistent
+        // with what the user is looking at.
+        final activePartnerId = _activePartnerId;
+        if (activePartnerId != null && activePartnerId.isNotEmpty) {
+          unawaited(
+            ref
+                .read(conversationMessagesProvider(activePartnerId).notifier)
+                .syncLatest(
+                  baseUrl: widget.serverUrl,
+                  accessToken: token,
+                  currentUserId: widget.currentUserId,
+                ),
+          );
+          unawaited(
+            ref
+                .read(conversationMessagesProvider(activePartnerId).notifier)
+                .markRead(baseUrl: widget.serverUrl, accessToken: token)
+                .then((_) {
+              if (mounted) {
+                ref
+                    .read(unreadCountsProvider.notifier)
+                    .clearForPartner(activePartnerId);
+              }
+            }).catchError((_) {}),
+          );
+        }
       });
       return;
     }
