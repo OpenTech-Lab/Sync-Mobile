@@ -41,6 +41,21 @@ platform :ios do
       UI.user_error!("app_identifier is missing. Set it in ios/fastlane/Appfile")
     end
     profile_name = ENV.fetch("IOS_PROVISIONING_PROFILE_NAME")
+    profile_uuid = ENV.fetch("IOS_PROVISIONING_PROFILE_UUID")
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "Runner.xcodeproj",
+      targets: ["Runner"],
+      build_configurations: ["Release"],
+      team_id: ENV.fetch("IOS_TEAM_ID"),
+      bundle_identifier: app_identifier,
+      code_sign_identity: "Apple Distribution",
+      sdk: "iphoneos*",
+      profile_name: profile_name,
+      profile_uuid: profile_uuid,
+      entitlements_file_path: "Runner/Runner.entitlements",
+    )
 
     begin
       gym(
@@ -54,13 +69,9 @@ platform :ios do
         xcargs: {
           "DEVELOPMENT_TEAM" => ENV.fetch("IOS_TEAM_ID"),
           "CODE_SIGN_STYLE"  => "Manual",
-          # PROVISIONING_PROFILE_SPECIFIER is intentionally omitted here.
-          # xcargs apply to every Xcode target including SPM package targets
-          # (image_picker_ios, shared_preferences_foundation, etc.) which
-          # don't support manual profiles and fail with "does not support
-          # provisioning profiles". The profile mapping is handled by
-          # export_options.provisioningProfiles below, which only touches
-          # the app bundle ID.
+          # The provisioning profile is set on the Runner target above.
+          # Keeping it out of xcargs avoids applying app-only profiles to
+          # package targets that do not support provisioning profiles.
         },
         export_options: {
           method:               "app-store",
