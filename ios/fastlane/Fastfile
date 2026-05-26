@@ -52,9 +52,15 @@ platform :ios do
         codesigning_identity: "Apple Distribution",
         suppress_xcode_output: false,
         xcargs: {
-          "DEVELOPMENT_TEAM"               => ENV.fetch("IOS_TEAM_ID"),
-          "CODE_SIGN_STYLE"                => "Manual",
-          "PROVISIONING_PROFILE_SPECIFIER" => profile_name,
+          "DEVELOPMENT_TEAM" => ENV.fetch("IOS_TEAM_ID"),
+          "CODE_SIGN_STYLE"  => "Manual",
+          # PROVISIONING_PROFILE_SPECIFIER is intentionally omitted here.
+          # xcargs apply to every Xcode target including SPM package targets
+          # (image_picker_ios, shared_preferences_foundation, etc.) which
+          # don't support manual profiles and fail with "does not support
+          # provisioning profiles". The profile mapping is handled by
+          # export_options.provisioningProfiles below, which only touches
+          # the app bundle ID.
         },
         export_options: {
           method:               "app-store",
