@@ -39,6 +39,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (!kCallingEnabled) {
       return;
     }
+    if (state.valueOrNull != null) return;
 
     final svc = ref.read(webRtcCallServiceProvider);
     _pendingIceCandidates.clear();

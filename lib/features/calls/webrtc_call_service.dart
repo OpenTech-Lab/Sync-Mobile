@@ -67,6 +67,9 @@ class WebRtcCallService {
   Future<({MediaStream localStream, String sdpOffer})> createOffer({
     required bool withVideo,
   }) async {
+    // Guard against leaking a previous call's peer connection/tracks if a
+    // new call is started before the last one was properly disposed.
+    await _closeExistingCall();
     await requestPermissions(withVideo);
     final localStream = await _openLocalStream(withVideo);
     final pc = await _createPeerConnection();
@@ -150,6 +153,14 @@ class WebRtcCallService {
     onIceCandidate = null;
     onRemoteStream = null;
     onConnectionFailed = null;
+    await _closeExistingCall();
+  }
+
+  /// Stops and releases the current peer connection and local media tracks,
+  /// if any. Unlike [dispose], this leaves the callback fields alone so it
+  /// is safe to call at the start of [createOffer] right after the caller
+  /// has just wired up callbacks for the new call.
+  Future<void> _closeExistingCall() async {
     _pendingCandidates.clear();
     _localStream?.getTracks().forEach((t) => t.stop());
     await _localStream?.dispose();
