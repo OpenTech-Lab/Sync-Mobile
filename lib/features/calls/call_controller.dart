@@ -239,7 +239,9 @@ class CallController extends AsyncNotifier<CallInfo?> {
   }) async {
     _noAnswerTimer?.cancel();
     _noAnswerTimer = null;
-    if (state.valueOrNull == null) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (current.callId != callId) return;
 
     await ref.read(webRtcCallServiceProvider).setRemoteAnswer(sdpAnswer);
 
@@ -267,6 +269,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     _noAnswerTimer = null;
     final current = state.valueOrNull;
     if (current == null) return;
+    if (current.callId != callId) return;
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
@@ -278,6 +281,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     _noAnswerTimer = null;
     final current = state.valueOrNull;
     if (current == null) return;
+    if (current.callId != callId) return;
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
@@ -290,6 +294,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
   }) async {
     final current = state.valueOrNull;
     if (current == null) return;
+    if (current.callId != callId) return;
     await ref.read(webRtcCallServiceProvider).addIceCandidate(candidateJson);
   }
 
