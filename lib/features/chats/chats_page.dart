@@ -328,12 +328,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
             peerDisplayName: displayName,
             callType: callType,
           );
-    } catch (error) {
+    } catch (error, stackTrace) {
       if (!mounted) return;
+      // TEMPORARY diagnostic: surface the raw exception on-screen so it can
+      // be read back without device console access. Revert once the call
+      // failure reported in testing is root-caused.
+      debugPrint('startCall failed: $error\n$stackTrace');
       showAppToast(
         context,
-        friendlyErrorMessage(error, _l10n),
+        '${friendlyErrorMessage(error, _l10n)}\n[DEBUG] ${error.runtimeType}: $error',
         variant: AppToastVariant.error,
+        duration: const Duration(seconds: 12),
       );
       return;
     }
