@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../features/calls/webrtc_call_service.dart';
 import '../l10n/app_localizations.dart';
 import '../services/objectionable_content_filter.dart';
 
@@ -9,10 +10,14 @@ import '../services/objectionable_content_filter.dart';
 /// - Network / connectivity  → check internet
 /// - Server error (5xx)     → server trouble, try later
 /// - Auth / permission       → contact administrator
+/// - Call mic/camera denial  → enable in Settings
 /// - Everything else         → generic "try again"
 String friendlyErrorMessage(Object error, AppLocalizations l10n) {
   if (error is ObjectionableContentException) {
     return error.message;
+  }
+  if (error is CallPermissionDeniedException) {
+    return l10n.errorCallPermission;
   }
   if (_isNetworkError(error)) {
     return l10n.errorNetwork;

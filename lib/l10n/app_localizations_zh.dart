@@ -30,6 +30,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorGeneric => 'Something went wrong. Please try again.';
 
   @override
+  String get errorCallPermission => 'Microphone and camera access is required for calls. Enable it in Settings and try again.';
+
+  @override
   String get restartAppHint => 'please restart the app';
 
   @override
@@ -1057,6 +1060,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get errorGeneric => '發生錯誤，請再試一次。';
+
+  @override
+  String get errorCallPermission => '通話需要麥克風和相機權限。請在設定中開啟權限後再試一次。';
 
   @override
   String get restartAppHint => '請重新啟動應用程式';

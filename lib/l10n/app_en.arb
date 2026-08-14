@@ -7,6 +7,7 @@
   "errorServer": "The server is having trouble. Please try again later.",
   "errorPermission": "You don't have permission to do this. Contact your administrator if this persists.",
   "errorGeneric": "Something went wrong. Please try again.",
+  "errorCallPermission": "Microphone and camera access is required for calls. Enable it in Settings and try again.",
   "restartAppHint": "please restart the app",
   "tabHome": "home",
   "tabPlanet": "planet",

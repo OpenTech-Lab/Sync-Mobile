@@ -30,6 +30,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get errorGeneric => 'エラーが発生しました。もう一度お試しください。';
 
   @override
+  String get errorCallPermission => '通話にはマイクとカメラへのアクセスが必要です。設定でアクセスを許可してからもう一度お試しください。';
+
+  @override
   String get restartAppHint => 'アプリを再起動してください';
 
   @override

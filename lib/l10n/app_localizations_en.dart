@@ -30,6 +30,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorGeneric => 'Something went wrong. Please try again.';
 
   @override
+  String get errorCallPermission => 'Microphone and camera access is required for calls. Enable it in Settings and try again.';
+
+  @override
   String get restartAppHint => 'please restart the app';
 
   @override

@@ -140,6 +140,12 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get errorGeneric;
 
+  /// No description provided for @errorCallPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone and camera access is required for calls. Enable it in Settings and try again.'**
+  String get errorCallPermission;
+
   /// No description provided for @restartAppHint.
   ///
   /// In en, this message translates to:
