@@ -50,6 +50,7 @@ class CallInfo {
     bool? isMuted,
     bool? isCameraOff,
     bool? isSpeakerOn,
+    String? sdpOffer,
   }) {
     return CallInfo(
       callId: callId ?? this.callId,
@@ -63,7 +64,7 @@ class CallInfo {
       isMuted: isMuted ?? this.isMuted,
       isCameraOff: isCameraOff ?? this.isCameraOff,
       isSpeakerOn: isSpeakerOn ?? this.isSpeakerOn,
-      sdpOffer: sdpOffer,
+      sdpOffer: sdpOffer ?? this.sdpOffer,
     );
   }
 }

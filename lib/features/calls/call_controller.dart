@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
@@ -95,6 +96,12 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     final current = state.valueOrNull;
     if (current == null || current.phase != CallPhase.ringing) return;
+    if (current.sdpOffer == null) {
+      // No offer yet — a VoIP-push-triggered call resumes via
+      // resumeCallFromPush(), which fetches the stashed offer and re-enters
+      // this method once it has one.
+      return;
+    }
 
     final svc = ref.read(webRtcCallServiceProvider);
 
@@ -126,6 +133,59 @@ class CallController extends AsyncNotifier<CallInfo?> {
       'caller_id': current.peerId,
       'sdp_answer': sdpAnswer,
     });
+
+    unawaited(_reportCallKitConnected(current.callId));
+  }
+
+  /// Resumes a call that was surfaced via a CallKit/PushKit incoming push
+  /// rather than the WebSocket `incoming_call` signal. The push payload
+  /// carries no SDP (PushKit payloads are small and time-sensitive), so this
+  /// fetches the stashed offer the server held for us, then proceeds through
+  /// the normal [acceptCall] path.
+  Future<void> resumeCallFromPush({
+    required String callId,
+    required String callerId,
+    required String callerDisplayName,
+    required String callType,
+  }) async {
+    if (!kCallingEnabled) {
+      await _reportCallKitEnded(callId);
+      return;
+    }
+
+    final current = state.valueOrNull;
+    if (current != null && current.callId != callId) {
+      // Already in a different call — nothing sensible to resume into.
+      await _reportCallKitEnded(callId);
+      return;
+    }
+    if (current == null) {
+      // Not yet tracked locally (e.g. app was terminated and CallKit is the
+      // only thing that knows about this call so far).
+      state = AsyncData(
+        CallInfo(
+          callId: callId,
+          peerId: callerId,
+          peerDisplayName: callerDisplayName,
+          callType: callType == 'video' ? CallType.video : CallType.voice,
+          direction: CallDirection.incoming,
+          phase: CallPhase.ringing,
+        ),
+      );
+    }
+
+    final offer = await _fetchStashedOffer(callId);
+    if (offer == null) {
+      // Offer already claimed/expired/not found — nothing to answer with.
+      rejectCall();
+      return;
+    }
+
+    final latest = state.valueOrNull;
+    if (latest == null || latest.callId != callId) return;
+    state = AsyncData(latest.copyWith(sdpOffer: offer));
+
+    await acceptCall();
   }
 
   // ── Incoming call — reject ─────────────────────────────────────────────────
@@ -142,6 +202,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
+    unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
   }
 
@@ -163,6 +224,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
+    unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
   }
 
@@ -199,7 +261,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     required String callerId,
     required String callerDisplayName,
     required String callType,
-    required String sdpOffer,
+    String? sdpOffer,
   }) {
     if (!kCallingEnabled) {
       ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
@@ -211,8 +273,18 @@ class CallController extends AsyncNotifier<CallInfo?> {
     }
 
     final current = state.valueOrNull;
-    // Auto-reject if already in a call
-    if (current != null && current.phase != CallPhase.idle) {
+    if (current != null) {
+      // A foregrounded app can receive both the WS `incoming_call` signal and
+      // the VoIP push for the same call. If we're already tracking this exact
+      // call (e.g. resumeCallFromPush already created it), just fill in the
+      // offer if this event is the one carrying it — don't reject our own call.
+      if (current.callId == callId) {
+        if (sdpOffer != null && current.sdpOffer == null) {
+          state = AsyncData(current.copyWith(sdpOffer: sdpOffer));
+        }
+        return;
+      }
+      // Auto-reject if already in a different call.
       ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
         'type': 'call_reject',
         'call_id': callId,
@@ -274,6 +346,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
+    unawaited(_reportCallKitEnded(callId));
     state = const AsyncData(null);
   }
 
@@ -286,6 +359,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     ref.read(webRtcCallServiceProvider).dispose();
     _pendingIceCandidates.clear();
+    unawaited(_reportCallKitEnded(callId));
     state = const AsyncData(null);
   }
 
@@ -325,6 +399,56 @@ class CallController extends AsyncNotifier<CallInfo?> {
       }
     } catch (_) {
       // Non-fatal: fall back to the default STUN-only config already set.
+    }
+  }
+
+  /// Fetches the SDP offer the server stashed for [callId] (see
+  /// `GET /api/calls/offer/{call_id}`), for calls resumed from a VoIP push.
+  /// Uses the same authed-HTTP-GET pattern as [_applyIceServers]. Returns
+  /// null on any error (missing auth, network failure, 404 because the
+  /// offer was already claimed/expired) — callers should treat that as
+  /// "nothing to answer with".
+  Future<String?> _fetchStashedOffer(String callId) async {
+    final ctrl = ref.read(realtimeSyncControllerProvider.notifier);
+    final baseUrl = ctrl.baseUrl;
+    final tokenFn = ctrl.accessTokenProvider;
+    if (baseUrl == null || tokenFn == null) return null;
+    final token = await tokenFn();
+    if (token == null || token.isEmpty) return null;
+    try {
+      final uri = Uri.parse('$baseUrl/api/calls/offer/$callId');
+      final response = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final offer = body['sdp_offer'] as String?;
+        if (offer != null && offer.isNotEmpty) return offer;
+      }
+    } catch (_) {
+      // Non-fatal: treated as "no offer available" by the caller.
+    }
+    return null;
+  }
+
+  /// Tells CallKit the call is now connected so the native call UI reflects
+  /// the Dart side's state instead of lingering on "connecting" forever.
+  Future<void> _reportCallKitConnected(String callId) async {
+    try {
+      await FlutterCallkitIncoming.setCallConnected(callId);
+    } catch (_) {
+      // CallKit is iOS-only / best-effort; ignore on platforms or in states
+      // where there's no matching native call to update.
+    }
+  }
+
+  /// Tells CallKit the call has ended so the native call UI is dismissed
+  /// after the Dart side resolves the call (reject/hangup/remote-hangup).
+  Future<void> _reportCallKitEnded(String callId) async {
+    try {
+      await FlutterCallkitIncoming.endCall(callId);
+    } catch (_) {
+      // Same as above — best-effort, safe to ignore.
     }
   }
 

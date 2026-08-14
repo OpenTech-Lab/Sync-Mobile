@@ -17,6 +17,7 @@ import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 import '../calls/call_controller.dart';
 import '../calls/call_models.dart';
+import '../calls/callkit_service.dart';
 import '../calls/incoming_call_screen.dart';
 import '../home/home_page.dart';
 import '../planet/planet_page.dart';
@@ -63,6 +64,7 @@ class _MainShellState extends ConsumerState<MainShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
+    ref.read(callkitServiceProvider).start();
     _syncChatVisibility();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final effectiveToken =

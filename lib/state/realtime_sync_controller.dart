@@ -220,7 +220,7 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
               callerId: callerId,
               callerDisplayName: displayName,
               callType: event.incomingCallType ?? 'voice',
-              sdpOffer: event.incomingCallSdpOffer!,
+              sdpOffer: event.incomingCallSdpOffer,
             );
       }
 
