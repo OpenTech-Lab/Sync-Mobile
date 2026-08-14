@@ -1,22 +1,48 @@
 import Flutter
 import Foundation
+import PushKit
 import UIKit
 import UserNotifications
+import flutter_callkit_incoming
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate {
   private var pushChannel: FlutterMethodChannel?
   private var clipboardChannel: FlutterMethodChannel?
   private var apnsTokenHex: String?
+  private var voipRegistry: PKPushRegistry?
+
+  // A VoIP push can arrive before the implicit Flutter engine has finished
+  // spinning up (and thus before GeneratedPluginRegistrant.register has run
+  // and SwiftFlutterCallkitIncomingPlugin.sharedInstance is set). In that
+  // window, buffer the payload+completion here instead of dropping the call,
+  // and replay it as soon as didInitializeImplicitFlutterEngine fires.
+  private var pendingVoipPush: (payload: PKPushPayload, completion: () -> Void)?
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
+    // NOTE: setupPushBridge(registry: self) below calls self.registrar(forPlugin:),
+    // which lazily creates and runs the implicit Flutter engine synchronously
+    // (FlutterAppDelegate -> FlutterLaunchEngine.engine getter), which in turn
+    // triggers didInitializeImplicitFlutterEngine() and GeneratedPluginRegistrant
+    // .register() before this method returns. That means SwiftFlutterCallkit
+    // IncomingPlugin.sharedInstance is already set by the time setupVoipRegistry()
+    // runs below and PushKit can start delivering pushes. The buffer-and-replay
+    // logic further down is defense-in-depth in case that ordering ever changes.
     setupPushBridge(registry: self)
     setupClipboardBridge(registry: self)
+    setupVoipRegistry()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func setupVoipRegistry() {
+    let registry = PKPushRegistry(queue: .main)
+    registry.delegate = self
+    registry.desiredPushTypes = [.voIP]
+    voipRegistry = registry
   }
 
   override func application(
@@ -39,6 +65,100 @@ import UserNotifications
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     setupPushBridge(registry: engineBridge.pluginRegistry)
     setupClipboardBridge(registry: engineBridge.pluginRegistry)
+    flushPendingVoipPush()
+  }
+
+  // MARK: - PushKit (VoIP)
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didUpdate pushCredentials: PKPushCredentials,
+    for type: PKPushType
+  ) {
+    guard type == .voIP else { return }
+    let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
+    UserDefaults.standard.set(token, forKey: "voip_push_token")
+    if let plugin = SwiftFlutterCallkitIncomingPlugin.sharedInstance {
+      plugin.setDevicePushTokenVoIP(token)
+    } else {
+      NSLog("[VoIP] token updated but plugin.sharedInstance is nil; stored to UserDefaults only")
+    }
+  }
+
+  func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
+    guard type == .voIP else { return }
+    UserDefaults.standard.removeObject(forKey: "voip_push_token")
+  }
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didReceiveIncomingPushWith payload: PKPushPayload,
+    for type: PKPushType,
+    completion: @escaping () -> Void
+  ) {
+    guard type == .voIP else {
+      completion()
+      return
+    }
+    // CRITICAL (Apple hard requirement): completion() must be called for every
+    // VoIP push, synchronously reporting a call via CallKit before returning —
+    // failing to do so within the callback gets the app killed/penalized.
+    // reportIncomingCall(...) below guarantees completion() is always invoked,
+    // either immediately or after buffering for plugin registration.
+    reportIncomingCall(from: payload, completion: completion)
+  }
+
+  private func reportIncomingCall(from payload: PKPushPayload, completion: @escaping () -> Void) {
+    guard let plugin = SwiftFlutterCallkitIncomingPlugin.sharedInstance else {
+      NSLog("[VoIP] plugin not registered yet; buffering incoming push for replay")
+      pendingVoipPush = (payload, completion)
+      return
+    }
+    showCallkit(payload: payload, plugin: plugin, completion: completion)
+  }
+
+  private func flushPendingVoipPush() {
+    guard let pending = pendingVoipPush else { return }
+    pendingVoipPush = nil
+    guard let plugin = SwiftFlutterCallkitIncomingPlugin.sharedInstance else {
+      // Should not happen — plugin registration just completed above — but
+      // never leave a buffered push without calling its completion handler.
+      NSLog("[VoIP] plugin still nil after registration; dropping buffered push")
+      pending.completion()
+      return
+    }
+    showCallkit(payload: pending.payload, plugin: plugin, completion: pending.completion)
+  }
+
+  private func showCallkit(
+    payload: PKPushPayload,
+    plugin: SwiftFlutterCallkitIncomingPlugin,
+    completion: @escaping () -> Void
+  ) {
+    let userInfo = payload.dictionaryPayload
+    let callId = userInfo["call_id"] as? String ?? UUID().uuidString
+    let callerId = userInfo["caller_id"] as? String ?? ""
+    let callerName = userInfo["caller_name"] as? String ?? (callerId.isEmpty ? "Unknown" : callerId)
+    let callType = userInfo["call_type"] as? String ?? "voice"
+
+    let args: [String: Any?] = [
+      "id": callId,
+      "nameCaller": callerName,
+      "appName": "Sync",
+      "handle": callerId.isEmpty ? callerName : callerId,
+      "type": callType == "video" ? 1 : 0,
+      "extra": [
+        "call_id": callId,
+        "caller_id": callerId,
+        "call_type": callType,
+      ],
+      "ios": [
+        "supportsVideo": true,
+        "iconName": "CallKitLogo",
+      ],
+    ]
+    let data = flutter_callkit_incoming.Data(args: args)
+    plugin.showCallkitIncoming(data, fromPushKit: true, completion: completion)
   }
 
   private func setupPushBridge(registry: FlutterPluginRegistry) {
@@ -62,6 +182,8 @@ import UserNotifications
       case "getPushToken":
         let token = self.apnsTokenHex ?? UserDefaults.standard.string(forKey: "apns_push_token")
         result(token)
+      case "getPushTokenVoip":
+        result(UserDefaults.standard.string(forKey: "voip_push_token"))
       case "showLocalNotification":
         self.showLocalNotification(call: call, result: result)
       case "getPendingCallNotification":
