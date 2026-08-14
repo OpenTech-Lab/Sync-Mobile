@@ -320,13 +320,23 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     final displayName =
         ref.read(userDisplayNameProvider(partnerId)).value ?? partnerId;
 
-    await ref
-        .read(callControllerProvider.notifier)
-        .startCall(
-          peerId: partnerId,
-          peerDisplayName: displayName,
-          callType: callType,
-        );
+    try {
+      await ref
+          .read(callControllerProvider.notifier)
+          .startCall(
+            peerId: partnerId,
+            peerDisplayName: displayName,
+            callType: callType,
+          );
+    } catch (error) {
+      if (!mounted) return;
+      showAppToast(
+        context,
+        friendlyErrorMessage(error, _l10n),
+        variant: AppToastVariant.error,
+      );
+      return;
+    }
 
     if (!mounted) return;
     final callInfo = ref.read(callControllerProvider).value;

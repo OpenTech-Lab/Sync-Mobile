@@ -1,6 +1,15 @@
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Thrown by [WebRtcCallService.createOffer]/[WebRtcCallService.createAnswer]
+/// when the user denies microphone (or camera, for video calls) permission.
+class CallPermissionDeniedException implements Exception {
+  const CallPermissionDeniedException();
+
+  @override
+  String toString() => 'CallPermissionDeniedException: microphone/camera permission denied';
+}
+
 class WebRtcCallService {
   /// ICE servers used for the next peer connection. Set this before calling
   /// [createOffer] or [createAnswer]. Defaults to Google's public STUN servers
@@ -18,10 +27,13 @@ class WebRtcCallService {
   void Function(MediaStream)? onRemoteStream;
   void Function()? onConnectionFailed;
 
-  Future<void> requestPermissions(bool withVideo) async {
+  /// Requests microphone (and, if [withVideo], camera) permission.
+  /// Returns whether every requested permission was granted.
+  Future<bool> requestPermissions(bool withVideo) async {
     final perms = [Permission.microphone];
     if (withVideo) perms.add(Permission.camera);
-    await perms.request();
+    final statuses = await perms.request();
+    return statuses.values.every((status) => status.isGranted);
   }
 
   Future<MediaStream> _openLocalStream(bool withVideo) async {
@@ -70,7 +82,9 @@ class WebRtcCallService {
     // Guard against leaking a previous call's peer connection/tracks if a
     // new call is started before the last one was properly disposed.
     await _closeExistingCall();
-    await requestPermissions(withVideo);
+    if (!await requestPermissions(withVideo)) {
+      throw const CallPermissionDeniedException();
+    }
     final localStream = await _openLocalStream(withVideo);
     final pc = await _createPeerConnection();
 
@@ -87,7 +101,9 @@ class WebRtcCallService {
     required String sdpOffer,
     required bool withVideo,
   }) async {
-    await requestPermissions(withVideo);
+    if (!await requestPermissions(withVideo)) {
+      throw const CallPermissionDeniedException();
+    }
     final localStream = await _openLocalStream(withVideo);
     final pc = await _createPeerConnection();
 

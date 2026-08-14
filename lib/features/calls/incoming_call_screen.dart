@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
+import '../../ui/components/atoms/app_toast.dart';
 import '../../ui/tokens/colors/app_palette.dart';
 import 'call_controller.dart';
 import 'call_models.dart';
@@ -68,9 +71,27 @@ class IncomingCallScreen extends ConsumerWidget {
                     color: const Color(0xFF2E7D32),
                     label: 'Accept',
                     onTap: () async {
-                      await ref
-                          .read(callControllerProvider.notifier)
-                          .acceptCall();
+                      try {
+                        await ref
+                            .read(callControllerProvider.notifier)
+                            .acceptCall();
+                      } catch (error) {
+                        // Don't leave the controller stuck in phase: ringing
+                        // if accepting failed (e.g. permission denied) --
+                        // reject the call so it's cleared on both sides.
+                        ref.read(callControllerProvider.notifier).rejectCall();
+                        if (context.mounted) {
+                          showAppToast(
+                            context,
+                            friendlyErrorMessage(
+                              error,
+                              AppLocalizations.of(context)!,
+                            ),
+                            variant: AppToastVariant.error,
+                          );
+                        }
+                        return;
+                      }
                       if (context.mounted) {
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute<void>(
