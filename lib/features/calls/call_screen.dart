@@ -67,9 +67,16 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
     final isVideo = callInfo.callType == CallType.video;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        ref.read(callControllerProvider.notifier).hangup();
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
         children: [
           // Remote video (full screen) or dark background
           if (isVideo && callInfo.remoteStream != null)
@@ -166,6 +173,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
