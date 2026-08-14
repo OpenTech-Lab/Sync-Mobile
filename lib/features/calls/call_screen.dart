@@ -44,12 +44,6 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   Widget build(BuildContext context) {
     final callInfo = ref.watch(callControllerProvider).value;
 
-    ref.listen(callControllerProvider, (_, next) {
-      final info = next.value;
-      if (info?.localStream != null) _localRenderer.srcObject = info!.localStream;
-      if (info?.remoteStream != null) _remoteRenderer.srcObject = info!.remoteStream;
-    });
-
     if (callInfo == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();
@@ -59,6 +53,16 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 
     if (!_renderersReady) {
       return const Scaffold(backgroundColor: Colors.black);
+    }
+
+    // Assign renderer sources from the current call state on every build
+    // (not just via a change listener) — an incoming call's streams may
+    // already exist by the time this screen first opens.
+    if (callInfo.localStream != null) {
+      _localRenderer.srcObject = callInfo.localStream;
+    }
+    if (callInfo.remoteStream != null) {
+      _remoteRenderer.srcObject = callInfo.remoteStream;
     }
 
     final isVideo = callInfo.callType == CallType.video;
