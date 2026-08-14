@@ -47,7 +47,7 @@ import flutter_callkit_incoming
 
   override func application(
     _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Foundation.Data
   ) {
     let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
     apnsTokenHex = token
@@ -383,7 +383,7 @@ import flutter_callkit_incoming
     }
   }
 
-  private func imageFileExtension(data: Data) -> String {
+  private func imageFileExtension(data: Foundation.Data) -> String {
     let bytes = [UInt8](data.prefix(12))
     if bytes.count >= 8 &&
       bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 &&
