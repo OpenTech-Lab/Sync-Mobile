@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +13,7 @@ class NotificationService {
       _httpClient = createDevHttpClient(httpClient);
 
   static const _deviceTokenKey = 'device_push_token';
+  static const _voipTokenKey = 'device_voip_push_token';
   static const _channel = MethodChannel('sync.notifications');
 
   final AppSecureStorage _storage;
@@ -54,27 +54,48 @@ class NotificationService {
       return existing;
     }
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
+    // Android has no real push transport yet (FCM integration is Phase 2),
+    // so there is no token to hand back. Returning a synthetic value here
+    // previously let the app believe push was configured when it wasn't.
+    return null;
+  }
+
+  /// Retrieves (or waits briefly for) the device's PushKit VoIP token.
+  ///
+  /// Mirrors [getOrCreateDeviceToken]'s retry-poll shape: AppDelegate's
+  /// `pushRegistry(_:didUpdate:for:)` callback can arrive a moment after
+  /// `PKPushRegistry.desiredPushTypes` is set, so poll briefly before giving
+  /// up. iOS only — VoIP pushes/CallKit are not wired up for Android in this
+  /// phase.
+  Future<String?> getOrCreateVoipToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
       return null;
     }
 
-    // Non-iOS fallback: keep deterministic local token so server-side webhook
-    // integrations can still target non-APNS platforms when configured.
-    final random = Random.secure();
-    const chars = 'abcdef0123456789';
-    final token = List.generate(
-      48,
-      (_) => chars[random.nextInt(chars.length)],
-    ).join();
+    for (var attempt = 0; attempt < 6; attempt++) {
+      try {
+        final voipToken = await _channel.invokeMethod<String>('getPushTokenVoip');
+        if (voipToken != null && voipToken.trim().isNotEmpty) {
+          final trimmed = voipToken.trim();
+          await _storage.write(key: _voipTokenKey, value: trimmed);
+          return trimmed;
+        }
+      } catch (_) {}
+      if (attempt < 5) await Future.delayed(const Duration(seconds: 1));
+    }
 
-    await _storage.write(key: _deviceTokenKey, value: token);
-    return token;
+    final existing = await _storage.read(key: _voipTokenKey);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    return null;
   }
 
   Future<void> syncTokenWithServer({
     required String baseUrl,
     required String accessToken,
     String? token,
+    String tokenKind = 'default',
   }) async {
     final resolvedToken = token?.trim();
     final effectiveToken = resolvedToken != null && resolvedToken.isNotEmpty
@@ -96,6 +117,7 @@ class NotificationService {
           body: jsonEncode({
             'token': effectiveToken,
             'platform': _platformName(),
+            'token_kind': tokenKind,
           }),
         )
         .timeout(const Duration(seconds: 8));
@@ -103,6 +125,24 @@ class NotificationService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Push token sync failed (${response.statusCode}).');
     }
+  }
+
+  /// Syncs the PushKit VoIP token to the server, tagged `token_kind: 'voip'`
+  /// so it's kept distinct from the default APNs token.
+  Future<void> syncVoipTokenWithServer({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final voipToken = await getOrCreateVoipToken();
+    if (voipToken == null || voipToken.isEmpty) {
+      return;
+    }
+    await syncTokenWithServer(
+      baseUrl: baseUrl,
+      accessToken: accessToken,
+      token: voipToken,
+      tokenKind: 'voip',
+    );
   }
 
   /// Returns call metadata stored when the user tapped an incoming-call push

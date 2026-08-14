@@ -114,6 +114,15 @@ class NotificationController extends AsyncNotifier<NotificationState> {
         token: trimmedToken,
       );
 
+      // Best-effort: VoIP token sync must never block/fail the main push-token
+      // flow above (e.g. on Android, or if PushKit hasn't produced a token yet).
+      try {
+        await _notificationService.syncVoipTokenWithServer(
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+        );
+      } catch (_) {}
+
       state = AsyncData(
         current.copyWith(
           initialized: true,
