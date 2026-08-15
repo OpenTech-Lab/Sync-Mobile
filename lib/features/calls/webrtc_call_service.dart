@@ -151,7 +151,7 @@ class WebRtcCallService {
     return pc;
   }
 
-  Future<({MediaStream localStream, String sdpOffer})> createOffer({
+  Future<({MediaStream localStream, Future<String> sdpOffer})> createOffer({
     required bool withVideo,
   }) async {
     // Guard against leaking a previous call's peer connection/tracks if a
@@ -169,14 +169,14 @@ class WebRtcCallService {
 
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    final gatheredOffer = await _localDescriptionAfterIceGathering(
+    final gatheredOffer = _localDescriptionAfterIceGathering(
       pc,
       fallback: offer,
-    );
-    return (localStream: localStream, sdpOffer: gatheredOffer.sdp ?? '');
+    ).then((description) => description.sdp ?? '');
+    return (localStream: localStream, sdpOffer: gatheredOffer);
   }
 
-  Future<({MediaStream localStream, String sdpAnswer})> createAnswer({
+  Future<({MediaStream localStream, Future<String> sdpAnswer})> createAnswer({
     required String sdpOffer,
     required bool withVideo,
   }) async {
@@ -193,10 +193,10 @@ class WebRtcCallService {
     await pc.setRemoteDescription(RTCSessionDescription(sdpOffer, 'offer'));
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    final gatheredAnswer = await _localDescriptionAfterIceGathering(
+    final gatheredAnswer = _localDescriptionAfterIceGathering(
       pc,
       fallback: answer,
-    );
+    ).then((description) => description.sdp ?? '');
 
     // Drain any ICE candidates buffered before remote description was set
     for (final c in _pendingCandidates) {
@@ -204,7 +204,7 @@ class WebRtcCallService {
     }
     _pendingCandidates.clear();
 
-    return (localStream: localStream, sdpAnswer: gatheredAnswer.sdp ?? '');
+    return (localStream: localStream, sdpAnswer: gatheredAnswer);
   }
 
   /// Returns the current local SDP after ICE gathering has completed, so the
@@ -221,27 +221,33 @@ class WebRtcCallService {
     required RTCSessionDescription fallback,
   }) async {
     const complete = RTCIceGatheringState.RTCIceGatheringStateComplete;
-    if (await pc.getIceGatheringState() != complete) {
-      final completer = Completer<void>();
-      pc.onIceGatheringState = (state) {
-        if (state == complete && !completer.isCompleted) {
-          completer.complete();
+    try {
+      if (await pc.getIceGatheringState() != complete) {
+        final completer = Completer<void>();
+        pc.onIceGatheringState = (state) {
+          if (state == complete && !completer.isCompleted) {
+            completer.complete();
+          }
+        };
+        try {
+          // Close the race where gathering completed between the first state
+          // check and installing the callback.
+          if (await pc.getIceGatheringState() != complete) {
+            await completer.future.timeout(_iceGatheringTimeout);
+          }
+        } on TimeoutException {
+          // Use the candidates gathered so far; trickle ICE remains active.
+        } finally {
+          pc.onIceGatheringState = null;
         }
-      };
-      try {
-        // Close the race where gathering completed between the first state
-        // check and installing the callback.
-        if (await pc.getIceGatheringState() != complete) {
-          await completer.future.timeout(_iceGatheringTimeout);
-        }
-      } on TimeoutException {
-        // Use the candidates gathered so far; trickle ICE remains active.
-      } finally {
-        pc.onIceGatheringState = null;
       }
+      return await pc.getLocalDescription() ?? fallback;
+    } catch (_) {
+      // A platform state query must not prevent signaling. The initial local
+      // description is still valid and trickle ICE remains available.
+      pc.onIceGatheringState = null;
+      return fallback;
     }
-
-    return await pc.getLocalDescription() ?? fallback;
   }
 
   Future<void> setRemoteAnswer(String sdpAnswer) async {

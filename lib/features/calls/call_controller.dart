@@ -32,6 +32,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
   Timer? _noAnswerTimer;
   final List<_PendingIceCandidate> _pendingIceCandidates = [];
+  int _outgoingAttempt = 0;
 
   /// Guards [resumeCallFromPush] against re-entry. The phase check alone is
   /// racy: the offer fetch and [acceptCall] are both async, so two concurrent
@@ -54,6 +55,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     }
     if (state.valueOrNull != null) return;
 
+    final attempt = ++_outgoingAttempt;
     final svc = ref.read(webRtcCallServiceProvider);
     _pendingIceCandidates.clear();
 
@@ -82,21 +84,17 @@ class CallController extends AsyncNotifier<CallInfo?> {
       ),
     );
 
-    ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
-      'type': 'call_offer',
-      'callee_id': peerId,
-      'call_type': callType == CallType.voice ? 'voice' : 'video',
-      'sdp_offer': sdpOffer,
-    });
-
-    // Hang up automatically if callee doesn't answer within 45 s
-    _noAnswerTimer?.cancel();
-    _noAnswerTimer = Timer(const Duration(seconds: 45), () {
-      final current = state.valueOrNull;
-      if (current != null && current.phase == CallPhase.calling) {
-        hangup();
-      }
-    });
+    // ICE gathering continues in the background. The UI can open immediately,
+    // while the eventual SDP still contains every gathered candidate for a
+    // callee that was offline when trickle candidates were emitted.
+    unawaited(
+      _sendCallOfferWhenReady(
+        attempt: attempt,
+        peerId: peerId,
+        callType: callType,
+        sdpOffer: sdpOffer,
+      ),
+    );
   }
 
   // ── Incoming call — accept ─────────────────────────────────────────────────
@@ -140,12 +138,13 @@ class CallController extends AsyncNotifier<CallInfo?> {
       ),
     );
 
-    ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
-      'type': 'call_answer',
-      'call_id': current.callId,
-      'caller_id': current.peerId,
-      'sdp_answer': sdpAnswer,
-    });
+    unawaited(
+      _sendCallAnswerWhenReady(
+        callId: current.callId,
+        callerId: current.peerId,
+        sdpAnswer: sdpAnswer,
+      ),
+    );
   }
 
   /// Resumes a call that was surfaced via a CallKit/PushKit incoming push
@@ -231,6 +230,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     });
 
     ref.read(webRtcCallServiceProvider).endCall();
+    _outgoingAttempt += 1;
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
@@ -253,6 +253,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     }
 
     ref.read(webRtcCallServiceProvider).endCall();
+    _outgoingAttempt += 1;
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
@@ -404,6 +405,56 @@ class CallController extends AsyncNotifier<CallInfo?> {
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  Future<void> _sendCallOfferWhenReady({
+    required int attempt,
+    required String peerId,
+    required CallType callType,
+    required Future<String> sdpOffer,
+  }) async {
+    final offer = await sdpOffer;
+    final current = state.valueOrNull;
+    if (attempt != _outgoingAttempt ||
+        current == null ||
+        current.callId != _pendingCallId ||
+        current.peerId != peerId) {
+      return;
+    }
+
+    ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
+      'type': 'call_offer',
+      'callee_id': peerId,
+      'call_type': callType == CallType.voice ? 'voice' : 'video',
+      'sdp_offer': offer,
+    });
+
+    // Start the no-answer clock when the callee is actually signaled, not
+    // while local ICE gathering is still in progress.
+    _noAnswerTimer?.cancel();
+    _noAnswerTimer = Timer(const Duration(seconds: 45), () {
+      final latest = state.valueOrNull;
+      if (latest != null && latest.phase == CallPhase.calling) {
+        hangup();
+      }
+    });
+  }
+
+  Future<void> _sendCallAnswerWhenReady({
+    required String callId,
+    required String callerId,
+    required Future<String> sdpAnswer,
+  }) async {
+    final answer = await sdpAnswer;
+    final current = state.valueOrNull;
+    if (current == null || current.callId != callId) return;
+
+    ref.read(realtimeSyncControllerProvider.notifier).sendCallSignal({
+      'type': 'call_answer',
+      'call_id': callId,
+      'caller_id': callerId,
+      'sdp_answer': answer,
+    });
+  }
 
   /// Fetches ICE server config from the API and applies it to [svc].
   /// Falls back to STUN-only on any error so calls still work without TURN.

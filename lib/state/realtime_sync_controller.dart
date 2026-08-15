@@ -61,6 +61,8 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
 
   String? _baseUrl;
   Future<String?> Function()? _accessTokenProvider;
+  String? _connectedUserId;
+  Future<void>? _connectInFlight;
 
   /// The server base URL from the most recent [connect] call.
   String? get baseUrl => _baseUrl;
@@ -92,9 +94,45 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required String baseUrl,
     required Future<String?> Function() accessTokenProvider,
     required String currentUserId,
-  }) async {
+  }) {
+    final sameConnection = _baseUrl == baseUrl &&
+        _connectedUserId == currentUserId;
     _baseUrl = baseUrl;
     _accessTokenProvider = accessTokenProvider;
+    _connectedUserId = currentUserId;
+
+    final inFlight = _connectInFlight;
+    if (sameConnection && inFlight != null) return inFlight;
+
+    final status = state.valueOrNull?.status;
+    if (sameConnection &&
+        status != null &&
+        status != RealtimeConnectionStatus.disconnected) {
+      // RealtimeSyncService already owns reconnects. Replacing a healthy or
+      // reconnecting socket here makes the server treat an active call as a
+      // disconnect and send a hangup to the peer.
+      return Future<void>.value();
+    }
+
+    late final Future<void> connection;
+    connection = _connect(
+      baseUrl: baseUrl,
+      accessTokenProvider: accessTokenProvider,
+      currentUserId: currentUserId,
+    ).whenComplete(() {
+      if (identical(_connectInFlight, connection)) {
+        _connectInFlight = null;
+      }
+    });
+    _connectInFlight = connection;
+    return connection;
+  }
+
+  Future<void> _connect({
+    required String baseUrl,
+    required Future<String?> Function() accessTokenProvider,
+    required String currentUserId,
+  }) async {
     final service = ref.read(realtimeSyncServiceProvider);
 
     await _subscription?.cancel();
