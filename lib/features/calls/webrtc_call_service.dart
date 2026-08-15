@@ -32,6 +32,8 @@ class CallPermissionDeniedException implements Exception {
 }
 
 class WebRtcCallService {
+  static const _iceGatheringTimeout = Duration(seconds: 8);
+
   /// ICE servers used for the next peer connection. Set this before calling
   /// [createOffer] or [createAnswer]. Defaults to Google's public STUN servers
   /// so calls still work if the server has no TURN configured.
@@ -167,7 +169,11 @@ class WebRtcCallService {
 
     final offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    return (localStream: localStream, sdpOffer: offer.sdp ?? '');
+    final gatheredOffer = await _localDescriptionAfterIceGathering(
+      pc,
+      fallback: offer,
+    );
+    return (localStream: localStream, sdpOffer: gatheredOffer.sdp ?? '');
   }
 
   Future<({MediaStream localStream, String sdpAnswer})> createAnswer({
@@ -187,6 +193,10 @@ class WebRtcCallService {
     await pc.setRemoteDescription(RTCSessionDescription(sdpOffer, 'offer'));
     final answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
+    final gatheredAnswer = await _localDescriptionAfterIceGathering(
+      pc,
+      fallback: answer,
+    );
 
     // Drain any ICE candidates buffered before remote description was set
     for (final c in _pendingCandidates) {
@@ -194,7 +204,44 @@ class WebRtcCallService {
     }
     _pendingCandidates.clear();
 
-    return (localStream: localStream, sdpAnswer: answer.sdp ?? '');
+    return (localStream: localStream, sdpAnswer: gatheredAnswer.sdp ?? '');
+  }
+
+  /// Returns the current local SDP after ICE gathering has completed, so the
+  /// SDP itself contains usable host/STUN/TURN candidates.
+  ///
+  /// We still trickle candidates through the WebSocket for fast foreground
+  /// calls. The self-contained SDP is required for a cold incoming call,
+  /// though: while the callee is offline, Redis pub/sub cannot retain the
+  /// caller's trickled candidates, whereas the server does retain the offer.
+  /// A timeout keeps a slow or unavailable ICE server from blocking the call;
+  /// in that case the best local description gathered so far is returned.
+  Future<RTCSessionDescription> _localDescriptionAfterIceGathering(
+    RTCPeerConnection pc, {
+    required RTCSessionDescription fallback,
+  }) async {
+    const complete = RTCIceGatheringState.RTCIceGatheringStateComplete;
+    if (await pc.getIceGatheringState() != complete) {
+      final completer = Completer<void>();
+      pc.onIceGatheringState = (state) {
+        if (state == complete && !completer.isCompleted) {
+          completer.complete();
+        }
+      };
+      try {
+        // Close the race where gathering completed between the first state
+        // check and installing the callback.
+        if (await pc.getIceGatheringState() != complete) {
+          await completer.future.timeout(_iceGatheringTimeout);
+        }
+      } on TimeoutException {
+        // Use the candidates gathered so far; trickle ICE remains active.
+      } finally {
+        pc.onIceGatheringState = null;
+      }
+    }
+
+    return await pc.getLocalDescription() ?? fallback;
   }
 
   Future<void> setRemoteAnswer(String sdpAnswer) async {
@@ -238,12 +285,18 @@ class WebRtcCallService {
     Helper.setSpeakerphoneOn(on);
   }
 
-  Future<void> dispose() async {
+  /// Ends the current call while keeping this provider-owned service reusable
+  /// for the next call.
+  Future<void> endCall() async {
     onIceCandidate = null;
     onRemoteStream = null;
     onConnectionConnected = null;
     onConnectionFailed = null;
     await _closeExistingCall();
+  }
+
+  Future<void> dispose() async {
+    await endCall();
     await _audioLevels.close();
   }
 

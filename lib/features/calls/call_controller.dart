@@ -130,9 +130,8 @@ class CallController extends AsyncNotifier<CallInfo?> {
       withVideo: current.callType == CallType.video,
     );
 
-    // Re-read state after the async gap: _onRemoteStream may have fired
-    // during createAnswer (onTrack fires when remote description is set)
-    // and already advanced the phase to active.
+    // Re-read state after the async gap: the peer connection may already have
+    // reached Connected and advanced the phase to active.
     final latest = state.valueOrNull ?? current;
     state = AsyncData(
       latest.copyWith(
@@ -231,7 +230,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
       'caller_id': current.peerId,
     });
 
-    ref.read(webRtcCallServiceProvider).dispose();
+    ref.read(webRtcCallServiceProvider).endCall();
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
@@ -253,7 +252,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
       });
     }
 
-    ref.read(webRtcCallServiceProvider).dispose();
+    ref.read(webRtcCallServiceProvider).endCall();
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(current.callId));
     state = const AsyncData(null);
@@ -349,8 +348,8 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     await ref.read(webRtcCallServiceProvider).setRemoteAnswer(sdpAnswer);
 
-    // Re-read state after the async gap: _onRemoteStream may have fired
-    // during setRemoteAnswer and already advanced the phase to active.
+    // Re-read state after the async gap: the peer connection may already have
+    // reached Connected and advanced the phase to active.
     final latest = state.valueOrNull;
     if (latest == null) return;
     if (latest.phase != CallPhase.active) {
@@ -375,7 +374,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (current == null) return;
     if (current.callId != callId) return;
 
-    ref.read(webRtcCallServiceProvider).dispose();
+    ref.read(webRtcCallServiceProvider).endCall();
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(callId));
     state = const AsyncData(null);
@@ -388,7 +387,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
     if (current == null) return;
     if (current.callId != callId) return;
 
-    ref.read(webRtcCallServiceProvider).dispose();
+    ref.read(webRtcCallServiceProvider).endCall();
     _pendingIceCandidates.clear();
     unawaited(_reportCallKitEnded(callId));
     state = const AsyncData(null);
@@ -533,17 +532,13 @@ class CallController extends AsyncNotifier<CallInfo?> {
   void _onRemoteStream(dynamic stream) {
     final current = state.valueOrNull;
     if (current == null) return;
-    state = AsyncData(
-      current.copyWith(
-        phase: CallPhase.active,
-        remoteStream: stream as MediaStream,
-      ),
-    );
+    state = AsyncData(current.copyWith(remoteStream: stream as MediaStream));
   }
 
   void _onConnectionConnected() {
     final current = state.valueOrNull;
     if (current == null || current.callId == _pendingCallId) return;
+    state = AsyncData(current.copyWith(phase: CallPhase.active));
     // This is intentionally driven by the peer connection, not by sending
     // the SDP answer. Calling setCallConnected earlier can make
     // flutter_callkit_incoming issue a second answer transaction while ICE is
