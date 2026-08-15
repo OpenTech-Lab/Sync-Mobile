@@ -138,14 +138,25 @@ import flutter_callkit_incoming
     let userInfo = payload.dictionaryPayload
     let callId = userInfo["call_id"] as? String ?? UUID().uuidString
     let callerId = userInfo["caller_id"] as? String ?? ""
-    let callerName = userInfo["caller_name"] as? String ?? (callerId.isEmpty ? "Unknown" : callerId)
+    // The server's VoIP payload names this field `caller_display_name`
+    // (see apns_service::send_voip_call_push_to_tokens). Reading `caller_name`
+    // never matched, so CallKit fell back to showing the caller's raw UUID.
+    // `caller_name` is still accepted as a fallback for older payloads.
+    let rawCallerName = (userInfo["caller_display_name"] as? String)
+      ?? (userInfo["caller_name"] as? String)
+      ?? ""
+    let trimmedCallerName = rawCallerName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let callerName = trimmedCallerName.isEmpty ? "Unknown" : trimmedCallerName
     let callType = userInfo["call_type"] as? String ?? "voice"
 
     let args: [String: Any?] = [
       "id": callId,
       "nameCaller": callerName,
       "appName": "Sync",
-      "handle": callerId.isEmpty ? callerName : callerId,
+      // Show the display name here too — `handle` surfaces in the CallKit UI
+      // and in the system call history, and a raw UUID is meaningless there.
+      // The caller's id is still carried in `extra.caller_id` for the app.
+      "handle": callerName,
       "type": callType == "video" ? 1 : 0,
       "extra": [
         "call_id": callId,
