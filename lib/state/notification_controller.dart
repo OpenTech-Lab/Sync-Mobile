@@ -105,6 +105,25 @@ class NotificationController extends AsyncNotifier<NotificationState> {
         );
         return;
       }
+      // Best-effort: VoIP token sync must never block/fail the main push-token
+      // flow (e.g. on Android, or if PushKit hasn't produced a token yet).
+      //
+      // This must run *before* the shouldSyncDeviceToken early-return below.
+      // PushKit delivers its token asynchronously, typically after the first
+      // APNs sync has already completed — so on the first launch there is no
+      // VoIP token to send yet, and on every later launch the APNs token is
+      // unchanged and the early-return would skip this entirely. The VoIP
+      // token would then never reach the server, leaving the callee with no
+      // CallKit ring. It returns early when no VoIP token exists (always so
+      // on Android), and the server upserts by token, so re-sending an
+      // unchanged token on each init is harmless.
+      try {
+        await _notificationService.syncVoipTokenWithServer(
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+        );
+      } catch (_) {}
+
       if (!current.shouldSyncDeviceToken(trimmedToken, baseUrl)) {
         return;
       }
@@ -113,15 +132,6 @@ class NotificationController extends AsyncNotifier<NotificationState> {
         accessToken: accessToken,
         token: trimmedToken,
       );
-
-      // Best-effort: VoIP token sync must never block/fail the main push-token
-      // flow above (e.g. on Android, or if PushKit hasn't produced a token yet).
-      try {
-        await _notificationService.syncVoipTokenWithServer(
-          baseUrl: baseUrl,
-          accessToken: accessToken,
-        );
-      } catch (_) {}
 
       state = AsyncData(
         current.copyWith(
