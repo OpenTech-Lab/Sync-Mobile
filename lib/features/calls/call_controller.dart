@@ -21,6 +21,12 @@ final callControllerProvider = AsyncNotifierProvider<CallController, CallInfo?>(
   CallController.new,
 );
 
+/// Live microphone / incoming-audio levels for the call in progress, used by
+/// the call screen's voice bars.
+final callAudioLevelsProvider = StreamProvider<CallAudioLevels>(
+  (ref) => ref.watch(webRtcCallServiceProvider).audioLevels,
+);
+
 class CallController extends AsyncNotifier<CallInfo?> {
   static const _pendingCallId = 'pending';
 

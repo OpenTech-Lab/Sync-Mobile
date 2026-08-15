@@ -1,5 +1,26 @@
+import 'dart:async';
+
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+/// A sample of how loud each side of the call currently is, taken from the
+/// peer connection's own stats.
+///
+/// [local] is the microphone's level and [remote] the level of the decoded
+/// incoming track, both 0..1. [remoteBytes] is the running total of audio
+/// bytes received, which distinguishes "no media is arriving" from "media is
+/// arriving but is silent".
+class CallAudioLevels {
+  const CallAudioLevels({
+    this.local = 0,
+    this.remote = 0,
+    this.remoteBytes = 0,
+  });
+
+  final double local;
+  final double remote;
+  final int remoteBytes;
+}
 
 /// Thrown by [WebRtcCallService.createOffer]/[WebRtcCallService.createAnswer]
 /// when the user denies microphone (or camera, for video calls) permission.
@@ -27,6 +48,53 @@ class WebRtcCallService {
   void Function(MediaStream)? onRemoteStream;
   void Function()? onConnectionConnected;
   void Function()? onConnectionFailed;
+
+  Timer? _audioLevelTimer;
+  final _audioLevels = StreamController<CallAudioLevels>.broadcast();
+
+  /// Periodic microphone / incoming-track loudness while a call is up.
+  /// Emits nothing once the peer connection is closed.
+  Stream<CallAudioLevels> get audioLevels => _audioLevels.stream;
+
+  void _startAudioLevelPolling() {
+    _audioLevelTimer?.cancel();
+    _audioLevelTimer = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) async {
+        final pc = _pc;
+        if (pc == null || _audioLevels.isClosed) return;
+        try {
+          var local = 0.0;
+          var remote = 0.0;
+          var remoteBytes = 0;
+          for (final report in await pc.getStats()) {
+            final values = report.values;
+            if (values['kind'] != 'audio') continue;
+            final level = values['audioLevel'];
+            // `media-source` is our own microphone; `inbound-rtp` is the
+            // decoded stream coming from the peer.
+            if (report.type == 'media-source' && level is num) {
+              local = level.toDouble();
+            } else if (report.type == 'inbound-rtp') {
+              if (level is num) remote = level.toDouble();
+              final bytes = values['bytesReceived'];
+              if (bytes is num) remoteBytes = bytes.toInt();
+            }
+          }
+          if (_audioLevels.isClosed) return;
+          _audioLevels.add(
+            CallAudioLevels(
+              local: local,
+              remote: remote,
+              remoteBytes: remoteBytes,
+            ),
+          );
+        } catch (_) {
+          // Stats are best-effort diagnostics; never disturb the call.
+        }
+      },
+    );
+  }
 
   /// Requests microphone (and, if [withVideo], camera) permission.
   /// Returns whether every requested permission was granted.
@@ -75,6 +143,8 @@ class WebRtcCallService {
         onRemoteStream?.call(event.streams.first);
       }
     };
+
+    _startAudioLevelPolling();
 
     return pc;
   }
@@ -174,6 +244,7 @@ class WebRtcCallService {
     onConnectionConnected = null;
     onConnectionFailed = null;
     await _closeExistingCall();
+    await _audioLevels.close();
   }
 
   /// Stops and releases the current peer connection and local media tracks,
@@ -181,6 +252,8 @@ class WebRtcCallService {
   /// is safe to call at the start of [createOffer] right after the caller
   /// has just wired up callbacks for the new call.
   Future<void> _closeExistingCall() async {
+    _audioLevelTimer?.cancel();
+    _audioLevelTimer = null;
     _pendingCandidates.clear();
     _localStream?.getTracks().forEach((t) => t.stop());
     await _localStream?.dispose();
