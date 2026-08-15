@@ -27,6 +27,12 @@ class CallController extends AsyncNotifier<CallInfo?> {
   Timer? _noAnswerTimer;
   final List<_PendingIceCandidate> _pendingIceCandidates = [];
 
+  /// Guards [resumeCallFromPush] against re-entry. The phase check alone is
+  /// racy: the offer fetch and [acceptCall] are both async, so two concurrent
+  /// invocations (CallKit accept event + cold-launch catch-up) can each pass
+  /// the phase check before either advances the call past `ringing`.
+  String? _resumingCallId;
+
   @override
   Future<CallInfo?> build() async => null;
 
@@ -159,33 +165,52 @@ class CallController extends AsyncNotifier<CallInfo?> {
       await _reportCallKitEnded(callId);
       return;
     }
-    if (current == null) {
-      // Not yet tracked locally (e.g. app was terminated and CallKit is the
-      // only thing that knows about this call so far).
-      state = AsyncData(
-        CallInfo(
-          callId: callId,
-          peerId: callerId,
-          peerDisplayName: callerDisplayName,
-          callType: callType == 'video' ? CallType.video : CallType.voice,
-          direction: CallDirection.incoming,
-          phase: CallPhase.ringing,
-        ),
-      );
-    }
-
-    final offer = await _fetchStashedOffer(callId);
-    if (offer == null) {
-      // Offer already claimed/expired/not found — nothing to answer with.
-      rejectCall();
+    if (_resumingCallId == callId) return;
+    if (current != null && current.phase != CallPhase.ringing) {
+      // Already accepted (connecting/active) or tearing down. This method can
+      // legitimately be entered twice for one call — once from the CallKit
+      // accept event and once from CallkitService's cold-launch catch-up — and
+      // resuming a second time would answer the same call twice.
       return;
     }
+    _resumingCallId = callId;
+    try {
+      if (current == null) {
+        // Not yet tracked locally (e.g. app was terminated and CallKit is the
+        // only thing that knows about this call so far).
+        state = AsyncData(
+          CallInfo(
+            callId: callId,
+            peerId: callerId,
+            peerDisplayName: callerDisplayName,
+            callType: callType == 'video' ? CallType.video : CallType.voice,
+            direction: CallDirection.incoming,
+            phase: CallPhase.ringing,
+          ),
+        );
+      }
 
-    final latest = state.valueOrNull;
-    if (latest == null || latest.callId != callId) return;
-    state = AsyncData(latest.copyWith(sdpOffer: offer));
+      // Prefer an offer we already hold from the WebSocket `incoming_call`
+      // signal. The server's stash is single-use (Redis GETDEL), so fetching
+      // it when we can already answer both wastes the one read and, if this
+      // method runs twice for the same call, makes the second run see a 404
+      // and reject a call that is already connecting.
+      final offer =
+          state.valueOrNull?.sdpOffer ?? await _fetchStashedOffer(callId);
+      if (offer == null) {
+        // Offer already claimed/expired/not found — nothing to answer with.
+        rejectCall();
+        return;
+      }
 
-    await acceptCall();
+      final latest = state.valueOrNull;
+      if (latest == null || latest.callId != callId) return;
+      state = AsyncData(latest.copyWith(sdpOffer: offer));
+
+      await acceptCall();
+    } finally {
+      if (_resumingCallId == callId) _resumingCallId = null;
+    }
   }
 
   // ── Incoming call — reject ─────────────────────────────────────────────────
