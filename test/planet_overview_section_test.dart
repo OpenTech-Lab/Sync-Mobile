@@ -49,7 +49,10 @@ void main() {
 
     expect(find.text('MY PLANET'), findsOneWidget);
     expect(find.text('Example Planet'), findsOneWidget);
-    expect(find.text('3147'), findsOneWidget);
-    expect(find.text('residents'), findsOneWidget);
+    expect(find.text('3147'), findsNothing);
+    expect(find.text('residents'), findsNothing);
+    expect(find.text('E2EE'), findsNothing);
+    expect(find.text('encrypted'), findsNothing);
+    expect(find.text('12'), findsOneWidget);
   });
 }

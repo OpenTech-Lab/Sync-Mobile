@@ -9,6 +9,28 @@ import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/planet_page_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _FakeAppController extends AppController {
+  _FakeAppController({this.accessToken});
+
+  final String? accessToken;
+
+  @override
+  Future<AppState> build() async {
+    return AppState(
+      serverUrl: 'https://example.com',
+      accessToken: accessToken,
+      currentUserId: 'owner-id',
+      currentUsername: 'owner',
+      savedUserId: 'owner-id',
+      connectionStatus: ConnectionStatus.idle,
+      connectionError: null,
+      planetInfo: null,
+      isSubmitting: false,
+      authError: null,
+    );
+  }
+}
+
 class _FakeHealthService extends ServerHealthService {
   _FakeHealthService(this._responses);
 
@@ -106,59 +128,118 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('planet page controller reuses cached data until refresh', () async {
-    final cache = _InMemoryPlanetPageCacheService();
-    await cache.write(
-      serverUrl,
-      PlanetPageData(
-        currentPlanet: _planet(
+  test(
+    'planet page controller paints cached data immediately, then revalidates in the background',
+    () async {
+      final cache = _InMemoryPlanetPageCacheService();
+      await cache.write(
+        serverUrl,
+        PlanetPageData(
+          currentPlanet: _planet(
+            baseUrl: serverUrl,
+            host: 'example.com',
+            name: 'Cached Planet',
+          ),
+          planets: const <PlanetInfo>[],
+          news: [_news('cached-1', 'Cached headline')],
+        ),
+      );
+      final health = _FakeHealthService({
+        serverUrl: _planet(
           baseUrl: serverUrl,
           host: 'example.com',
-          name: 'Cached Planet',
+          name: 'Remote Planet',
         ),
-        planets: const <PlanetInfo>[],
-        news: [_news('cached-1', 'Cached headline')],
-      ),
-    );
-    final health = _FakeHealthService({
-      serverUrl: _planet(
-        baseUrl: serverUrl,
-        host: 'example.com',
-        name: 'Remote Planet',
-      ),
-    });
-    final newsService = _FakeNewsService([
-      _news('remote-1', 'Remote headline'),
-    ]);
+      });
+      final newsService = _FakeNewsService([
+        _news('remote-1', 'Remote headline'),
+      ]);
 
-    final container = ProviderContainer(
-      overrides: [
-        activeServerUrlProvider.overrideWithValue(serverUrl),
-        planetPageCacheServiceProvider.overrideWithValue(cache),
-        planetPageHealthServiceProvider.overrideWithValue(health),
-        planetPageNewsServiceProvider.overrideWithValue(newsService),
-      ],
-    );
-    addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          activeServerUrlProvider.overrideWithValue(serverUrl),
+          planetPageCacheServiceProvider.overrideWithValue(cache),
+          planetPageHealthServiceProvider.overrideWithValue(health),
+          planetPageNewsServiceProvider.overrideWithValue(newsService),
+          appControllerProvider.overrideWith(
+            () => _FakeAppController(accessToken: 'token'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final initial = await container.read(planetPageControllerProvider.future);
-    expect(initial?.currentPlanet?.instanceName, 'Cached Planet');
-    expect(initial?.news.single.title, 'Cached headline');
-    expect(health.validateCallCount, 0);
-    expect(newsService.listCallCount, 0);
+      final initial = await container.read(
+        planetPageControllerProvider.future,
+      );
+      expect(initial?.currentPlanet?.instanceName, 'Cached Planet');
+      expect(initial?.news.single.title, 'Cached headline');
 
-    await container
-        .read(planetPageControllerProvider.notifier)
-        .refresh(baseUrl: serverUrl, accessToken: 'token');
+      // The background revalidation is fire-and-forget; wait for it to land.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-    final refreshed = container.read(planetPageControllerProvider).valueOrNull;
-    expect(refreshed?.currentPlanet?.instanceName, 'Remote Planet');
-    expect(refreshed?.news.single.title, 'Remote headline');
-    expect(health.validateCallCount, 1);
-    expect(newsService.listCallCount, 1);
+      final revalidated = container
+          .read(planetPageControllerProvider)
+          .valueOrNull;
+      expect(revalidated?.currentPlanet?.instanceName, 'Remote Planet');
+      expect(revalidated?.news.single.title, 'Remote headline');
+      expect(health.validateCallCount, 1);
+      expect(newsService.listCallCount, 1);
 
-    final cachedAfterRefresh = await cache.read(serverUrl);
-    expect(cachedAfterRefresh?.currentPlanet?.instanceName, 'Remote Planet');
-    expect(cachedAfterRefresh?.news.single.title, 'Remote headline');
-  });
+      final cachedAfterRevalidate = await cache.read(serverUrl);
+      expect(cachedAfterRevalidate?.currentPlanet?.instanceName, 'Remote Planet');
+      expect(cachedAfterRevalidate?.news.single.title, 'Remote headline');
+    },
+  );
+
+  test(
+    'planet page controller skips background revalidation without an access token',
+    () async {
+      final cache = _InMemoryPlanetPageCacheService();
+      await cache.write(
+        serverUrl,
+        PlanetPageData(
+          currentPlanet: _planet(
+            baseUrl: serverUrl,
+            host: 'example.com',
+            name: 'Cached Planet',
+          ),
+          planets: const <PlanetInfo>[],
+          news: [_news('cached-1', 'Cached headline')],
+        ),
+      );
+      final health = _FakeHealthService({
+        serverUrl: _planet(
+          baseUrl: serverUrl,
+          host: 'example.com',
+          name: 'Remote Planet',
+        ),
+      });
+      final newsService = _FakeNewsService([
+        _news('remote-1', 'Remote headline'),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          activeServerUrlProvider.overrideWithValue(serverUrl),
+          planetPageCacheServiceProvider.overrideWithValue(cache),
+          planetPageHealthServiceProvider.overrideWithValue(health),
+          planetPageNewsServiceProvider.overrideWithValue(newsService),
+          appControllerProvider.overrideWith(
+            () => _FakeAppController(accessToken: null),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final initial = await container.read(
+        planetPageControllerProvider.future,
+      );
+      expect(initial?.currentPlanet?.instanceName, 'Cached Planet');
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(health.validateCallCount, 0);
+      expect(newsService.listCallCount, 0);
+    },
+  );
 }

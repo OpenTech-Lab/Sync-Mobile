@@ -40,7 +40,6 @@ class PlanetOverviewSection extends StatelessWidget {
             l10n: l10n,
           ),
           stickerCount: stickerCount,
-          memberCount: _planetResidentCountFromData(planetInfo: planetInfo),
           isConnected: isConnected,
           serverCreatedDate: _serverCreatedDateFromData(planetInfo: planetInfo),
           isReconnecting: isReconnecting,
@@ -83,14 +82,6 @@ String _serverCreatedDateFromData({required PlanetInfo? planetInfo}) {
   return DateFormat('yyyy-MM-dd').format(value.toLocal());
 }
 
-int _planetResidentCountFromData({required PlanetInfo? planetInfo}) {
-  final value = planetInfo?.memberCount;
-  if (value == null || value < 0) {
-    return 0;
-  }
-  return value;
-}
-
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label, required this.ruleColor});
 
@@ -126,7 +117,6 @@ class _PlanetCard extends StatelessWidget {
     required this.planetName,
     required this.planetDescription,
     required this.stickerCount,
-    required this.memberCount,
     required this.isConnected,
     required this.serverCreatedDate,
     required this.isReconnecting,
@@ -138,7 +128,6 @@ class _PlanetCard extends StatelessWidget {
   final String planetName;
   final String planetDescription;
   final int stickerCount;
-  final int memberCount;
   final bool isConnected;
   final String serverCreatedDate;
   final bool isReconnecting;
@@ -214,22 +203,8 @@ class _PlanetCard extends StatelessWidget {
         Row(
           children: [
             _TextStat(
-              value: '$memberCount',
-              label: l10n.settingsResidents,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 28),
-            _TextStat(
               value: '$stickerCount',
               label: l10n.settingsStickers,
-              inkColor: inkColor,
-              mutedColor: mutedColor,
-            ),
-            const SizedBox(width: 28),
-            _TextStat(
-              value: 'E2EE',
-              label: l10n.settingsEncrypted,
               inkColor: inkColor,
               mutedColor: mutedColor,
             ),

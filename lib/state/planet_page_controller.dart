@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/planet_page_data.dart';
@@ -41,6 +43,10 @@ class PlanetPageController extends AsyncNotifier<PlanetPageData?> {
 
     final cached = await _cache.read(serverUrl);
     if (cached != null) {
+      // Paint the cached copy immediately, then revalidate against the
+      // server so stale values (name, description, sticker count, etc.)
+      // don't linger indefinitely without a manual pull-to-refresh.
+      unawaited(_revalidateInBackground(serverUrl: serverUrl));
       return cached;
     }
 
@@ -55,6 +61,31 @@ class PlanetPageController extends AsyncNotifier<PlanetPageData?> {
       baseUrl: baseUrl == null || baseUrl.isEmpty ? serverUrl : baseUrl,
       accessToken: accessToken,
     );
+  }
+
+  Future<void> _revalidateInBackground({required String serverUrl}) async {
+    final String accessToken;
+    final String? baseUrl;
+    try {
+      final appState = await ref.read(appControllerProvider.future);
+      final trimmedToken = appState.accessToken?.trim();
+      if (trimmedToken == null || trimmedToken.isEmpty) {
+        return;
+      }
+      accessToken = trimmedToken;
+      baseUrl = appState.serverUrl?.trim();
+    } catch (_) {
+      return;
+    }
+
+    try {
+      await _fetchAndStore(
+        baseUrl: baseUrl == null || baseUrl.isEmpty ? serverUrl : baseUrl,
+        accessToken: accessToken,
+      );
+    } catch (_) {
+      // Keep showing the cached copy if background revalidation fails.
+    }
   }
 
   Future<PlanetPageData> refresh({
