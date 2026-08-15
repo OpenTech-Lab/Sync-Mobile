@@ -19,6 +19,8 @@ class RealtimeSyncService {
   StreamSubscription? _channelSubscription;
   Timer? _pingTimer;
   Timer? _reconnectTimer;
+  bool _channelReady = false;
+  final List<String> _pendingCallSignals = <String>[];
 
   bool _closedByUser = false;
   int _attempt = 0;
@@ -69,15 +71,22 @@ class RealtimeSyncService {
   }
 
   void sendCallSignal(Map<String, dynamic> payload) {
+    final encoded = jsonEncode(payload);
     final channel = _channel;
-    if (channel == null) return;
+    if (channel == null || !_channelReady) {
+      _pendingCallSignals.add(encoded);
+      return;
+    }
     try {
-      channel.sink.add(jsonEncode(payload));
-    } catch (_) {}
+      channel.sink.add(encoded);
+    } catch (_) {
+      _pendingCallSignals.add(encoded);
+    }
   }
 
   Future<void> dispose() async {
     await disconnect();
+    _pendingCallSignals.clear();
     await _events.close();
   }
 
@@ -109,7 +118,14 @@ class RealtimeSyncService {
       final wsUri = _wsUri(baseUrl, accessToken);
       final channel = connectDevWebSocketChannel(wsUri);
       _channel = channel;
+      _channelReady = false;
       await channel.ready;
+      if (!identical(_channel, channel)) {
+        await channel.sink.close();
+        return;
+      }
+      _channelReady = true;
+      _flushPendingCallSignals(channel);
       _events.add(RealtimeEvent.connection(RealtimeConnectionStatus.connected));
 
       _pingTimer?.cancel();
@@ -188,9 +204,24 @@ class RealtimeSyncService {
 
   Future<void> _closeChannel() async {
     _pingTimer?.cancel();
+    _channelReady = false;
     await _channelSubscription?.cancel();
     await _channel?.sink.close();
     _channel = null;
+  }
+
+  void _flushPendingCallSignals(WebSocketChannel channel) {
+    if (_pendingCallSignals.isEmpty) return;
+    final pending = List<String>.of(_pendingCallSignals);
+    _pendingCallSignals.clear();
+    for (var index = 0; index < pending.length; index++) {
+      try {
+        channel.sink.add(pending[index]);
+      } catch (_) {
+        _pendingCallSignals.insertAll(0, pending.sublist(index));
+        return;
+      }
+    }
   }
 
   RealtimeEvent? _tryParseRealtimeEvent({

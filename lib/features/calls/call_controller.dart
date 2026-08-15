@@ -53,6 +53,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     svc.onIceCandidate = (c) => _sendIceCandidate(c, peerId);
     svc.onRemoteStream = _onRemoteStream;
+    svc.onConnectionConnected = _onConnectionConnected;
     svc.onConnectionFailed = hangup;
 
     await _applyIceServers(svc);
@@ -113,6 +114,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
     svc.onIceCandidate = (c) => _sendIceCandidate(c, current.peerId);
     svc.onRemoteStream = _onRemoteStream;
+    svc.onConnectionConnected = _onConnectionConnected;
     svc.onConnectionFailed = hangup;
 
     await _applyIceServers(svc);
@@ -139,8 +141,6 @@ class CallController extends AsyncNotifier<CallInfo?> {
       'caller_id': current.peerId,
       'sdp_answer': sdpAnswer,
     });
-
-    unawaited(_reportCallKitConnected(current.callId));
   }
 
   /// Resumes a call that was surfaced via a CallKit/PushKit incoming push
@@ -435,8 +435,19 @@ class CallController extends AsyncNotifier<CallInfo?> {
   /// "nothing to answer with".
   Future<String?> _fetchStashedOffer(String callId) async {
     final ctrl = ref.read(realtimeSyncControllerProvider.notifier);
-    final baseUrl = ctrl.baseUrl;
-    final tokenFn = ctrl.accessTokenProvider;
+    String? baseUrl = ctrl.baseUrl;
+    Future<String?> Function()? tokenFn = ctrl.accessTokenProvider;
+    // On a cold CallKit accept, MainShell has subscribed to CallKit before
+    // its post-frame realtime connect runs. Wait briefly for the synchronous
+    // connection configuration instead of treating that startup gap as a
+    // missing/expired SDP offer.
+    for (var attempt = 0;
+        (baseUrl == null || tokenFn == null) && attempt < 50;
+        attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      baseUrl = ctrl.baseUrl;
+      tokenFn = ctrl.accessTokenProvider;
+    }
     if (baseUrl == null || tokenFn == null) return null;
     final token = await tokenFn();
     if (token == null || token.isEmpty) return null;
@@ -533,6 +544,16 @@ class CallController extends AsyncNotifier<CallInfo?> {
         remoteStream: stream as MediaStream,
       ),
     );
+  }
+
+  void _onConnectionConnected() {
+    final current = state.valueOrNull;
+    if (current == null || current.callId == _pendingCallId) return;
+    // This is intentionally driven by the peer connection, not by sending
+    // the SDP answer. Calling setCallConnected earlier can make
+    // flutter_callkit_incoming issue a second answer transaction while ICE is
+    // still negotiating.
+    unawaited(_reportCallKitConnected(current.callId));
   }
 }
 

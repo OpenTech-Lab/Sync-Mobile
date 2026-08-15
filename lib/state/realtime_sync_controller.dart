@@ -68,6 +68,17 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
   /// Live access-token provider from the most recent [connect] call.
   Future<String?> Function()? get accessTokenProvider => _accessTokenProvider;
 
+  /// Makes the connection configuration available to call recovery before the
+  /// first WebSocket connection is established. CallKit can deliver Accept on
+  /// a cold launch before the post-frame realtime connect starts.
+  void configure({
+    required String baseUrl,
+    required Future<String?> Function() accessTokenProvider,
+  }) {
+    _baseUrl = baseUrl;
+    _accessTokenProvider = accessTokenProvider;
+  }
+
   @override
   Future<RealtimeSyncState> build() async {
     return const RealtimeSyncState(

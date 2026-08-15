@@ -1,12 +1,15 @@
+import AVFAudio
+import CallKit
 import Flutter
 import Foundation
 import PushKit
 import UIKit
 import UserNotifications
+import WebRTC
 import flutter_callkit_incoming
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
   private var pushChannel: FlutterMethodChannel?
   private var clipboardChannel: FlutterMethodChannel?
   private var apnsTokenHex: String?
@@ -67,6 +70,40 @@ import flutter_callkit_incoming
     setupClipboardBridge(registry: engineBridge.pluginRegistry)
     flushPendingVoipPush()
   }
+
+  // MARK: - CallKit/WebRTC audio bridge
+
+  // flutter_callkit_incoming owns AVAudioSession while CallKit is active.
+  // Forward its activation callbacks to libwebrtc so the WebRTC audio unit
+  // starts using the already-active session.
+  func didActivateAudioSession(_ audioSession: AVAudioSession) {
+    RTCAudioSession.sharedInstance().audioSessionDidActivate(audioSession)
+    RTCAudioSession.sharedInstance().isAudioEnabled = true
+  }
+
+  func didDeactivateAudioSession(_ audioSession: AVAudioSession) {
+    RTCAudioSession.sharedInstance().audioSessionDidDeactivate(audioSession)
+    RTCAudioSession.sharedInstance().isAudioEnabled = false
+  }
+
+  // The Dart event channel remains the source of call actions. These methods
+  // only satisfy CallkitIncomingAppDelegate and complete the native actions;
+  // media readiness is reported separately from the peer-connection callback.
+  func onAccept(_ call: Call, _ action: CXAnswerCallAction) {
+    action.fulfill()
+  }
+
+  func onDecline(_ call: Call, _ action: CXEndCallAction) {
+    action.fulfill()
+  }
+
+  func onEnd(_ call: Call, _ action: CXEndCallAction) {
+    action.fulfill()
+  }
+
+  func onTimeOut(_ call: Call) {}
+
+  func providerDidReset() {}
 
   // MARK: - PushKit (VoIP)
 

@@ -25,6 +25,7 @@ class WebRtcCallService {
 
   void Function(RTCIceCandidate)? onIceCandidate;
   void Function(MediaStream)? onRemoteStream;
+  void Function()? onConnectionConnected;
   void Function()? onConnectionFailed;
 
   /// Requests microphone (and, if [withVideo], camera) permission.
@@ -62,7 +63,9 @@ class WebRtcCallService {
     };
 
     pc.onConnectionState = (state) {
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        onConnectionConnected?.call();
+      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
         onConnectionFailed?.call();
       }
     };
@@ -168,6 +171,7 @@ class WebRtcCallService {
   Future<void> dispose() async {
     onIceCandidate = null;
     onRemoteStream = null;
+    onConnectionConnected = null;
     onConnectionFailed = null;
     await _closeExistingCall();
   }

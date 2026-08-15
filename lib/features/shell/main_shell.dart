@@ -64,6 +64,10 @@ class _MainShellState extends ConsumerState<MainShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _realtimeSyncNotifier = ref.read(realtimeSyncControllerProvider.notifier);
+    _realtimeSyncNotifier.configure(
+      baseUrl: widget.serverUrl,
+      accessTokenProvider: _effectiveAccessToken,
+    );
     ref.read(callkitServiceProvider).start();
     _syncChatVisibility();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -183,7 +187,12 @@ class _MainShellState extends ConsumerState<MainShell>
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _realtimeSyncNotifier.disconnect();
+      // Keep signaling alive while a call is ringing/connecting/active. The
+      // server ends an active call when this socket disconnects, and CallKit
+      // commonly backgrounds the app while the callee is accepting.
+      if (ref.read(callControllerProvider).valueOrNull == null) {
+        _realtimeSyncNotifier.disconnect();
+      }
     }
   }
 
