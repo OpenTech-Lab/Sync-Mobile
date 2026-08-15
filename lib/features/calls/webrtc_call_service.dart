@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -119,10 +120,7 @@ class WebRtcCallService {
   }
 
   Future<RTCPeerConnection> _createPeerConnection() async {
-    final config = {
-      'iceServers': iceServers,
-      'sdpSemantics': 'unified-plan',
-    };
+    final config = peerConnectionConfigurationForTest();
     final pc = await createPeerConnection(config);
     _pc = pc;
 
@@ -149,6 +147,33 @@ class WebRtcCallService {
     _startAudioLevelPolling();
 
     return pc;
+  }
+
+  /// Builds the configuration used for each peer connection.
+  ///
+  /// Mobile carrier and same-NAT host/server-reflexive paths were unreliable
+  /// in production even though TURN was healthy. Once the API provides TURN,
+  /// use it as the deterministic media path. STUN-only remains available as a
+  /// fallback when the TURN configuration endpoint cannot be reached.
+  @visibleForTesting
+  Map<String, dynamic> peerConnectionConfigurationForTest() {
+    final hasTurn = iceServers.any((server) {
+      final urls = server['urls'];
+      if (urls is String) {
+        return urls.startsWith('turn:') || urls.startsWith('turns:');
+      }
+      if (urls is Iterable) {
+        return urls.whereType<String>().any(
+          (url) => url.startsWith('turn:') || url.startsWith('turns:'),
+        );
+      }
+      return false;
+    });
+    return {
+      'iceServers': iceServers,
+      'iceTransportPolicy': hasTurn ? 'relay' : 'all',
+      'sdpSemantics': 'unified-plan',
+    };
   }
 
   Future<({MediaStream localStream, Future<String> sdpOffer})> createOffer({

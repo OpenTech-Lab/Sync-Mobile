@@ -33,6 +33,7 @@ class CallController extends AsyncNotifier<CallInfo?> {
   Timer? _noAnswerTimer;
   final List<_PendingIceCandidate> _pendingIceCandidates = [];
   int _outgoingAttempt = 0;
+  Future<void>? _acceptInFlight;
 
   /// Guards [resumeCallFromPush] against re-entry. The phase check alone is
   /// racy: the offer fetch and [acceptCall] are both async, so two concurrent
@@ -99,20 +100,42 @@ class CallController extends AsyncNotifier<CallInfo?> {
 
   // ── Incoming call — accept ─────────────────────────────────────────────────
 
-  Future<void> acceptCall() async {
+  Future<void> acceptCall() {
     if (!kCallingEnabled) {
       rejectCall();
-      return;
+      return Future<void>.value();
     }
 
+    final inFlight = _acceptInFlight;
+    if (inFlight != null) return inFlight;
+
     final current = state.valueOrNull;
-    if (current == null || current.phase != CallPhase.ringing) return;
+    if (current == null || current.phase != CallPhase.ringing) {
+      return Future<void>.value();
+    }
     if (current.sdpOffer == null) {
       // No offer yet — a VoIP-push-triggered call resumes via
       // resumeCallFromPush(), which fetches the stashed offer and re-enters
       // this method once it has one.
-      return;
+      return Future<void>.value();
     }
+
+    late final Future<void> acceptance;
+    acceptance = _acceptCall(current).whenComplete(() {
+      if (identical(_acceptInFlight, acceptance)) {
+        _acceptInFlight = null;
+      }
+    });
+    _acceptInFlight = acceptance;
+    return acceptance;
+  }
+
+  Future<void> _acceptCall(CallInfo current) async {
+    // Claim the call before any permission, HTTP, or WebRTC await. Native
+    // CallKit and the in-app button can arrive almost together; leaving the
+    // phase as ringing allowed both paths to create answers and the second
+    // peer connection overwrote the first one.
+    state = AsyncData(current.copyWith(phase: CallPhase.connecting));
 
     final svc = ref.read(webRtcCallServiceProvider);
 
@@ -121,30 +144,44 @@ class CallController extends AsyncNotifier<CallInfo?> {
     svc.onConnectionConnected = _onConnectionConnected;
     svc.onConnectionFailed = hangup;
 
-    await _applyIceServers(svc);
+    try {
+      await _applyIceServers(svc);
 
-    final (:localStream, :sdpAnswer) = await svc.createAnswer(
-      sdpOffer: current.sdpOffer!,
-      withVideo: current.callType == CallType.video,
-    );
+      final (:localStream, :sdpAnswer) = await svc.createAnswer(
+        sdpOffer: current.sdpOffer!,
+        withVideo: current.callType == CallType.video,
+      );
 
-    // Re-read state after the async gap: the peer connection may already have
-    // reached Connected and advanced the phase to active.
-    final latest = state.valueOrNull ?? current;
-    state = AsyncData(
-      latest.copyWith(
-        localStream: localStream,
-        phase: latest.phase == CallPhase.active ? CallPhase.active : CallPhase.connecting,
-      ),
-    );
+      // Re-read state after the async gap: the peer connection may already
+      // have reached Connected and advanced the phase to active.
+      final latest = state.valueOrNull;
+      if (latest == null || latest.callId != current.callId) {
+        await svc.endCall();
+        return;
+      }
+      state = AsyncData(
+        latest.copyWith(
+          localStream: localStream,
+          phase: latest.phase == CallPhase.active
+              ? CallPhase.active
+              : CallPhase.connecting,
+        ),
+      );
 
-    unawaited(
-      _sendCallAnswerWhenReady(
-        callId: current.callId,
-        callerId: current.peerId,
-        sdpAnswer: sdpAnswer,
-      ),
-    );
+      unawaited(
+        _sendCallAnswerWhenReady(
+          callId: current.callId,
+          callerId: current.peerId,
+          sdpAnswer: sdpAnswer,
+        ),
+      );
+    } catch (_) {
+      final latest = state.valueOrNull;
+      if (latest != null && latest.callId == current.callId) {
+        rejectCall();
+      }
+      rethrow;
+    }
   }
 
   /// Resumes a call that was surfaced via a CallKit/PushKit incoming push

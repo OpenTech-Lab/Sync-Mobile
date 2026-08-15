@@ -17,6 +17,7 @@ import '../../state/unread_counts_controller.dart';
 import '../../state/user_profile_controller.dart';
 import '../calls/call_controller.dart';
 import '../calls/call_models.dart';
+import '../calls/call_screen.dart';
 import '../calls/callkit_service.dart';
 import '../calls/incoming_call_screen.dart';
 import '../home/home_page.dart';
@@ -68,9 +69,12 @@ class _MainShellState extends ConsumerState<MainShell>
       baseUrl: widget.serverUrl,
       accessTokenProvider: _effectiveAccessToken,
     );
-    ref.read(callkitServiceProvider).start();
     _syncChatVisibility();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Start after the first frame so the call-state navigation listener in
+      // build() is attached before a persisted cold-start CallKit acceptance
+      // is replayed.
+      ref.read(callkitServiceProvider).start();
       final effectiveToken =
           await _effectiveAccessToken() ?? widget.accessToken;
       // Kick off all background services after first frame
@@ -245,12 +249,21 @@ class _MainShellState extends ConsumerState<MainShell>
     // Show IncomingCallScreen when a call arrives in the ringing phase
     ref.listen<AsyncValue<CallInfo?>>(callControllerProvider, (prev, next) {
       final info = next.valueOrNull;
+      final previousInfo = prev?.valueOrNull;
       if (info?.phase == CallPhase.ringing &&
-          prev?.valueOrNull?.phase != CallPhase.ringing) {
+          previousInfo?.phase != CallPhase.ringing) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => IncomingCallScreen(callInfo: info!),
           ),
+        );
+      } else if (info?.direction == CallDirection.incoming &&
+          previousInfo?.phase == CallPhase.ringing &&
+          info?.phase != CallPhase.ringing) {
+        // Native CallKit acceptance advances the controller directly. Replace
+        // the in-app ringing route automatically; no second Accept tap.
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const CallScreen()),
         );
       }
     });

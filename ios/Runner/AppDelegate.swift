@@ -10,6 +10,7 @@ import flutter_callkit_incoming
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
+  private static let pendingAcceptedCallKey = "pending_accepted_call"
   private var pushChannel: FlutterMethodChannel?
   private var clipboardChannel: FlutterMethodChannel?
   private var apnsTokenHex: String?
@@ -86,24 +87,42 @@ import flutter_callkit_incoming
     RTCAudioSession.sharedInstance().isAudioEnabled = false
   }
 
-  // The Dart event channel remains the source of call actions. These methods
-  // only satisfy CallkitIncomingAppDelegate and complete the native actions;
-  // media readiness is reported separately from the peer-connection callback.
+  // Persist and forward native acceptance here because the plugin event
+  // channel has no cold-start buffering. Media readiness is still reported
+  // separately from the peer-connection callback.
   func onAccept(_ call: Call, _ action: CXAnswerCallAction) {
+    let extra = call.data.extra
+    let acceptedCall: [String: Any] = [
+      "call_id": call.data.uuid,
+      "caller_id": extra["caller_id"] as? String ?? "",
+      "caller_display_name": call.data.nameCaller,
+      "call_type": extra["call_type"] as? String ?? (call.data.type == 1 ? "video" : "voice"),
+    ]
+    // Persist before fulfilling the native action. Event-channel messages are
+    // not buffered during a cold Flutter launch, while UserDefaults survives
+    // until Dart explicitly consumes this acceptance.
+    UserDefaults.standard.set(acceptedCall, forKey: Self.pendingAcceptedCallKey)
+    pushChannel?.invokeMethod("callkitAccepted", arguments: acceptedCall)
     action.fulfill()
   }
 
   func onDecline(_ call: Call, _ action: CXEndCallAction) {
+    clearPendingAcceptedCall(call.data.uuid)
     action.fulfill()
   }
 
   func onEnd(_ call: Call, _ action: CXEndCallAction) {
+    clearPendingAcceptedCall(call.data.uuid)
     action.fulfill()
   }
 
-  func onTimeOut(_ call: Call) {}
+  func onTimeOut(_ call: Call) {
+    clearPendingAcceptedCall(call.data.uuid)
+  }
 
-  func providerDidReset() {}
+  func providerDidReset() {
+    UserDefaults.standard.removeObject(forKey: Self.pendingAcceptedCallKey)
+  }
 
   // MARK: - PushKit (VoIP)
 
@@ -238,12 +257,23 @@ import flutter_callkit_incoming
         let data = UserDefaults.standard.dictionary(forKey: "pending_call_notification")
         UserDefaults.standard.removeObject(forKey: "pending_call_notification")
         result(data)
+      case "getPendingAcceptedCall":
+        let data = UserDefaults.standard.dictionary(forKey: Self.pendingAcceptedCallKey)
+        UserDefaults.standard.removeObject(forKey: Self.pendingAcceptedCallKey)
+        result(data)
       default:
         result(FlutterMethodNotImplemented)
       }
     }
 
     pushChannel = channel
+  }
+
+  private func clearPendingAcceptedCall(_ callId: String) {
+    let pending = UserDefaults.standard.dictionary(forKey: Self.pendingAcceptedCallKey)
+    if pending?["call_id"] as? String == callId {
+      UserDefaults.standard.removeObject(forKey: Self.pendingAcceptedCallKey)
+    }
   }
 
   private func setupClipboardBridge(registry: FlutterPluginRegistry) {
