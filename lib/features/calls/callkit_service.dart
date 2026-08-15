@@ -25,6 +25,39 @@ class CallkitService {
   void start() {
     if (defaultTargetPlatform != TargetPlatform.iOS) return;
     _subscription ??= FlutterCallkitIncoming.onEvent.listen(_handleEvent);
+    unawaited(_resumeAnyActiveCall());
+  }
+
+  /// On a cold launch triggered by tapping Accept on the native CallKit UI,
+  /// the ACTION_CALL_ACCEPT event fires natively before this Dart isolate has
+  /// subscribed to [FlutterCallkitIncoming.onEvent] (the event channel has no
+  /// buffering — events sent with nobody listening are simply dropped), so
+  /// the call would otherwise be silently lost. CallKit itself keeps the
+  /// answered call tracked regardless, so check for one on every start and
+  /// resume it the same way an in-time accept event would.
+  Future<void> _resumeAnyActiveCall() async {
+    final List<CallKitParams> active;
+    try {
+      active = await FlutterCallkitIncoming.activeCalls();
+    } catch (_) {
+      return;
+    }
+    // Only resume calls CallKit itself marked answered (isAccepted, set by
+    // provider(_:perform: CXAnswerCallAction) natively) — a still-ringing
+    // call is also "active" and must not be auto-connected just because the
+    // app happened to launch while it was ringing.
+    final answered = active.where((call) => call.isAccepted);
+    if (answered.isEmpty) return;
+    final callKitParams = answered.first;
+    final extra = callKitParams.extra ?? const <String, dynamic>{};
+    _ref.read(callControllerProvider.notifier).resumeCallFromPush(
+          callId: callKitParams.id,
+          callerId: (extra['caller_id'] as String?) ?? '',
+          callerDisplayName:
+              callKitParams.nameCaller ?? callKitParams.handle ?? 'Unknown',
+          callType: (extra['call_type'] as String?) ??
+              (callKitParams.type == 1 ? 'video' : 'voice'),
+        );
   }
 
   void dispose() {
