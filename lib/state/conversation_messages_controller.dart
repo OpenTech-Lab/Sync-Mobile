@@ -270,10 +270,18 @@ class ConversationMessagesController
     var success = false;
     try {
       final preferences = BackupPreferences();
-      final cursor = await preferences.readConversationSyncCursor(
+      final storedCursor = await preferences.readConversationSyncCursor(
         baseUrl,
         arg,
       );
+      // The watermark only holds while its message is still stored: a
+      // backup restore or an unreadable-database reset replaces local
+      // messages without touching preferences, and resuming `after` a
+      // message we no longer have would skip everything between.
+      final cursor =
+          storedCursor != null && await _repository.hasMessage(storedCursor)
+          ? storedCursor
+          : null;
       List<LocalChatMessage> fetched;
       if (cursor == null) {
         fetched = await _fetchLatestPage(

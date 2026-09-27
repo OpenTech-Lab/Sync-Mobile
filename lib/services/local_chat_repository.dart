@@ -43,6 +43,8 @@ abstract class ChatRepository {
 
   Future<void> upsertMessages(List<LocalChatMessage> messages);
 
+  Future<bool> hasMessage(String id);
+
   Future<List<LocalChatMessage>> listAllMessages();
 
   Future<void> replaceAllMessages(List<LocalChatMessage> messages);
@@ -139,6 +141,10 @@ class InMemoryChatRepository implements ChatRepository {
       }
     }
   }
+
+  @override
+  Future<bool> hasMessage(String id) async =>
+      _store.values.any((list) => list.any((m) => m.id == id));
 
   @override
   Future<List<LocalChatMessage>> listAllMessages() async {
@@ -392,6 +398,19 @@ class LocalChatRepository implements ChatRepository {
       where: 'conversation_id = ?',
       whereArgs: [conversationId],
     );
+  }
+
+  @override
+  Future<bool> hasMessage(String id) async {
+    final db = await _encryptedDatabase.open();
+    final rows = await db.query(
+      'local_messages',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 
   @override

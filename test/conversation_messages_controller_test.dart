@@ -49,6 +49,10 @@ class _InMemoryChatRepository implements ChatRepository {
   }
 
   @override
+  Future<bool> hasMessage(String id) async =>
+      _messages.any((message) => message.id == id);
+
+  @override
   Future<void> clearConversation(String conversationId) async {
     _messages.removeWhere(
       (message) => message.conversationId == conversationId,
@@ -749,6 +753,16 @@ void main() {
       SharedPreferences.setMockInitialValues(const <String, Object>{});
       const baseUrl = 'http://localhost:8080';
       final repo = _InMemoryChatRepository();
+      // The watermark always names a message an earlier sync stored.
+      await repo.upsertMessages([
+        LocalChatMessage(
+          id: 'cursor-0',
+          conversationId: partnerId,
+          senderId: 'other',
+          body: 'already synced',
+          createdAt: DateTime.utc(2026, 3, 2, 12),
+        ),
+      ]);
       // Seed a persisted sync cursor (as an earlier successful syncLatest
       // call would have left behind) so this call has a watermark to page
       // forward from.
@@ -815,7 +829,7 @@ void main() {
       final messages = container
           .read(conversationMessagesProvider(partnerId))
           .value!;
-      expect(messages, hasLength(firstPage.length + secondPage.length));
+      expect(messages, hasLength(1 + firstPage.length + secondPage.length));
       expect(
         messages.map((m) => m.id),
         containsAll(['p1-0', 'p1-99', 'p2-0', 'p2-4']),
@@ -849,6 +863,16 @@ void main() {
         body: 'm2 (arrived over WS)',
         createdAt: DateTime.utc(2026, 3, 2, 12, 2),
       );
+      // The watermark always names a message an earlier sync stored.
+      await repo.upsertMessages([
+        LocalChatMessage(
+          id: 'm0',
+          conversationId: partnerId,
+          senderId: 'other',
+          body: 'already synced',
+          createdAt: DateTime.utc(2026, 3, 2, 12),
+        ),
+      ]);
       await repo.upsertMessages([m2]);
       await BackupPreferences().writeConversationSyncCursor(
         serverUrl: baseUrl,
@@ -911,6 +935,16 @@ void main() {
       SharedPreferences.setMockInitialValues(const <String, Object>{});
       const baseUrl = 'http://localhost:8080';
       final repo = _InMemoryChatRepository();
+      // The watermark always names a message an earlier sync stored.
+      await repo.upsertMessages([
+        LocalChatMessage(
+          id: 'cursor-0',
+          conversationId: partnerId,
+          senderId: 'other',
+          body: 'already synced',
+          createdAt: DateTime.utc(2026, 3, 2, 12),
+        ),
+      ]);
       await BackupPreferences().writeConversationSyncCursor(
         serverUrl: baseUrl,
         conversationId: partnerId,
@@ -961,6 +995,60 @@ void main() {
       final advancedCursor = await BackupPreferences()
           .readConversationSyncCursor(baseUrl, partnerId);
       expect(advancedCursor, 'fallback-1');
+    },
+  );
+
+  test(
+    'syncLatest ignores a watermark whose message is no longer stored '
+    '(backup restore / database reset) and does a full latest-page fetch',
+    () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
+      final repo = _InMemoryChatRepository();
+      // Preferences survived, but local messages were replaced: paging
+      // `after` this cursor would skip everything between the restored
+      // snapshot and it.
+      await BackupPreferences().writeConversationSyncCursor(
+        serverUrl: baseUrl,
+        conversationId: partnerId,
+        messageId: 'gone',
+      );
+
+      final remote = _FakeRemoteChatService({
+        partnerId: [
+          [
+            LocalChatMessage(
+              id: 'latest-1',
+              conversationId: partnerId,
+              senderId: 'other',
+              body: 'latest',
+              createdAt: DateTime.utc(2026, 3, 2, 12, 30),
+            ),
+          ],
+        ],
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      final success = await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: 'token', currentUserId: 'me');
+
+      expect(success, isTrue);
+      expect(remote.afterCallCount, 0);
+      expect(remote.plainCallCount, 1);
+      final cursor = await BackupPreferences().readConversationSyncCursor(
+        baseUrl,
+        partnerId,
+      );
+      expect(cursor, 'latest-1');
     },
   );
 
