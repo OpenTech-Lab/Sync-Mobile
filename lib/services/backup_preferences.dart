@@ -9,6 +9,7 @@ class BackupPreferences {
   static const _autoBackupMessageThresholdPrefix = 'backup_auto_threshold';
   static const _chatClearedAtPrefix = 'chat_cleared_at';
   static const _conversationClearedAtPrefix = 'conversation_cleared_at';
+  static const _conversationSyncCursorPrefix = 'conversation_sync_cursor';
   static const int defaultAutoBackupMessageThreshold = 20;
 
   String _enabledKey(String serverUrl) =>
@@ -29,6 +30,13 @@ class BackupPreferences {
   String _conversationClearedAtKey(String serverUrl, String conversationId) =>
       scopedStorageKey(
         _conversationClearedAtPrefix,
+        serverUrl,
+        suffix: conversationId,
+      );
+
+  String _conversationSyncCursorKey(String serverUrl, String conversationId) =>
+      scopedStorageKey(
+        _conversationSyncCursorPrefix,
         serverUrl,
         suffix: conversationId,
       );
@@ -164,6 +172,43 @@ class BackupPreferences {
       _conversationClearedAtKey(serverUrl, conversationId),
       clearedAt.toUtc().toIso8601String(),
     );
+  }
+
+  /// The id of the newest message a REST fetch has returned for this
+  /// conversation, used as the `after` cursor for incremental catch-up. Only
+  /// a REST response may advance this — see the write side for why.
+  Future<String?> readConversationSyncCursor(
+    String serverUrl,
+    String conversationId,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(
+      _conversationSyncCursorKey(serverUrl, conversationId),
+    );
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    return raw;
+  }
+
+  Future<void> writeConversationSyncCursor({
+    required String serverUrl,
+    required String conversationId,
+    required String messageId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _conversationSyncCursorKey(serverUrl, conversationId),
+      messageId,
+    );
+  }
+
+  Future<void> clearConversationSyncCursor(
+    String serverUrl,
+    String conversationId,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_conversationSyncCursorKey(serverUrl, conversationId));
   }
 
   Future<String?> _readString({

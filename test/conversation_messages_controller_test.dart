@@ -205,6 +205,7 @@ class _FakeRemoteChatService extends RemoteChatService {
   final Set<String> _afterThrowsFor;
   int afterCallCount = 0;
   int plainCallCount = 0;
+  String? lastAfterCursor;
 
   @override
   Future<List<LocalChatMessage>> getConversation({
@@ -218,6 +219,7 @@ class _FakeRemoteChatService extends RemoteChatService {
   }) async {
     if (after != null) {
       afterCallCount++;
+      lastAfterCursor = after;
       if (_afterThrowsFor.contains(partnerId)) {
         throw const RemoteChatApiException(
           message: 'unknown cursor',
@@ -416,6 +418,10 @@ void main() {
   const partnerId = '11111111-1111-1111-1111-111111111111';
 
   test('syncLatest caches remote messages in local store', () async {
+    // Each test gets its own clean SharedPreferences store: syncLatest now
+    // persists a per-conversation sync cursor there, and several tests here
+    // reuse the same partnerId/baseUrl.
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
     final repo = _InMemoryChatRepository();
     final remote = _FakeRemoteChatService({
       partnerId: [
@@ -456,6 +462,7 @@ void main() {
   });
 
   test('loadMore appends older page without duplicates', () async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
     final repo = _InMemoryChatRepository();
     final remote = _FakeRemoteChatService({
       partnerId: [
@@ -587,6 +594,7 @@ void main() {
   );
 
   test('sendMessage persists server-created message locally', () async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
     final repo = _InMemoryChatRepository();
     final remote = _FakeRemoteChatService({partnerId: const []});
 
@@ -681,6 +689,7 @@ void main() {
   test(
     'concealReportedMessage updates local state and survives syncLatest',
     () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
       const partnerId = 'friend-1';
       final original = LocalChatMessage(
         id: 'm-1',
@@ -734,32 +743,44 @@ void main() {
   );
 
   test(
-    'syncLatest pages forward with after once a local cursor exists, '
-    'stopping at the first short page',
+    'syncLatest pages forward with after once a sync-cursor watermark '
+    'exists, stopping at the first short page',
     () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
       final repo = _InMemoryChatRepository();
-      // Seed a locally-known server message so the next syncLatest call has
-      // a cursor to page forward from.
-      await repo.upsertMessages([
-        LocalChatMessage(
-          id: 'cursor-0',
+      // Seed a persisted sync cursor (as an earlier successful syncLatest
+      // call would have left behind) so this call has a watermark to page
+      // forward from.
+      await BackupPreferences().writeConversationSyncCursor(
+        serverUrl: baseUrl,
+        conversationId: partnerId,
+        messageId: 'cursor-0',
+      );
+
+      // `pageOffset * 200 + i` minutes keeps every message in a later page
+      // strictly newer than every message in an earlier one, regardless of
+      // page size (a plain `13 + pageOffset` hour with `i` minutes would
+      // overflow and interleave once a page has more than 59 messages).
+      LocalChatMessage messageAt(String prefix, int i, int pageOffset) {
+        return LocalChatMessage(
+          id: '$prefix-$i',
           conversationId: partnerId,
           senderId: 'other',
-          body: 'seed',
-          createdAt: DateTime.utc(2026, 3, 2, 12, 0),
-        ),
-      ]);
+          body: '$prefix message $i',
+          createdAt: DateTime.utc(
+            2026,
+            3,
+            2,
+            13,
+          ).add(Duration(minutes: pageOffset * 200 + i)),
+        );
+      }
 
-      List<LocalChatMessage> page(String prefix, int count, int hourOffset) {
+      List<LocalChatMessage> page(String prefix, int count, int pageOffset) {
         return List.generate(
           count,
-          (i) => LocalChatMessage(
-            id: '$prefix-$i',
-            conversationId: partnerId,
-            senderId: 'other',
-            body: '$prefix message $i',
-            createdAt: DateTime.utc(2026, 3, 2, 13 + hourOffset, i),
-          ),
+          (i) => messageAt(prefix, i, pageOffset),
         );
       }
 
@@ -784,11 +805,7 @@ void main() {
       await container.read(conversationMessagesProvider(partnerId).future);
       final success = await container
           .read(conversationMessagesProvider(partnerId).notifier)
-          .syncLatest(
-            baseUrl: 'http://localhost:8080',
-            accessToken: 'token',
-            currentUserId: 'me',
-          );
+          .syncLatest(baseUrl: baseUrl, accessToken: 'token', currentUserId: 'me');
 
       expect(success, isTrue);
       // Two after-cursor pages fetched, and never the plain limit:30 fetch.
@@ -798,12 +815,92 @@ void main() {
       final messages = container
           .read(conversationMessagesProvider(partnerId))
           .value!;
-      // Seed message + both pages, all merged in.
-      expect(messages, hasLength(1 + firstPage.length + secondPage.length));
+      expect(messages, hasLength(firstPage.length + secondPage.length));
       expect(
         messages.map((m) => m.id),
-        containsAll(['cursor-0', 'p1-0', 'p1-99', 'p2-0', 'p2-4']),
+        containsAll(['p1-0', 'p1-99', 'p2-0', 'p2-4']),
       );
+
+      // The watermark advances to the newest id across everything fetched
+      // this call, so the next syncLatest resumes from p2-4, not cursor-0.
+      final advancedCursor = await BackupPreferences()
+          .readConversationSyncCursor(baseUrl, partnerId);
+      expect(advancedCursor, 'p2-4');
+    },
+  );
+
+  test(
+    'syncLatest uses the persisted sync cursor as the after-watermark, not '
+    'the newest locally-stored message — a realtime WS event can insert a '
+    'newer message (m2) while an earlier one (m1) was lost in a socket gap, '
+    'and the newest local row is not a safe substitute for "already synced"',
+    () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
+      final repo = _InMemoryChatRepository();
+
+      // The last REST sync landed on m0; m2 then arrived over the realtime
+      // socket (and was stored locally) while m1 — sent in between — was
+      // lost in a connection gap and never delivered over WS.
+      final m2 = LocalChatMessage(
+        id: 'm2',
+        conversationId: partnerId,
+        senderId: 'other',
+        body: 'm2 (arrived over WS)',
+        createdAt: DateTime.utc(2026, 3, 2, 12, 2),
+      );
+      await repo.upsertMessages([m2]);
+      await BackupPreferences().writeConversationSyncCursor(
+        serverUrl: baseUrl,
+        conversationId: partnerId,
+        messageId: 'm0',
+      );
+
+      final m1 = LocalChatMessage(
+        id: 'm1',
+        conversationId: partnerId,
+        senderId: 'other',
+        body: 'm1 (missed by WS, only recoverable via catch-up)',
+        createdAt: DateTime.utc(2026, 3, 2, 12, 1),
+      );
+      final remote = _FakeRemoteChatService(
+        const {},
+        afterPages: {
+          partnerId: [
+            [m1],
+          ],
+        },
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      final success = await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: 'token', currentUserId: 'me');
+
+      expect(success, isTrue);
+      expect(remote.afterCallCount, 1);
+      expect(remote.lastAfterCursor, 'm0');
+
+      final messages = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      // m1 (fetched via catch-up) and m2 (already local from the WS event)
+      // are both present — m1 is no longer lost.
+      expect(messages.map((m) => m.id), containsAll(['m1', 'm2']));
+
+      // Advances to the newest id the server actually returned (m1), not to
+      // m2 (which was never part of this fetch).
+      final advancedCursor = await BackupPreferences()
+          .readConversationSyncCursor(baseUrl, partnerId);
+      expect(advancedCursor, 'm1');
     },
   );
 
@@ -811,16 +908,14 @@ void main() {
     'syncLatest falls back to the plain limit:30 fetch when the after '
     'request fails (e.g. unknown cursor on an old or reset server)',
     () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
       final repo = _InMemoryChatRepository();
-      await repo.upsertMessages([
-        LocalChatMessage(
-          id: 'cursor-0',
-          conversationId: partnerId,
-          senderId: 'other',
-          body: 'seed',
-          createdAt: DateTime.utc(2026, 3, 2, 12, 0),
-        ),
-      ]);
+      await BackupPreferences().writeConversationSyncCursor(
+        serverUrl: baseUrl,
+        conversationId: partnerId,
+        messageId: 'cursor-0',
+      );
 
       final remote = _FakeRemoteChatService(
         {
@@ -850,11 +945,7 @@ void main() {
       await container.read(conversationMessagesProvider(partnerId).future);
       final success = await container
           .read(conversationMessagesProvider(partnerId).notifier)
-          .syncLatest(
-            baseUrl: 'http://localhost:8080',
-            accessToken: 'token',
-            currentUserId: 'me',
-          );
+          .syncLatest(baseUrl: baseUrl, accessToken: 'token', currentUserId: 'me');
 
       expect(success, isTrue);
       expect(remote.afterCallCount, 1);
@@ -863,14 +954,23 @@ void main() {
       final messages = container
           .read(conversationMessagesProvider(partnerId))
           .value!;
-      expect(messages.map((m) => m.id), containsAll(['cursor-0', 'fallback-1']));
+      expect(messages.map((m) => m.id), contains('fallback-1'));
+
+      // The fallback fetch still succeeded, so the watermark advances to its
+      // newest id rather than being left pointed at the stale cursor.
+      final advancedCursor = await BackupPreferences()
+          .readConversationSyncCursor(baseUrl, partnerId);
+      expect(advancedCursor, 'fallback-1');
     },
   );
 
   test(
     'syncLatest reports failure without throwing when the server is '
-    'unreachable, so callers can gate on the result',
+    'unreachable, so callers can gate on the result, and does not advance '
+    'the sync-cursor watermark',
     () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      const baseUrl = 'http://localhost:8080';
       final repo = _InMemoryChatRepository();
       final remote = _AlwaysThrowingRemoteChatService();
 
@@ -885,13 +985,14 @@ void main() {
       await container.read(conversationMessagesProvider(partnerId).future);
       final success = await container
           .read(conversationMessagesProvider(partnerId).notifier)
-          .syncLatest(
-            baseUrl: 'http://localhost:8080',
-            accessToken: 'token',
-            currentUserId: 'me',
-          );
+          .syncLatest(baseUrl: baseUrl, accessToken: 'token', currentUserId: 'me');
 
       expect(success, isFalse);
+      final cursor = await BackupPreferences().readConversationSyncCursor(
+        baseUrl,
+        partnerId,
+      );
+      expect(cursor, isNull);
     },
   );
 
@@ -899,6 +1000,7 @@ void main() {
     'sendMessage does not fail (and so does not trigger a duplicate resend) '
     'when the post-send markRead call fails',
     () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
       final repo = _InMemoryChatRepository();
       final remote = _FakeRemoteChatService({partnerId: const []})
         ..markReadThrows = true;

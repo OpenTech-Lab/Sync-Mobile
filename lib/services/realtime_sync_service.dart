@@ -140,8 +140,12 @@ class RealtimeSyncService {
       // (web_socket_channel 3.x: `sink.close()` on a channel whose `ready`
       // failed never resolves), hanging every future disconnect/reconnect.
       await channel.ready;
-      if (!identical(_openAttempt, attempt)) {
-        // A newer open() call has already taken over; don't touch shared
+      if (!identical(_openAttempt, attempt) || _closedByUser) {
+        // A newer open() call has already taken over, or disconnect() ran
+        // while we were waiting on `ready` (which clears _openAttempt below,
+        // but a `ready` that had already resolved by then must still be
+        // caught here rather than being published as a live, "connected"
+        // socket after the user asked to disconnect). Don't touch shared
         // state, just close the channel we opened.
         unawaited(
           channel.sink
@@ -234,6 +238,12 @@ class RealtimeSyncService {
   Future<void> _closeChannel() async {
     _pingTimer?.cancel();
     _channelReady = false;
+    // Invalidate any open() attempt still waiting on `ready`: without this,
+    // a disconnect()/connect() that runs while _open is mid-`ready` leaves
+    // _openAttempt pointing at that stale attempt, so it still looks current
+    // when `ready` finally resolves and the (now unwanted) channel gets
+    // published as `_channel` and reported as connected.
+    _openAttempt = null;
     await _channelSubscription?.cancel();
     // Detach state before closing: a channel whose `ready` never succeeded
     // can have a `sink.close()` that never completes, and awaiting that here

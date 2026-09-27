@@ -146,8 +146,9 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
       // Chain onto the queue rather than awaiting here, so the stream
       // subscription itself never blocks: events are still handled in
       // arrival order (each handler starts only once the previous one's
-      // synchronous work — see _handleEvent — has finished), but a bad event
-      // can't wedge every event after it.
+      // returned future — its full awaited decrypt/upsert/call handling in
+      // _handleEvent, not just its synchronous portion — has completed),
+      // but a bad event can't wedge every event after it.
       _eventQueue = _eventQueue.then(
         (_) => _handleEvent(
           event,

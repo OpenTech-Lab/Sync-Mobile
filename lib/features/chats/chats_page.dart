@@ -431,10 +431,17 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
     }
     final clearedAt = DateTime.now().toUtc();
     final repository = ref.read(chatRepositoryProvider);
-    await BackupPreferences().writeConversationClearedAt(
+    final backupPreferences = BackupPreferences();
+    await backupPreferences.writeConversationClearedAt(
       serverUrl: widget.serverUrl,
       conversationId: conversationId,
       clearedAt: clearedAt,
+    );
+    // A stale sync cursor would otherwise resume catch-up from before the
+    // clear, re-fetching only to have the clearedAt filter drop it again.
+    await backupPreferences.clearConversationSyncCursor(
+      widget.serverUrl,
+      conversationId,
     );
     await repository.clearConversation(conversationId);
     await ref.read(hiddenConversationIdsProvider.notifier).hide(conversationId);

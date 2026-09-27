@@ -12,8 +12,14 @@ import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/state/chat_visibility_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
 import 'package:mobile/state/realtime_sync_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  // syncLatest reads/writes a per-conversation sync-cursor watermark via
+  // BackupPreferences, which needs SharedPreferences' plugin mocked.
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
+
   test('coalesces concurrent connects for the same realtime session', () async {
     final gate = Completer<void>();
     final service = _FakeRealtimeSyncService(connectGate: gate);

@@ -245,18 +245,19 @@ class ConversationMessagesController
   /// see [_fetchIncremental]) can't turn catch-up into an unbounded loop.
   static const _maxCatchUpPages = 10;
 
-  /// Local-only rows queued before the server assigned a real id (see
-  /// [ChatRepository.addMessage]) are never usable as an incremental-sync
-  /// cursor — only a server-assigned id guarantees `after=<id>` means
-  /// anything to the server.
-  bool _hasServerId(LocalChatMessage message) =>
-      !message.id.startsWith('m_');
-
-  /// Fetches messages newer than the newest locally-known server message and
-  /// merges them into local storage, falling back to the old "latest page"
-  /// fetch when there is no usable cursor or the incremental request fails
-  /// (e.g. an old server that doesn't understand `after`, or the cursor
-  /// message has since been deleted server-side).
+  /// Fetches messages newer than [BackupPreferences.readConversationSyncCursor]
+  /// and merges them into local storage, falling back to the old "latest
+  /// page" fetch when there is no cursor yet or the incremental request
+  /// fails (e.g. an old server that doesn't understand `after`, or the
+  /// cursor message has since been deleted server-side).
+  ///
+  /// The cursor is a REST-sync watermark, not "the newest message we happen
+  /// to have stored locally": a realtime WS event can insert a newer message
+  /// (m2) while an earlier one (m1) was lost in a socket gap, so the newest
+  /// local row is not a safe stand-in for "everything up to here has been
+  /// fetched over REST". Only a successful fetch in this method may advance
+  /// it (see the end of this method) — a WS insert or a sent message must
+  /// never move it forward, or the gap behind it would never get filled in.
   ///
   /// Returns whether the sync completed successfully, so callers that must
   /// not proceed on a failed sync (see [MainShell]'s resume handling) can
@@ -268,7 +269,11 @@ class ConversationMessagesController
   }) async {
     var success = false;
     try {
-      final cursor = await _findLocalCursor();
+      final preferences = BackupPreferences();
+      final cursor = await preferences.readConversationSyncCursor(
+        baseUrl,
+        arg,
+      );
       List<LocalChatMessage> fetched;
       if (cursor == null) {
         fetched = await _fetchLatestPage(
@@ -302,6 +307,24 @@ class ConversationMessagesController
           : fetched.where((m) => m.createdAt.isAfter(clearedAt)).toList();
 
       await _repository.upsertMessages(toUpsert);
+
+      if (fetched.isNotEmpty) {
+        // Advance the watermark to the newest id among everything the
+        // server returned this call (regardless of clearedAt filtering —
+        // clearing local data doesn't mean the server-side history before
+        // it needs re-fetching later). Only once the upsert above has
+        // actually landed, and never when the fetch came back empty (that
+        // would just repeat the same cursor next time, which is correct).
+        final newestId = fetched
+            .reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b)
+            .id;
+        await preferences.writeConversationSyncCursor(
+          serverUrl: baseUrl,
+          conversationId: arg,
+          messageId: newestId,
+        );
+      }
+
       if (toUpsert.isNotEmpty) {
         await _unhideConversationIfNeeded();
       }
@@ -325,24 +348,6 @@ class ConversationMessagesController
       state = AsyncData(local);
     }
     return success;
-  }
-
-  /// The newest locally-stored message id that is safe to use as an `after`
-  /// cursor, or null if none of the messages we have locally came from the
-  /// server (e.g. a brand-new conversation).
-  Future<String?> _findLocalCursor() async {
-    // listMessages is newest-first, so the first server-sourced id we see is
-    // the correct cursor.
-    final local = await _repository.listMessages(
-      conversationId: arg,
-      limit: 200,
-    );
-    for (final message in local) {
-      if (_hasServerId(message)) {
-        return message.id;
-      }
-    }
-    return null;
   }
 
   Future<List<LocalChatMessage>> _fetchLatestPage({
