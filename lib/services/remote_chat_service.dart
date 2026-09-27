@@ -158,19 +158,24 @@ class RemoteChatService {
     required String currentUserId,
     required String partnerId,
     String? before,
+    String? after,
     int limit = 30,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final uri = Uri.parse('$normalized/api/messages/$partnerId').replace(
       queryParameters: {
         if (before != null && before.isNotEmpty) 'before': before,
+        if (after != null && after.isNotEmpty) 'after': after,
         'limit': '$limit',
       },
     );
 
+    // Conversation history can be several megabytes (media is stored inline
+    // in the E2EE envelope), so this can take much longer than a typical API
+    // call on a slow mobile connection.
     final response = await _httpClient
         .get(uri, headers: _authHeaders(accessToken))
-        .timeout(const Duration(seconds: 10));
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
       throw StateError('Failed to load conversation (${response.statusCode}).');
@@ -195,19 +200,23 @@ class RemoteChatService {
     required String accessToken,
     required String roomId,
     String? before,
+    String? after,
     int limit = 50,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final uri = Uri.parse('$normalized/api/rooms/$roomId/messages').replace(
       queryParameters: {
         if (before != null && before.isNotEmpty) 'before': before,
+        if (after != null && after.isNotEmpty) 'after': after,
         'limit': '$limit',
       },
     );
 
+    // See getConversation: room history can also be large, so this fetch
+    // gets the same relaxed timeout.
     final response = await _httpClient
         .get(uri, headers: _authHeaders(accessToken))
-        .timeout(const Duration(seconds: 10));
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
       throw StateError(
@@ -571,7 +580,7 @@ class RemoteChatService {
       id: json['id'] as String,
       conversationId: conversationId,
       senderId: senderId,
-      body: decrypted ?? '[Encrypted message: key unavailable on this device]',
+      body: decrypted ?? encryptedFallbackMessagePlaceholder,
       createdAt: DateTime.parse(json['created_at'] as String).toUtc(),
     );
   }

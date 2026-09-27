@@ -1,3 +1,9 @@
+/// Body used when a message's E2EE envelope could not be decrypted on this
+/// device (no local key yet, or a transient key-store error). Shared so a
+/// later successful decrypt can be recognized and replace the placeholder.
+const encryptedFallbackMessagePlaceholder =
+    '[Encrypted message: key unavailable on this device]';
+
 class LocalChatMessage {
   const LocalChatMessage({
     required this.id,

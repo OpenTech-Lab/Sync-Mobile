@@ -160,7 +160,10 @@ class _MainShellState extends ConsumerState<MainShell>
         );
         // Backfill any messages that arrived while the WebSocket was down,
         // then mark the conversation read so unread state stays consistent
-        // with what the user is looking at.
+        // with what the user is looking at. This must be a chain, not run in
+        // parallel: marking read before catch-up finished (or when it failed)
+        // could clear the unread badge for messages the app hadn't fetched
+        // yet.
         final activePartnerId = _activePartnerId;
         if (activePartnerId != null && activePartnerId.isNotEmpty) {
           unawaited(
@@ -170,19 +173,20 @@ class _MainShellState extends ConsumerState<MainShell>
                   baseUrl: widget.serverUrl,
                   accessToken: token,
                   currentUserId: widget.currentUserId,
-                ),
-          );
-          unawaited(
-            ref
-                .read(conversationMessagesProvider(activePartnerId).notifier)
-                .markRead(baseUrl: widget.serverUrl, accessToken: token)
-                .then((_) {
-              if (mounted) {
-                ref
-                    .read(unreadCountsProvider.notifier)
-                    .clearForPartner(activePartnerId);
-              }
-            }).catchError((_) {}),
+                )
+                .then((synced) async {
+              if (!synced) return;
+              try {
+                await ref
+                    .read(conversationMessagesProvider(activePartnerId).notifier)
+                    .markRead(baseUrl: widget.serverUrl, accessToken: token);
+                if (mounted) {
+                  ref
+                      .read(unreadCountsProvider.notifier)
+                      .clearForPartner(activePartnerId);
+                }
+              } catch (_) {}
+            }),
           );
         }
       });

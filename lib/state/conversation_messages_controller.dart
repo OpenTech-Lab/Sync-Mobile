@@ -240,32 +240,66 @@ class ConversationMessagesController
     ref.invalidate(conversationSummariesProvider);
   }
 
-  Future<void> syncLatest({
+  /// Maximum number of `after`-cursor pages fetched per [syncLatest] call, so
+  /// a server that never reports a short page (e.g. one ignoring `after`,
+  /// see [_fetchIncremental]) can't turn catch-up into an unbounded loop.
+  static const _maxCatchUpPages = 10;
+
+  /// Local-only rows queued before the server assigned a real id (see
+  /// [ChatRepository.addMessage]) are never usable as an incremental-sync
+  /// cursor — only a server-assigned id guarantees `after=<id>` means
+  /// anything to the server.
+  bool _hasServerId(LocalChatMessage message) =>
+      !message.id.startsWith('m_');
+
+  /// Fetches messages newer than the newest locally-known server message and
+  /// merges them into local storage, falling back to the old "latest page"
+  /// fetch when there is no usable cursor or the incremental request fails
+  /// (e.g. an old server that doesn't understand `after`, or the cursor
+  /// message has since been deleted server-side).
+  ///
+  /// Returns whether the sync completed successfully, so callers that must
+  /// not proceed on a failed sync (see [MainShell]'s resume handling) can
+  /// gate on it.
+  Future<bool> syncLatest({
     required String baseUrl,
     required String accessToken,
     required String currentUserId,
   }) async {
+    var success = false;
     try {
-      final latest = _isRoomConversation
-          ? await _remoteChatService.getRoomMessages(
-              baseUrl: baseUrl,
-              accessToken: accessToken,
-              roomId: _roomId,
-              limit: 30,
-            )
-          : await _remoteChatService.getConversation(
-              baseUrl: baseUrl,
-              accessToken: accessToken,
-              currentUserId: currentUserId,
-              partnerId: arg,
-              limit: 30,
-            );
+      final cursor = await _findLocalCursor();
+      List<LocalChatMessage> fetched;
+      if (cursor == null) {
+        fetched = await _fetchLatestPage(
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+          currentUserId: currentUserId,
+        );
+      } else {
+        try {
+          fetched = await _fetchIncremental(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+            cursor: cursor,
+          );
+        } catch (_) {
+          // Unknown cursor (404), an old server that rejects/ignores `after`,
+          // or a transient network error — fall back to the plain fetch.
+          fetched = await _fetchLatestPage(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+          );
+        }
+      }
 
       // Don't restore messages that pre-date a local-data deletion.
       final clearedAt = await _latestClearedAt(baseUrl);
       final toUpsert = clearedAt == null
-          ? latest
-          : latest.where((m) => m.createdAt.isAfter(clearedAt)).toList();
+          ? fetched
+          : fetched.where((m) => m.createdAt.isAfter(clearedAt)).toList();
 
       await _repository.upsertMessages(toUpsert);
       if (toUpsert.isNotEmpty) {
@@ -278,6 +312,7 @@ class ConversationMessagesController
       } else {
         ref.invalidate(conversationSummariesProvider);
       }
+      success = true;
     } catch (_) {
       // Network unavailable — fall through to show local cache below.
     } finally {
@@ -289,6 +324,105 @@ class ConversationMessagesController
       );
       state = AsyncData(local);
     }
+    return success;
+  }
+
+  /// The newest locally-stored message id that is safe to use as an `after`
+  /// cursor, or null if none of the messages we have locally came from the
+  /// server (e.g. a brand-new conversation).
+  Future<String?> _findLocalCursor() async {
+    // listMessages is newest-first, so the first server-sourced id we see is
+    // the correct cursor.
+    final local = await _repository.listMessages(
+      conversationId: arg,
+      limit: 200,
+    );
+    for (final message in local) {
+      if (_hasServerId(message)) {
+        return message.id;
+      }
+    }
+    return null;
+  }
+
+  Future<List<LocalChatMessage>> _fetchLatestPage({
+    required String baseUrl,
+    required String accessToken,
+    required String currentUserId,
+  }) {
+    return _isRoomConversation
+        ? _remoteChatService.getRoomMessages(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            roomId: _roomId,
+            limit: 30,
+          )
+        : _remoteChatService.getConversation(
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+            partnerId: arg,
+            limit: 30,
+          );
+  }
+
+  /// Pages forward from [cursor] with `after`, advancing to the newest id
+  /// seen in each page, until a page comes back short (fewer than the
+  /// requested limit), a page adds nothing we haven't already seen this call
+  /// (guards against a server that ignores `after` and keeps returning the
+  /// same latest page), or [_maxCatchUpPages] pages have been fetched.
+  Future<List<LocalChatMessage>> _fetchIncremental({
+    required String baseUrl,
+    required String accessToken,
+    required String currentUserId,
+    required String cursor,
+  }) async {
+    const pageLimit = 100;
+    final collected = <LocalChatMessage>[];
+    final seenIds = <String>{};
+    var afterId = cursor;
+
+    for (var page = 0; page < _maxCatchUpPages; page++) {
+      final batch = _isRoomConversation
+          ? await _remoteChatService.getRoomMessages(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              roomId: _roomId,
+              after: afterId,
+              limit: pageLimit,
+            )
+          : await _remoteChatService.getConversation(
+              baseUrl: baseUrl,
+              accessToken: accessToken,
+              currentUserId: currentUserId,
+              partnerId: arg,
+              after: afterId,
+              limit: pageLimit,
+            );
+      if (batch.isEmpty) {
+        break;
+      }
+
+      final newInBatch = batch.where((m) => !seenIds.contains(m.id)).toList();
+      if (newInBatch.isEmpty) {
+        break;
+      }
+      seenIds.addAll(newInBatch.map((m) => m.id));
+      collected.addAll(newInBatch);
+
+      // Pick the newest id by timestamp rather than assuming an order, so an
+      // old server that ignores `after` and replies newest-first still moves
+      // the cursor forward instead of looping on the same page.
+      afterId = batch
+          .reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b)
+          .id;
+
+      if (batch.length < pageLimit) {
+        break;
+      }
+    }
+
+    return collected;
   }
 
   Future<void> loadMore({
@@ -389,21 +523,33 @@ class ConversationMessagesController
     await _repository.upsertMessages([sent]);
     await _unhideConversationIfNeeded();
     ref.invalidate(conversationSummariesProvider);
+    // The message is already sent and stored at this point — a read-receipt
+    // failure below must not be reported as a send failure (it previously
+    // propagated out of sendMessage, which the UI treated as a failed send
+    // and retried, duplicating the message on the server).
     if (_isRoomConversation) {
-      await _remoteChatService.markRoomRead(
-        baseUrl: baseUrl,
-        accessToken: accessToken,
-        roomId: _roomId,
-      );
-      await ref
-          .read(roomConversationsProvider.notifier)
-          .markRoomReadLocal(_roomId);
+      try {
+        await _remoteChatService.markRoomRead(
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+          roomId: _roomId,
+        );
+        await ref
+            .read(roomConversationsProvider.notifier)
+            .markRoomReadLocal(_roomId);
+      } catch (_) {
+        // Best-effort; see comment above.
+      }
     } else {
-      await _remoteChatService.markRead(
-        baseUrl: baseUrl,
-        accessToken: accessToken,
-        partnerId: arg,
-      );
+      try {
+        await _remoteChatService.markRead(
+          baseUrl: baseUrl,
+          accessToken: accessToken,
+          partnerId: arg,
+        );
+      } catch (_) {
+        // Best-effort; see comment above.
+      }
     }
 
     final local = await _repository.listMessages(

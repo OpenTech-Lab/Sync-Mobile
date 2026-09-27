@@ -148,11 +148,6 @@ class MessageE2eeService {
       return normalized;
     }
 
-    final localKeyPairData = await _getLocalKeyPair();
-    if (localKeyPairData == null) {
-      return null;
-    }
-
     final decoded = jsonDecode(normalized);
     if (decoded is! Map<String, dynamic>) {
       return null;
@@ -178,6 +173,13 @@ class MessageE2eeService {
     }
 
     try {
+      // Inside the try: secure-storage access can throw (e.g. a transient
+      // keystore error), and that must return null like any other failed
+      // decrypt rather than escape uncaught out of the WS event handler.
+      final localKeyPairData = await _getLocalKeyPair();
+      if (localKeyPairData == null) {
+        return null;
+      }
       final sharedSecret = await _x25519.sharedSecretKey(
         keyPair: localKeyPairData,
         remotePublicKey: SimplePublicKey(

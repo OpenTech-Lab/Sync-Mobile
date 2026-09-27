@@ -347,10 +347,38 @@ class LocalChatRepository implements ChatRepository {
     final db = await _encryptedDatabase.open();
     await db.transaction((txn) async {
       for (final message in messages) {
+        if (message.body == encryptedFallbackMessagePlaceholder) {
+          // Never let a fresh placeholder clobber a body we already managed
+          // to decrypt.
+          await txn.insert(
+            'local_messages',
+            message.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+          continue;
+        }
+
+        // ConflictAlgorithm.ignore means a row first stored as the
+        // encrypted-fallback placeholder (decrypt failed at the time, e.g.
+        // the device key wasn't ready yet) could never be replaced once a
+        // later fetch or realtime event brings the same id with a
+        // successfully-decrypted body. Repair that case explicitly.
+        final existing = await txn.query(
+          'local_messages',
+          columns: ['body'],
+          where: 'id = ?',
+          whereArgs: [message.id],
+          limit: 1,
+        );
+        final existingBody = existing.isEmpty
+            ? null
+            : existing.first['body'] as String?;
         await txn.insert(
           'local_messages',
           message.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.ignore,
+          conflictAlgorithm: existingBody == encryptedFallbackMessagePlaceholder
+              ? ConflictAlgorithm.replace
+              : ConflictAlgorithm.ignore,
         );
       }
     });
