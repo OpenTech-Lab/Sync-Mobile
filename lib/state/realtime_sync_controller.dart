@@ -54,10 +54,15 @@ final realtimeSyncControllerProvider =
     );
 
 class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
-  static const _encryptedFallbackMessage =
-      '[Encrypted message: key unavailable on this device]';
+  static const _encryptedFallbackMessage = encryptedFallbackMessagePlaceholder;
   StreamSubscription<RealtimeEvent>? _subscription;
   final Set<String> _conversationSyncInFlight = <String>{};
+  final Set<String> _conversationSyncDirty = <String>{};
+
+  /// Chains event handling so decrypt + upsert + call handling happen in the
+  /// order events arrived, even though each handler is async. Reset whenever
+  /// a fresh subscription is attached in [_connect].
+  Future<void> _eventQueue = Future<void>.value();
 
   String? _baseUrl;
   Future<String?> Function()? _accessTokenProvider;
@@ -136,7 +141,37 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     final service = ref.read(realtimeSyncServiceProvider);
 
     await _subscription?.cancel();
-    _subscription = service.events.listen((event) async {
+    _eventQueue = Future<void>.value();
+    _subscription = service.events.listen((event) {
+      // Chain onto the queue rather than awaiting here, so the stream
+      // subscription itself never blocks: events are still handled in
+      // arrival order (each handler starts only once the previous one's
+      // synchronous work — see _handleEvent — has finished), but a bad event
+      // can't wedge every event after it.
+      _eventQueue = _eventQueue.then(
+        (_) => _handleEvent(
+          event,
+          baseUrl: baseUrl,
+          accessTokenProvider: accessTokenProvider,
+          currentUserId: currentUserId,
+        ),
+      );
+    });
+
+    await service.connect(
+      baseUrl: baseUrl,
+      accessTokenProvider: accessTokenProvider,
+      currentUserId: currentUserId,
+    );
+  }
+
+  Future<void> _handleEvent(
+    RealtimeEvent event, {
+    required String baseUrl,
+    required Future<String?> Function() accessTokenProvider,
+    required String currentUserId,
+  }) async {
+    try {
       final current =
           state.value ??
           const RealtimeSyncState(
@@ -149,6 +184,16 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
         state = AsyncData(
           current.copyWith(status: event.connectionStatus, error: null),
         );
+        if (event.connectionStatus == RealtimeConnectionStatus.connected) {
+          // Never block the event queue on catch-up network calls.
+          unawaited(
+            _runConnectCatchUp(
+              baseUrl: baseUrl,
+              accessTokenProvider: accessTokenProvider,
+              currentUserId: currentUserId,
+            ),
+          );
+        }
       }
 
       if (event.error != null) {
@@ -161,13 +206,19 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
       }
 
       if (event.typingPartnerId != null && event.isTyping != null) {
-        final nextTyping = {...current.typingPartnerIds};
+        // Re-read state rather than reusing `current`: nothing has awaited
+        // yet on this path, but keeping this consistent with the message
+        // branch below avoids the class of bug where a stale snapshot
+        // clobbers a connection-status change made concurrently by a
+        // side-effect task.
+        final latest = state.value ?? current;
+        final nextTyping = {...latest.typingPartnerIds};
         if (event.isTyping!) {
           nextTyping.add(event.typingPartnerId!);
         } else {
           nextTyping.remove(event.typingPartnerId!);
         }
-        state = AsyncData(current.copyWith(typingPartnerIds: nextTyping));
+        state = AsyncData(latest.copyWith(typingPartnerIds: nextTyping));
       }
 
       if (event.roomMembershipChangedRoomId != null) {
@@ -209,53 +260,30 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
             createdAt: message.createdAt,
           );
         }
-        final typingAfterMessage = {...current.typingPartnerIds}
+        // Re-read state: the decrypt above awaited, so `current` may already
+        // be stale (e.g. a connection-status update landed while we were
+        // decrypting). Writing back `current.copyWith(...)` here would
+        // silently overwrite that newer status.
+        final latestForMessage = state.value ?? current;
+        final typingAfterMessage = {...latestForMessage.typingPartnerIds}
           ..remove(message.conversationId);
         state = AsyncData(
-          current.copyWith(typingPartnerIds: typingAfterMessage),
+          latestForMessage.copyWith(typingPartnerIds: typingAfterMessage),
         );
         await ref.read(chatRepositoryProvider).upsertMessages([message]);
-        final partnerId = message.conversationId;
-        final isRoomConversation = isRoomConversationId(partnerId);
-        final accessToken = await accessTokenProvider();
-        if (accessToken == null || accessToken.isEmpty) {
-          ref.invalidate(conversationMessagesProvider(partnerId));
-          ref.invalidate(conversationSummariesProvider);
-          return;
-        }
-        if (isRoomConversation) {
-          try {
-            await ref
-                .read(roomConversationsProvider.notifier)
-                .syncRooms(baseUrl: baseUrl, accessToken: accessToken);
-          } catch (_) {
-            ref.invalidate(conversationSummariesProvider);
-          }
-        }
-        await _syncConversationSnapshot(
-          partnerId: partnerId,
-          baseUrl: baseUrl,
-          accessToken: accessToken,
-          currentUserId: currentUserId,
+
+        // Everything below is a best-effort background refresh (network
+        // fetches, a notification, backup) — run it unawaited so a slow
+        // catch-up fetch can never stall in-order handling of the next
+        // realtime event, e.g. a call signal arriving right behind a message.
+        unawaited(
+          _handleMessageSideEffects(
+            message: message,
+            baseUrl: baseUrl,
+            accessTokenProvider: accessTokenProvider,
+            currentUserId: currentUserId,
+          ),
         );
-        final visibility = ref.read(chatVisibilityProvider);
-        if (!visibility.isConversationOpen(partnerId) &&
-            message.senderId != currentUserId) {
-          final avatarBase64 = isRoomConversation
-              ? null
-              : await ref
-                    .read(userProfilePreferencesProvider)
-                    .readAvatarBase64(baseUrl, partnerId);
-          await ref
-              .read(realtimeNotificationServiceProvider)
-              .showIncomingMessageNotification(avatarBase64: avatarBase64);
-        }
-        await ref
-            .read(unreadCountsProvider.notifier)
-            .refresh(baseUrl: baseUrl, accessToken: accessToken);
-        await ref
-            .read(backupControllerProvider.notifier)
-            .maybeAutoBackup(baseUrl: baseUrl, accessToken: accessToken);
       }
 
       if (event.incomingCallId != null) {
@@ -312,13 +340,112 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
               },
             );
       }
-    });
+    } catch (_) {
+      // A single malformed/unlucky event must not break the queue for every
+      // event that arrives after it.
+    }
+  }
 
-    await service.connect(
-      baseUrl: baseUrl,
-      accessTokenProvider: accessTokenProvider,
-      currentUserId: currentUserId,
-    );
+  Future<void> _handleMessageSideEffects({
+    required LocalChatMessage message,
+    required String baseUrl,
+    required Future<String?> Function() accessTokenProvider,
+    required String currentUserId,
+  }) async {
+    try {
+      final partnerId = message.conversationId;
+      final isRoomConversation = isRoomConversationId(partnerId);
+      final accessToken = await accessTokenProvider();
+      if (accessToken == null || accessToken.isEmpty) {
+        ref.invalidate(conversationMessagesProvider(partnerId));
+        ref.invalidate(conversationSummariesProvider);
+        return;
+      }
+      if (isRoomConversation) {
+        try {
+          await ref
+              .read(roomConversationsProvider.notifier)
+              .syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+        } catch (_) {
+          ref.invalidate(conversationSummariesProvider);
+        }
+      }
+      await _syncConversationSnapshot(
+        partnerId: partnerId,
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        currentUserId: currentUserId,
+      );
+      final visibility = ref.read(chatVisibilityProvider);
+      if (!visibility.isConversationOpen(partnerId) &&
+          message.senderId != currentUserId) {
+        final avatarBase64 = isRoomConversation
+            ? null
+            : await ref
+                  .read(userProfilePreferencesProvider)
+                  .readAvatarBase64(baseUrl, partnerId);
+        await ref
+            .read(realtimeNotificationServiceProvider)
+            .showIncomingMessageNotification(avatarBase64: avatarBase64);
+      }
+      await ref
+          .read(unreadCountsProvider.notifier)
+          .refresh(baseUrl: baseUrl, accessToken: accessToken);
+      await ref
+          .read(backupControllerProvider.notifier)
+          .maybeAutoBackup(baseUrl: baseUrl, accessToken: accessToken);
+    } catch (_) {
+      // Best-effort background sync; never let it crash the fire-and-forget
+      // task it runs in.
+    }
+  }
+
+  /// Runs on every successful (re)connect: unread messages can have been
+  /// missed while the socket was down or reconnecting (Redis pubsub has no
+  /// history), so refresh unread counts and catch up every conversation that
+  /// might be behind — anything with an unread count, plus whatever the user
+  /// currently has open.
+  Future<void> _runConnectCatchUp({
+    required String baseUrl,
+    required Future<String?> Function() accessTokenProvider,
+    required String currentUserId,
+  }) async {
+    try {
+      final accessToken = await accessTokenProvider();
+      if (accessToken == null || accessToken.isEmpty) {
+        return;
+      }
+
+      await ref
+          .read(unreadCountsProvider.notifier)
+          .refresh(baseUrl: baseUrl, accessToken: accessToken);
+      final unread = ref.read(unreadCountsProvider).value ?? const {};
+      final activePartnerId = ref.read(chatVisibilityProvider).activePartnerId;
+
+      final partnersToSync = <String>{
+        for (final entry in unread.entries)
+          if (entry.value > 0) entry.key,
+        if (activePartnerId != null && activePartnerId.isNotEmpty)
+          activePartnerId,
+      };
+      for (final partnerId in partnersToSync) {
+        unawaited(
+          _syncConversationSnapshot(
+            partnerId: partnerId,
+            baseUrl: baseUrl,
+            accessToken: accessToken,
+            currentUserId: currentUserId,
+          ),
+        );
+      }
+
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .syncRooms(baseUrl: baseUrl, accessToken: accessToken);
+    } catch (_) {
+      // Best-effort: a later reconnect (or a manual pull-to-refresh) will
+      // retry this.
+    }
   }
 
   Future<void> disconnect() async {
@@ -347,6 +474,12 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     ref.read(realtimeSyncServiceProvider).sendCallSignal(payload);
   }
 
+  /// Runs [syncLatest] for [partnerId], coalescing concurrent requests
+  /// instead of dropping them: a request that arrives while one is already
+  /// in flight must not be silently skipped (its message would then depend
+  /// on the in-flight sync happening to already cover it), so it's recorded
+  /// as "dirty" and the sync reruns once more after the in-flight one
+  /// finishes.
   Future<void> _syncConversationSnapshot({
     required String partnerId,
     required String baseUrl,
@@ -354,22 +487,28 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
     required String currentUserId,
   }) async {
     if (_conversationSyncInFlight.contains(partnerId)) {
+      _conversationSyncDirty.add(partnerId);
       return;
     }
 
     _conversationSyncInFlight.add(partnerId);
     try {
-      await ref
-          .read(conversationMessagesProvider(partnerId).notifier)
-          .syncLatest(
-            baseUrl: baseUrl,
-            accessToken: accessToken,
-            currentUserId: currentUserId,
-          );
-    } catch (_) {
-      // Keep UI reactive even if remote sync fails transiently.
-      ref.invalidate(conversationMessagesProvider(partnerId));
-      ref.invalidate(conversationSummariesProvider);
+      do {
+        _conversationSyncDirty.remove(partnerId);
+        try {
+          await ref
+              .read(conversationMessagesProvider(partnerId).notifier)
+              .syncLatest(
+                baseUrl: baseUrl,
+                accessToken: accessToken,
+                currentUserId: currentUserId,
+              );
+        } catch (_) {
+          // Keep UI reactive even if remote sync fails transiently.
+          ref.invalidate(conversationMessagesProvider(partnerId));
+          ref.invalidate(conversationSummariesProvider);
+        }
+      } while (_conversationSyncDirty.contains(partnerId));
     } finally {
       _conversationSyncInFlight.remove(partnerId);
     }

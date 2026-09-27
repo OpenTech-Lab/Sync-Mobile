@@ -223,11 +223,15 @@ class WebRtcCallService {
       fallback: answer,
     ).then((description) => description.sdp ?? '');
 
-    // Drain any ICE candidates buffered before remote description was set
-    for (final c in _pendingCandidates) {
+    // Drain any ICE candidates buffered before remote description was set.
+    // A candidate can arrive concurrently while we await addCandidate, so
+    // iterating a snapshot (`for (final c in _pendingCandidates)` then
+    // `.clear()`) risks a ConcurrentModificationError or silently dropping
+    // that candidate unapplied; removing from the front as we go avoids both.
+    while (_pendingCandidates.isNotEmpty) {
+      final c = _pendingCandidates.removeAt(0);
       await pc.addCandidate(c);
     }
-    _pendingCandidates.clear();
 
     return (localStream: localStream, sdpAnswer: gatheredAnswer);
   }
@@ -280,11 +284,13 @@ class WebRtcCallService {
     if (pc == null) return;
     await pc.setRemoteDescription(RTCSessionDescription(sdpAnswer, 'answer'));
 
-    // Drain buffered ICE candidates
-    for (final c in _pendingCandidates) {
+    // Drain buffered ICE candidates. See the matching comment in
+    // createAnswer for why this removes from the front instead of iterating
+    // a snapshot and clearing afterwards.
+    while (_pendingCandidates.isNotEmpty) {
+      final c = _pendingCandidates.removeAt(0);
       await pc.addCandidate(c);
     }
-    _pendingCandidates.clear();
   }
 
   Future<void> addIceCandidate(Map<String, dynamic> candidateJson) async {

@@ -8,5 +8,12 @@ import 'dev_http_client_io.dart';
 WebSocketChannel connect(Uri uri) {
   final client = HttpClient();
   configureDevBadCertificateCallback(client);
-  return IOWebSocketChannel.connect(uri, customClient: client);
+  return IOWebSocketChannel.connect(
+    uri,
+    customClient: client,
+    // Detect a dead-but-not-closed socket (common on flaky mobile networks)
+    // instead of waiting on a read that never comes.
+    pingInterval: const Duration(seconds: 15),
+    connectTimeout: const Duration(seconds: 10),
+  );
 }

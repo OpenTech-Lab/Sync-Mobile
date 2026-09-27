@@ -16,11 +16,18 @@ class RealtimeSyncService {
   final _events = StreamController<RealtimeEvent>.broadcast();
 
   WebSocketChannel? _channel;
+  Object? _openAttempt;
   StreamSubscription? _channelSubscription;
   Timer? _pingTimer;
   Timer? _reconnectTimer;
   bool _channelReady = false;
-  final List<String> _pendingCallSignals = <String>[];
+
+  /// Call signals queued while the socket is (re)connecting, with the time
+  /// they were queued so a stale one — the peer has long since hung up or
+  /// retried through a fresh connection — isn't replayed into a new call.
+  static const _maxPendingCallSignalAge = Duration(seconds: 30);
+  final List<({String payload, DateTime enqueuedAt})> _pendingCallSignals =
+      <({String payload, DateTime enqueuedAt})>[];
 
   bool _closedByUser = false;
   int _attempt = 0;
@@ -49,6 +56,10 @@ class RealtimeSyncService {
     _closedByUser = true;
     _reconnectTimer?.cancel();
     await _closeChannel();
+    // A user-initiated disconnect ends any call signaling in flight; queued
+    // signals belong to that now-dead session and must not be replayed into
+    // whatever connects next.
+    _pendingCallSignals.clear();
     _events.add(
       RealtimeEvent.connection(RealtimeConnectionStatus.disconnected),
     );
@@ -74,13 +85,13 @@ class RealtimeSyncService {
     final encoded = jsonEncode(payload);
     final channel = _channel;
     if (channel == null || !_channelReady) {
-      _pendingCallSignals.add(encoded);
+      _pendingCallSignals.add((payload: encoded, enqueuedAt: DateTime.now()));
       return;
     }
     try {
       channel.sink.add(encoded);
     } catch (_) {
-      _pendingCallSignals.add(encoded);
+      _pendingCallSignals.add((payload: encoded, enqueuedAt: DateTime.now()));
     }
   }
 
@@ -104,6 +115,12 @@ class RealtimeSyncService {
       ),
     );
 
+    // Identifies this attempt so a superseded open (a newer connect()/_open()
+    // call started while this one was still waiting on `ready`) can detect
+    // that it lost the race and close its own channel instead of publishing
+    // it as `_channel`.
+    final attempt = Object();
+    _openAttempt = attempt;
     try {
       final accessToken = await accessTokenProvider();
       if (accessToken == null || accessToken.trim().isEmpty) {
@@ -117,14 +134,26 @@ class RealtimeSyncService {
       }
       final wsUri = _wsUri(baseUrl, accessToken);
       final channel = connectDevWebSocketChannel(wsUri);
-      _channel = channel;
-      _channelReady = false;
+      // Only publish the channel once `ready` succeeds. Assigning it earlier
+      // left `_channel` pointing at a channel whose `ready` could still fail,
+      // and closing that channel later in `_closeChannel` never completes
+      // (web_socket_channel 3.x: `sink.close()` on a channel whose `ready`
+      // failed never resolves), hanging every future disconnect/reconnect.
       await channel.ready;
-      if (!identical(_channel, channel)) {
-        await channel.sink.close();
+      if (!identical(_openAttempt, attempt)) {
+        // A newer open() call has already taken over; don't touch shared
+        // state, just close the channel we opened.
+        unawaited(
+          channel.sink
+              .close()
+              .timeout(const Duration(seconds: 2))
+              .catchError((_) {}),
+        );
         return;
       }
+      _channel = channel;
       _channelReady = true;
+      _attempt = 0;
       _flushPendingCallSignals(channel);
       _events.add(RealtimeEvent.connection(RealtimeConnectionStatus.connected));
 
@@ -206,17 +235,31 @@ class RealtimeSyncService {
     _pingTimer?.cancel();
     _channelReady = false;
     await _channelSubscription?.cancel();
-    await _channel?.sink.close();
+    // Detach state before closing: a channel whose `ready` never succeeded
+    // can have a `sink.close()` that never completes, and awaiting that here
+    // would hang every subsequent connect()/disconnect() forever.
+    final channel = _channel;
     _channel = null;
+    if (channel != null) {
+      unawaited(
+        channel.sink
+            .close()
+            .timeout(const Duration(seconds: 2))
+            .catchError((_) {}),
+      );
+    }
   }
 
   void _flushPendingCallSignals(WebSocketChannel channel) {
     if (_pendingCallSignals.isEmpty) return;
-    final pending = List<String>.of(_pendingCallSignals);
+    final now = DateTime.now();
+    final pending = _pendingCallSignals
+        .where((entry) => now.difference(entry.enqueuedAt) <= _maxPendingCallSignalAge)
+        .toList();
     _pendingCallSignals.clear();
     for (var index = 0; index < pending.length; index++) {
       try {
-        channel.sink.add(pending[index]);
+        channel.sink.add(pending[index].payload);
       } catch (_) {
         _pendingCallSignals.insertAll(0, pending.sublist(index));
         return;
