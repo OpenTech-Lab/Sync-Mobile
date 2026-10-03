@@ -3,17 +3,32 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'dev_http_client.dart';
 import 'dev_web_socket_channel.dart';
 import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../models/realtime_event.dart';
 
+/// The server has no `POST /auth/ws-ticket` (404/405): it predates tickets and
+/// only understands the legacy `?token=` handshake. Any other ticket failure
+/// is NOT this; see [RealtimeSyncService._resolveWebSocketUri].
+class _WebSocketTicketUnsupported implements Exception {
+  const _WebSocketTicketUnsupported();
+}
+
 class RealtimeSyncService {
-  RealtimeSyncService();
+  RealtimeSyncService([
+    http.Client? httpClient,
+    WebSocketChannel Function(Uri uri)? connectChannel,
+  ]) : _httpClient = createDevHttpClient(httpClient),
+       _connectChannel = connectChannel ?? connectDevWebSocketChannel;
 
   final _events = StreamController<RealtimeEvent>.broadcast();
+  final http.Client _httpClient;
+  final WebSocketChannel Function(Uri uri) _connectChannel;
 
   WebSocketChannel? _channel;
   Object? _openAttempt;
@@ -98,6 +113,7 @@ class RealtimeSyncService {
   Future<void> dispose() async {
     await disconnect();
     _pendingCallSignals.clear();
+    _httpClient.close();
     await _events.close();
   }
 
@@ -132,8 +148,18 @@ class RealtimeSyncService {
         );
         return;
       }
-      final wsUri = _wsUri(baseUrl, accessToken);
-      final channel = connectDevWebSocketChannel(wsUri);
+      // Every (re)connect needs its own ticket: they are single-use and only
+      // valid for 30 s, so one can never be reused or fetched ahead of time.
+      final wsUri = await _resolveWebSocketUri(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+      );
+      if (!identical(_openAttempt, attempt) || _closedByUser) {
+        // Superseded or disconnected while the ticket was in flight; don't
+        // open a socket (and burn the ticket) nobody wants any more.
+        return;
+      }
+      final channel = _connectChannel(wsUri);
       // Only publish the channel once `ready` succeeds. Assigning it earlier
       // left `_channel` pointing at a channel whose `ready` could still fail,
       // and closing that channel later in `_closeChannel` never completes
@@ -179,7 +205,7 @@ class RealtimeSyncService {
           }
         },
         onError: (error) {
-          _events.add(RealtimeEvent.error(error.toString()));
+          _events.add(RealtimeEvent.error(_redactedError(error)));
           _scheduleReconnect(
             baseUrl: baseUrl,
             accessTokenProvider: accessTokenProvider,
@@ -196,7 +222,7 @@ class RealtimeSyncService {
         cancelOnError: true,
       );
     } catch (error) {
-      _events.add(RealtimeEvent.error(error.toString()));
+      _events.add(RealtimeEvent.error(_redactedError(error)));
       _scheduleReconnect(
         baseUrl: baseUrl,
         accessTokenProvider: accessTokenProvider,
@@ -264,7 +290,10 @@ class RealtimeSyncService {
     if (_pendingCallSignals.isEmpty) return;
     final now = DateTime.now();
     final pending = _pendingCallSignals
-        .where((entry) => now.difference(entry.enqueuedAt) <= _maxPendingCallSignalAge)
+        .where(
+          (entry) =>
+              now.difference(entry.enqueuedAt) <= _maxPendingCallSignalAge,
+        )
         .toList();
     _pendingCallSignals.clear();
     for (var index = 0; index < pending.length; index++) {
@@ -429,11 +458,8 @@ class RealtimeSyncService {
   }
 
   @visibleForTesting
-  Uri buildWebSocketUri({
-    required String baseUrl,
-    required String accessToken,
-  }) {
-    return _wsUri(baseUrl, accessToken);
+  Uri buildWebSocketUri({required String baseUrl, required String ticket}) {
+    return _wsUri(baseUrl, 'ticket', ticket);
   }
 
   @visibleForTesting
@@ -447,7 +473,83 @@ class RealtimeSyncService {
     );
   }
 
-  Uri _wsUri(String baseUrl, String accessToken) {
+  @visibleForTesting
+  Uri buildLegacyWebSocketUri({
+    required String baseUrl,
+    required String accessToken,
+  }) {
+    return _wsUri(baseUrl, 'token', accessToken);
+  }
+
+  /// Error text for the event stream. The platform's WebSocket errors quote the
+  /// full handshake URL ("Connection to '.../ws?ticket=...' was not upgraded"),
+  /// so strip the credential before it can reach state, logs or crash reports.
+  static String _redactedError(Object error) =>
+      error.toString().replaceAllMapped(
+        RegExp(r'([?&](?:ticket|token)=)[^&\s\x27"#]*'),
+        (m) => '${m[1]}<redacted>',
+      );
+
+  /// Builds the handshake URL for one connect attempt: fetches a fresh
+  /// single-use ticket with the access token in the `Authorization` header, so
+  /// the token itself never appears in a URL.
+  ///
+  /// Only a server that has no ticket endpoint (404/405, i.e. older than the
+  /// ticket handshake) gets the legacy `?token=` URL. 401, 5xx, timeouts and
+  /// network errors propagate to the caller's reconnect backoff instead:
+  /// falling back there would put the token in a URL on exactly the paths
+  /// (an unhealthy or misconfigured server) where that is least wanted.
+  /// A 401 retries through the same backoff, which asks the token provider
+  /// again and so picks up a refreshed access token.
+  Future<Uri> _resolveWebSocketUri({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    try {
+      final ticket = await _requestWebSocketTicket(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+      );
+      return _wsUri(baseUrl, 'ticket', ticket);
+    } on _WebSocketTicketUnsupported {
+      return _wsUri(baseUrl, 'token', accessToken);
+    }
+  }
+
+  Future<String> _requestWebSocketTicket({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
+    final normalized = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+    Future<http.Response> post(String base) => _httpClient
+        .post(
+          Uri.parse('$base/auth/ws-ticket'),
+          headers: {'Authorization': 'Bearer $accessToken'},
+        )
+        .timeout(const Duration(seconds: 8));
+
+    var response = await post(normalized);
+    if (response.statusCode == 404 && normalized.endsWith('/api')) {
+      // Same fallback as AuthService: /auth is mounted at the server root.
+      response = await post(normalized.substring(0, normalized.length - 4));
+    }
+    if (response.statusCode == 404 || response.statusCode == 405) {
+      throw const _WebSocketTicketUnsupported();
+    }
+    if (response.statusCode != 200) {
+      throw StateError(
+        'WebSocket ticket request failed (${response.statusCode}).',
+      );
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final ticket = decoded['ticket'] as String?;
+    if (ticket == null || ticket.isEmpty) {
+      throw const FormatException('Invalid WebSocket ticket response.');
+    }
+    return ticket;
+  }
+
+  Uri _wsUri(String baseUrl, String credentialKey, String credential) {
     final httpUri = Uri.parse(baseUrl.trim().replaceFirst(RegExp(r'#.*$'), ''));
     final scheme = httpUri.scheme == 'https' ? 'wss' : 'ws';
     final defaultPort = httpUri.scheme == 'https' ? 443 : 80;
@@ -458,13 +560,13 @@ class RealtimeSyncService {
         ? '${httpUri.path}ws'
         : '${httpUri.path}/ws';
     final normalizedPath = wsPath.replaceAll('//', '/');
-    final token = Uri.encodeQueryComponent(accessToken);
+    final encoded = Uri.encodeQueryComponent(credential);
     return Uri(
       scheme: scheme,
       host: httpUri.host,
       port: port,
       path: normalizedPath,
-      query: 'token=$token',
+      query: '$credentialKey=$encoded',
     );
   }
 }
