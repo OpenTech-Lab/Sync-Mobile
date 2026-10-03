@@ -63,6 +63,7 @@ class AuthService {
     : _httpClient = createDevHttpClient(httpClient);
 
   final http.Client _httpClient;
+  final _qrPollPostConfirmed = <String>{};
 
   /// Requests a device-login challenge. Returns `null` only when the server has
   /// no challenge endpoint (404/405, after the `/api` root retry in
@@ -75,6 +76,7 @@ class AuthService {
       baseUrl: baseUrl,
       path: 'device-login/challenge',
       body: {'device_auth_pubkey': deviceAuthPublicKey},
+      persistentConnection: false,
     );
     if (_isEndpointMissing(response)) {
       return null;
@@ -295,13 +297,14 @@ class AuthService {
     required String secret,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
-    Future<http.Response> post(String base) => _httpClient
-        .post(
-          Uri.parse('$base/auth/qr-login/session/$sessionId'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'secret': secret}),
-        )
-        .timeout(const Duration(seconds: 8));
+    // Until this server has answered the POST route once, a 404/405 may mean it
+    // predates the route (see [_postAuth]); don't pool that connection.
+    final probing = !_qrPollPostConfirmed.contains(normalized);
+    Future<http.Response> post(String base) => _sendPost(
+      Uri.parse('$base/auth/qr-login/session/$sessionId'),
+      body: jsonEncode({'secret': secret}),
+      persistentConnection: !probing,
+    );
     Future<http.Response> get(String base) => _httpClient
         .get(
           Uri.parse(
@@ -315,7 +318,9 @@ class AuthService {
     if (response.statusCode == 404 && normalized.endsWith('/api')) {
       response = await post(_stripApiSuffix(normalized));
     }
-    if (_isEndpointMissing(response)) {
+    if (!_isEndpointMissing(response)) {
+      _qrPollPostConfirmed.add(normalized);
+    } else {
       try {
         response = await get(normalized);
         if (response.statusCode == 404 && normalized.endsWith('/api')) {
@@ -401,6 +406,21 @@ class AuthService {
     return (json['email'] as String?)?.trim().toLowerCase();
   }
 
+  Future<http.Response> _sendPost(
+    Uri uri, {
+    required String body,
+    bool persistentConnection = true,
+  }) async {
+    final request = http.Request('POST', uri)
+      ..headers['Content-Type'] = 'application/json'
+      ..body = body
+      ..persistentConnection = persistentConnection;
+    return _httpClient
+        .send(request)
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 8));
+  }
+
   /// 404/405 means the route does not exist on this server (it predates the
   /// endpoint), as opposed to the endpoint rejecting the request.
   bool _isEndpointMissing(http.Response response) =>
@@ -480,10 +500,15 @@ class AuthService {
     }
   }
 
+  /// [persistentConnection] false sends `Connection: close`. Use it for a probe
+  /// whose 404 may come from a server that predates the endpoint: such a server
+  /// answers without reading the request body and then drops the connection,
+  /// so the next request on the pooled connection fails to write.
   Future<http.Response> _postAuth({
     required String baseUrl,
     required String path,
     required Map<String, dynamic> body,
+    bool persistentConnection = true,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
     final candidates = _candidateAuthBaseUrls(normalized);
@@ -493,13 +518,11 @@ class AuthService {
     for (final candidate in candidates) {
       try {
         final uri = Uri.parse('$candidate/auth/$path');
-        final response = await _httpClient
-            .post(
-              uri,
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode(body),
-            )
-            .timeout(const Duration(seconds: 8));
+        final response = await _sendPost(
+          uri,
+          body: jsonEncode(body),
+          persistentConnection: persistentConnection,
+        );
         if (response.statusCode == 404) {
           lastResponse = response;
           continue;

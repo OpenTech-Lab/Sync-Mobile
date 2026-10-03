@@ -148,6 +148,19 @@ void main() {
       });
     });
 
+    test('the challenge probe is not pooled; the login request is', () async {
+      final service = serviceFor(
+        (r) => r.url.path.endsWith('/device-login/challenge')
+            ? _challenge()
+            : _tokens(),
+      );
+
+      await login(service);
+
+      expect(requests[0].persistentConnection, isFalse);
+      expect(requests[1].persistentConnection, isTrue);
+    });
+
     for (final status in [404, 405]) {
       test(
         'challenge endpoint $status: falls back to the legacy body',
@@ -337,6 +350,36 @@ void main() {
       expect(requests.single.url.path, '/auth/qr-login/session/sess-1');
       expect(requests.single.url.hasQuery, isFalse);
       expect(jsonDecode(requests.single.body), {'secret': _qrSecret});
+    });
+
+    test(
+      'the first POST is not pooled, later ones are once it works',
+      () async {
+        final service = serviceFor((_) => _json(200, {'status': 'pending'}));
+
+        await poll(service);
+        await poll(service);
+
+        expect(requests.map((r) => r.persistentConnection), [false, true]);
+      },
+    );
+
+    test('an old server keeps being probed without pooling', () async {
+      final service = serviceFor(
+        (r) => r.method == 'POST'
+            ? http.Response('', 404)
+            : _json(200, {'status': 'pending'}),
+      );
+
+      await poll(service);
+      await poll(service);
+
+      expect(
+        requests
+            .where((r) => r.method == 'POST')
+            .map((r) => r.persistentConnection),
+        [false, false],
+      );
     });
 
     for (final status in [404, 405]) {
