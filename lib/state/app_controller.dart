@@ -377,6 +377,11 @@ class AppController extends AsyncNotifier<AppState> {
       final tokens = await _authService.deviceLogin(
         baseUrl: current.serverUrl!,
         deviceAuthPublicKey: deviceAuthPublicKey,
+        createProof: (challenge) => _messageE2eeService.createDeviceLoginProof(
+          challengeId: challenge.challengeId,
+          serverEphemeralPublicKeyBase64: challenge.serverEphemeralPublicKey,
+          devicePublicKeyBase64: deviceAuthPublicKey,
+        ),
         altchaPayload: altchaPayload,
       );
       await _sessionStorage.writeTokens(

@@ -11,6 +11,18 @@ class AuthTokens {
   final String refreshToken;
 }
 
+class DeviceLoginChallenge {
+  const DeviceLoginChallenge({
+    required this.challengeId,
+    required this.serverEphemeralPublicKey,
+    required this.expiresIn,
+  });
+
+  final String challengeId;
+  final String serverEphemeralPublicKey;
+  final int expiresIn;
+}
+
 class QrLoginSession {
   const QrLoginSession({
     required this.sessionId,
@@ -52,13 +64,72 @@ class AuthService {
 
   final http.Client _httpClient;
 
+  /// Requests a device-login challenge. Returns `null` only when the server has
+  /// no challenge endpoint (404/405, after the `/api` root retry in
+  /// [_postAuth]), i.e. it predates the challenge. Every other failure throws.
+  Future<DeviceLoginChallenge?> _requestDeviceLoginChallenge({
+    required String baseUrl,
+    required String deviceAuthPublicKey,
+  }) async {
+    final response = await _postAuth(
+      baseUrl: baseUrl,
+      path: 'device-login/challenge',
+      body: {'device_auth_pubkey': deviceAuthPublicKey},
+    );
+    if (_isEndpointMissing(response)) {
+      return null;
+    }
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Device login challenge failed (${response.statusCode}).',
+      );
+    }
+
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      throw const FormatException('Invalid device login challenge response.');
+    }
+    final json = decoded is Map<String, dynamic> ? decoded : null;
+    final challengeId = json?['challenge_id'];
+    final serverPublicKey = json?['server_ephemeral_pubkey'];
+    final expiresIn = json?['expires_in'];
+    if (challengeId is! String ||
+        serverPublicKey is! String ||
+        expiresIn is! int) {
+      throw const FormatException('Invalid device login challenge response.');
+    }
+    return DeviceLoginChallenge(
+      challengeId: challengeId,
+      serverEphemeralPublicKey: serverPublicKey,
+      expiresIn: expiresIn,
+    );
+  }
+
+  /// Logs in with the device key. Uses the device-login challenge when the
+  /// server supports it: [createProof] is called with the challenge and its
+  /// result is sent as `proof` next to `challenge_id`. A server that has no
+  /// challenge endpoint gets the legacy body instead; any other challenge
+  /// failure is an error, and a legacy body is never sent after a challenge
+  /// was issued.
   Future<AuthTokens> deviceLogin({
     required String baseUrl,
     required String deviceAuthPublicKey,
+    required Future<String> Function(DeviceLoginChallenge challenge)
+    createProof,
     String? altchaPayload,
     int? acceptedTermsVersion,
   }) async {
+    final challenge = await _requestDeviceLoginChallenge(
+      baseUrl: baseUrl,
+      deviceAuthPublicKey: deviceAuthPublicKey,
+    );
     final body = <String, dynamic>{'device_auth_pubkey': deviceAuthPublicKey};
+    if (challenge != null) {
+      body['challenge_id'] = challenge.challengeId;
+      body['proof'] = await createProof(challenge);
+    }
     if (altchaPayload != null) {
       body['altcha_payload'] = altchaPayload;
     }
@@ -215,26 +286,45 @@ class AuthService {
     );
   }
 
+  /// Polls a QR login session. The secret travels in a POST body; only a server
+  /// that has no such route (404/405, after the `/api` root retry) is polled
+  /// with the legacy `GET ?secret=` form. Other failures are errors.
   Future<QrLoginStatus> pollQrLoginSession({
     required String baseUrl,
     required String sessionId,
     required String secret,
   }) async {
     final normalized = _normalizeBaseUrl(baseUrl);
-    final uri = Uri.parse(
-      '$normalized/auth/qr-login/session/$sessionId?secret=${Uri.encodeQueryComponent(secret)}',
-    );
-    var response = await _httpClient
-        .get(uri)
+    Future<http.Response> post(String base) => _httpClient
+        .post(
+          Uri.parse('$base/auth/qr-login/session/$sessionId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'secret': secret}),
+        )
         .timeout(const Duration(seconds: 8));
+    Future<http.Response> get(String base) => _httpClient
+        .get(
+          Uri.parse(
+            '$base/auth/qr-login/session/$sessionId'
+            '?secret=${Uri.encodeQueryComponent(secret)}',
+          ),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    var response = await post(normalized);
     if (response.statusCode == 404 && normalized.endsWith('/api')) {
-      final fallbackBase = _stripApiSuffix(normalized);
-      final fallbackUri = Uri.parse(
-        '$fallbackBase/auth/qr-login/session/$sessionId?secret=${Uri.encodeQueryComponent(secret)}',
-      );
-      response = await _httpClient
-          .get(fallbackUri)
-          .timeout(const Duration(seconds: 8));
+      response = await post(_stripApiSuffix(normalized));
+    }
+    if (_isEndpointMissing(response)) {
+      try {
+        response = await get(normalized);
+        if (response.statusCode == 404 && normalized.endsWith('/api')) {
+          response = await get(_stripApiSuffix(normalized));
+        }
+      } catch (error) {
+        // Transport errors quote the request URL, which carries the secret.
+        throw StateError('QR login polling failed: ${_redactedError(error)}');
+      }
     }
     if (response.statusCode != 200) {
       throw StateError('QR login polling failed (${response.statusCode}).');
@@ -310,6 +400,19 @@ class AuthService {
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     return (json['email'] as String?)?.trim().toLowerCase();
   }
+
+  /// 404/405 means the route does not exist on this server (it predates the
+  /// endpoint), as opposed to the endpoint rejecting the request.
+  bool _isEndpointMissing(http.Response response) =>
+      response.statusCode == 404 || response.statusCode == 405;
+
+  /// Error text that is safe to surface: strips a `?secret=` / `&secret=` value
+  /// that transport errors quote from the request URL.
+  static String _redactedError(Object error) =>
+      error.toString().replaceAllMapped(
+        RegExp(r'([?&]secret=)[^&\s\x27"#]*'),
+        (m) => '${m[1]}<redacted>',
+      );
 
   String _normalizeBaseUrl(String raw) {
     final trimmed = raw.trim();

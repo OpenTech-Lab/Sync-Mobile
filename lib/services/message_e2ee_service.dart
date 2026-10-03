@@ -113,6 +113,38 @@ class MessageE2eeService {
     return _cachedPublicKeyBase64!;
   }
 
+  /// Proves possession of the private X25519 device key without transmitting
+  /// it. The server's public key is ephemeral and the challenge is single-use.
+  Future<String> createDeviceLoginProof({
+    required String challengeId,
+    required String serverEphemeralPublicKeyBase64,
+    required String devicePublicKeyBase64,
+  }) async {
+    final localKeyPair = await _getLocalKeyPair();
+    if (localKeyPair == null) {
+      throw StateError('Device identity is not initialized');
+    }
+    final serverPublicKeyBytes = base64Decode(serverEphemeralPublicKeyBase64);
+    if (serverPublicKeyBytes.length != 32) {
+      throw const FormatException('Invalid device login server public key');
+    }
+    final sharedSecret = await _x25519.sharedSecretKey(
+      keyPair: localKeyPair,
+      remotePublicKey: SimplePublicKey(
+        serverPublicKeyBytes,
+        type: KeyPairType.x25519,
+      ),
+    );
+    final message = utf8.encode(
+      'device-login:$challengeId:$devicePublicKeyBase64',
+    );
+    final mac = await Hmac.sha256().calculateMac(
+      message,
+      secretKey: sharedSecret,
+    );
+    return base64Encode(mac.bytes);
+  }
+
   Future<String> encryptEnvelope({
     required String clearText,
     required String recipientPublicKeyBase64,
