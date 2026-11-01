@@ -119,18 +119,25 @@ final activeServerUrlProvider = Provider<String?>((ref) {
 });
 
 class AppController extends AsyncNotifier<AppState> {
+  AppController({AuthService? authService, SessionStorage? sessionStorage})
+    : _authService = authService ?? AuthService(),
+      _sessionStorage = sessionStorage ?? const SessionStorage();
+
   static const _genericConnectError =
       'Connection failed. Please try again later or ask planet manager.';
 
   final _serverPreferences = ServerPreferences();
-  final _sessionStorage = const SessionStorage();
+  final SessionStorage _sessionStorage;
   final _serverHealthService = ServerHealthService();
-  final _authService = AuthService();
+  final AuthService _authService;
   final _jwtService = const JwtService();
   final _messageE2eeService = MessageE2eeService();
   final _userProfilePreferences = UserProfilePreferences();
   final _remoteUserProfileService = RemoteUserProfileService();
   final _remoteSafetyService = RemoteSafetyService();
+
+  /// In-flight `/auth/refresh` per server; see [_refreshSession].
+  final _refreshInFlight = <String, Future<AuthTokens?>>{};
 
   bool _isAuthIdentityInvalidError(Object error) {
     final raw = error.toString();
@@ -157,17 +164,8 @@ class AppController extends AsyncNotifier<AppState> {
         serverUrl.isNotEmpty &&
         _jwtService.isExpiredOrExpiringSoon(accessToken)) {
       try {
-        final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
-        if (storedRefresh != null && storedRefresh.isNotEmpty) {
-          final tokens = await _authService.refresh(
-            baseUrl: serverUrl,
-            refreshToken: storedRefresh,
-          );
-          await _sessionStorage.writeTokens(
-            serverUrl: serverUrl,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-          );
+        final tokens = await _refreshSession(serverUrl);
+        if (tokens != null) {
           accessToken = tokens.accessToken;
         }
       } catch (_) {}
@@ -602,36 +600,70 @@ class AppController extends AsyncNotifier<AppState> {
     if (serverUrl == null || serverUrl.isEmpty) return token;
 
     try {
-      final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
-      if (storedRefresh == null || storedRefresh.isEmpty) return token;
-
-      final tokens = await _authService.refresh(
-        baseUrl: serverUrl,
-        refreshToken: storedRefresh,
-      );
-
-      await _sessionStorage.writeTokens(
-        serverUrl: serverUrl,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      );
-
-      state = AsyncData(current!.copyWith(accessToken: tokens.accessToken));
-      return tokens.accessToken;
+      final tokens = await _refreshSession(serverUrl);
+      return tokens?.accessToken ?? token;
     } catch (_) {
       return token;
     }
+  }
+
+  /// Rotates the session tokens, or returns null when no refresh token is
+  /// stored. Single-flight per server: the server rotates refresh tokens and
+  /// revokes the whole family on replay, so a second concurrent refresh with
+  /// the same stored token would end the session. Everyone awaits one request
+  /// and the tokens are written once.
+  ///
+  /// Not `async`: the in-flight future must be registered before the first
+  /// await, or two callers could both find none.
+  Future<AuthTokens?> _refreshSession(String serverUrl) {
+    final inFlight = _refreshInFlight[serverUrl];
+    if (inFlight != null) return inFlight;
+
+    // Block body on purpose: whenComplete awaits a Future returned by its
+    // callback, and Map.remove would return this very future — a deadlock.
+    final refresh = _rotateTokens(serverUrl).whenComplete(() {
+      _refreshInFlight.remove(serverUrl);
+    });
+    _refreshInFlight[serverUrl] = refresh;
+    return refresh;
+  }
+
+  Future<AuthTokens?> _rotateTokens(String serverUrl) async {
+    final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
+    if (storedRefresh == null || storedRefresh.isEmpty) return null;
+
+    final tokens = await _authService.refresh(
+      baseUrl: serverUrl,
+      refreshToken: storedRefresh,
+    );
+    await _sessionStorage.writeTokens(
+      serverUrl: serverUrl,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
+
+    // Read state now, not before the request: it may have changed meanwhile
+    // (a logout, or a submit flag a stale snapshot would overwrite).
+    final latest = state.value;
+    final latestToken = latest?.accessToken;
+    if (latest != null &&
+        latest.serverUrl == serverUrl &&
+        latestToken != null &&
+        latestToken.isNotEmpty) {
+      state = AsyncData(latest.copyWith(accessToken: tokens.accessToken));
+    }
+    return tokens;
   }
 
   /// Verifies the session is still valid on app resume.
   ///
   /// Returns true if the session is usable (token valid or successfully
   /// refreshed). Returns false and clears the session when the server
-  /// explicitly rejects the refresh token (auth error), which causes the
+  /// explicitly rejects the refresh token (401/403), which causes the
   /// reactive UI to transition to the login screen.
   ///
-  /// Network errors (no connectivity, timeout) do NOT force a logout — the
-  /// user stays on the home screen and can retry when connectivity returns.
+  /// Any other failure (no connectivity, timeout, a 502/503/429) does NOT
+  /// force a logout — the user stays on the home screen and can retry later.
   Future<bool> verifySessionOnResume() async {
     final current = state.value;
     final token = current?.accessToken;
@@ -643,36 +675,19 @@ class AppController extends AsyncNotifier<AppState> {
     if (serverUrl == null || serverUrl.isEmpty) return false;
 
     try {
-      final storedRefresh = await _sessionStorage.readRefreshToken(serverUrl);
-      if (storedRefresh == null || storedRefresh.isEmpty) {
+      final tokens = await _refreshSession(serverUrl);
+      if (tokens == null) {
         await _clearSession(current!, serverUrl);
         return false;
       }
-
-      final tokens = await _authService.refresh(
-        baseUrl: serverUrl,
-        refreshToken: storedRefresh,
-      );
-      await _sessionStorage.writeTokens(
-        serverUrl: serverUrl,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      );
-      state = AsyncData(current!.copyWith(accessToken: tokens.accessToken));
       return true;
     } catch (error) {
       // Only force logout when the server explicitly rejected the session.
-      // Network errors contain no HTTP status code in their message.
-      final msg = error.toString();
-      final isServerAuthError =
-          msg.contains('Token refresh failed') ||
-          msg.contains('(401)') ||
-          msg.contains('(403)');
-      if (isServerAuthError) {
+      if (error is TokenRefreshException && error.isSessionRejected) {
         await _clearSession(current!, serverUrl);
         return false;
       }
-      // Network outage — keep the user on the home screen.
+      // Outage or server trouble — keep the user on the home screen.
       return true;
     }
   }

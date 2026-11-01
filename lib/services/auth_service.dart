@@ -58,6 +58,20 @@ class AccountPendingApprovalException implements Exception {
   String toString() => message ?? 'Account pending admin approval';
 }
 
+/// `/auth/refresh` answered with something other than 200. Only
+/// [isSessionRejected] means the session is over; anything else (a 502 from a
+/// proxy, a 429, ...) says nothing about the refresh token.
+class TokenRefreshException implements Exception {
+  const TokenRefreshException(this.statusCode);
+
+  final int statusCode;
+
+  bool get isSessionRejected => statusCode == 401 || statusCode == 403;
+
+  @override
+  String toString() => 'Token refresh failed ($statusCode).';
+}
+
 class AuthService {
   AuthService([http.Client? httpClient])
     : _httpClient = createDevHttpClient(httpClient);
@@ -251,7 +265,7 @@ class AuthService {
     );
 
     if (response.statusCode != 200) {
-      throw StateError('Token refresh failed (${response.statusCode}).');
+      throw TokenRefreshException(response.statusCode);
     }
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
