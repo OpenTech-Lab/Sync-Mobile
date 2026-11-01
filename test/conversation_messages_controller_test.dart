@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mobile/models/chat_room.dart';
 import 'package:mobile/models/conversation_note.dart';
 import 'package:mobile/models/local_chat_message.dart';
@@ -12,6 +14,7 @@ import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/services/server_scope.dart';
 import 'package:mobile/services/remote_user_profile_service.dart';
 import 'package:mobile/state/app_controller.dart';
+import 'package:mobile/state/chat_visibility_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
 import 'package:mobile/state/hidden_conversation_ids_controller.dart';
 import 'package:mobile/state/user_profile_controller.dart';
@@ -210,6 +213,10 @@ class _FakeRemoteChatService extends RemoteChatService {
   int afterCallCount = 0;
   int plainCallCount = 0;
   String? lastAfterCursor;
+  int afterFailureStatus = 404;
+  bool plainThrows = false;
+  int markReadCalls = 0;
+  int markRoomReadCalls = 0;
 
   @override
   Future<List<LocalChatMessage>> getConversation({
@@ -225,9 +232,9 @@ class _FakeRemoteChatService extends RemoteChatService {
       afterCallCount++;
       lastAfterCursor = after;
       if (_afterThrowsFor.contains(partnerId)) {
-        throw const RemoteChatApiException(
-          message: 'unknown cursor',
-          statusCode: 404,
+        throw RemoteChatApiException(
+          message: 'after failed',
+          statusCode: afterFailureStatus,
         );
       }
       final pageIndex = _afterPageIndexes[partnerId] ?? 0;
@@ -240,6 +247,9 @@ class _FakeRemoteChatService extends RemoteChatService {
     }
 
     plainCallCount++;
+    if (plainThrows) {
+      throw const RemoteChatApiException(message: 'offline', statusCode: 503);
+    }
     final pageIndex = _pageIndexes[partnerId] ?? 0;
     final pages = _pages[partnerId] ?? const [];
     if (pageIndex >= pages.length) {
@@ -277,6 +287,7 @@ class _FakeRemoteChatService extends RemoteChatService {
     required String accessToken,
     required String partnerId,
   }) async {
+    markReadCalls++;
     if (markReadThrows) {
       throw const RemoteChatApiException(
         message: 'mark read failed',
@@ -299,9 +310,9 @@ class _FakeRemoteChatService extends RemoteChatService {
     if (after != null) {
       afterCallCount++;
       if (_afterThrowsFor.contains(conversationId)) {
-        throw const RemoteChatApiException(
-          message: 'unknown cursor',
-          statusCode: 404,
+        throw RemoteChatApiException(
+          message: 'after failed',
+          statusCode: afterFailureStatus,
         );
       }
       final pageIndex = _afterPageIndexes[conversationId] ?? 0;
@@ -314,6 +325,9 @@ class _FakeRemoteChatService extends RemoteChatService {
     }
 
     plainCallCount++;
+    if (plainThrows) {
+      throw const RemoteChatApiException(message: 'offline', statusCode: 503);
+    }
     final pageIndex = _pageIndexes[conversationId] ?? 0;
     final pages = _pages[conversationId] ?? const [];
     if (pageIndex >= pages.length) {
@@ -345,6 +359,7 @@ class _FakeRemoteChatService extends RemoteChatService {
     required String accessToken,
     required String roomId,
   }) async {
+    markRoomReadCalls++;
     return 1;
   }
 }
@@ -929,8 +944,8 @@ void main() {
   );
 
   test(
-    'syncLatest falls back to the plain limit:30 fetch when the after '
-    'request fails (e.g. unknown cursor on an old or reset server)',
+    'syncLatest falls back to the plain limit:30 fetch when the server says '
+    'the after cursor is unknown (404)',
     () async {
       SharedPreferences.setMockInitialValues(const <String, Object>{});
       const baseUrl = 'http://localhost:8080';
@@ -990,8 +1005,8 @@ void main() {
           .value!;
       expect(messages.map((m) => m.id), contains('fallback-1'));
 
-      // The fallback fetch still succeeded, so the watermark advances to its
-      // newest id rather than being left pointed at the stale cursor.
+      // The cursor is gone for good, so the watermark advances to the fallback's
+      // newest id rather than being left pointed at it forever.
       final advancedCursor = await BackupPreferences()
           .readConversationSyncCursor(baseUrl, partnerId);
       expect(advancedCursor, 'fallback-1');
@@ -1123,6 +1138,312 @@ void main() {
       expect(messages.first.id, 'sent-1');
     },
   );
+
+  for (final status in [500, 502, 503, 429, 401]) {
+    test(
+      'syncLatest fails and keeps the watermark when the after request fails '
+      'with $status, rather than jumping to the newest page over the gap',
+      () async {
+        SharedPreferences.setMockInitialValues(const <String, Object>{});
+        const baseUrl = 'http://localhost:8080';
+        final repo = _InMemoryChatRepository();
+        await repo.upsertMessages([
+          LocalChatMessage(
+            id: 'cursor-0',
+            conversationId: partnerId,
+            senderId: 'other',
+            body: 'already synced',
+            createdAt: DateTime.utc(2026, 3, 2, 12),
+          ),
+        ]);
+        await BackupPreferences().writeConversationSyncCursor(
+          serverUrl: baseUrl,
+          conversationId: partnerId,
+          messageId: 'cursor-0',
+        );
+
+        final remote = _FakeRemoteChatService(
+          {
+            partnerId: [
+              [
+                LocalChatMessage(
+                  id: 'newest',
+                  conversationId: partnerId,
+                  senderId: 'other',
+                  body: 'newest',
+                  createdAt: DateTime.utc(2026, 3, 2, 18),
+                ),
+              ],
+            ],
+          },
+          afterThrowsFor: {partnerId},
+        )..afterFailureStatus = status;
+
+        final container = ProviderContainer(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(repo),
+            remoteChatServiceProvider.overrideWithValue(remote),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(conversationMessagesProvider(partnerId).future);
+        final success = await container
+            .read(conversationMessagesProvider(partnerId).notifier)
+            .syncLatest(
+              baseUrl: baseUrl,
+              accessToken: 'token',
+              currentUserId: 'me',
+            );
+
+        expect(success, isFalse);
+        expect(remote.plainCallCount, 0);
+        expect(
+          await BackupPreferences().readConversationSyncCursor(
+            baseUrl,
+            partnerId,
+          ),
+          'cursor-0',
+        );
+      },
+    );
+  }
+
+  test(
+    'syncLatest falls back on a real 404 from RemoteChatService but not on a '
+    'real 502: the status survives the HTTP layer',
+    () async {
+      Future<(bool, String?, List<String>)> run(int afterStatus) async {
+        SharedPreferences.setMockInitialValues(const <String, Object>{});
+        const baseUrl = 'https://chat.example';
+        final repo = _InMemoryChatRepository();
+        await repo.upsertMessages([
+          LocalChatMessage(
+            id: 'cursor-0',
+            conversationId: partnerId,
+            senderId: 'other',
+            body: 'already synced',
+            createdAt: DateTime.utc(2026, 3, 2, 12),
+          ),
+        ]);
+        await BackupPreferences().writeConversationSyncCursor(
+          serverUrl: baseUrl,
+          conversationId: partnerId,
+          messageId: 'cursor-0',
+        );
+
+        final requests = <String>[];
+        final client = MockClient((request) async {
+          requests.add(request.url.query);
+          if (request.url.queryParameters.containsKey('after')) {
+            return http.Response('{"error":"nope"}', afterStatus);
+          }
+          return http.Response('[]', 200);
+        });
+        final container = ProviderContainer(
+          overrides: [
+            chatRepositoryProvider.overrideWithValue(repo),
+            remoteChatServiceProvider.overrideWithValue(
+              RemoteChatService(client),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(conversationMessagesProvider(partnerId).future);
+        final success = await container
+            .read(conversationMessagesProvider(partnerId).notifier)
+            .syncLatest(
+              baseUrl: baseUrl,
+              accessToken: 'token',
+              currentUserId: 'me',
+            );
+        return (success, requests.last, requests);
+      }
+
+      final (fellBack, lastFellBack, _) = await run(404);
+      expect(fellBack, isTrue);
+      expect(lastFellBack, isNot(contains('after=')));
+
+      final (failed, _, failedRequests) = await run(502);
+      expect(failed, isFalse);
+      expect(failedRequests, hasLength(1));
+    },
+  );
+
+  test(
+    'sendMessage does not mark read when the catch-up after sending fails, '
+    'and the send itself still succeeds',
+    () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final repo = _InMemoryChatRepository();
+      final remote = _FakeRemoteChatService({partnerId: const []})
+        ..plainThrows = true;
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+          remoteUserProfileServiceProvider.overrideWithValue(
+            _FakeRemoteUserProfileService(),
+          ),
+          messageE2eeServiceProvider.overrideWithValue(_FakeMessageE2eeService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .sendMessage(
+            baseUrl: 'http://localhost:8080',
+            accessToken: 'token',
+            currentUserId: 'me',
+            body: 'hi',
+          );
+
+      expect(remote.markReadCalls, 0);
+      final messages = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      expect(messages.single.id, 'sent-1');
+    },
+  );
+
+  test(
+    'sendMessage catches up before marking read, so a message a dropped '
+    'socket missed is fetched rather than silently cleared',
+    () async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final repo = _InMemoryChatRepository();
+      final remote = _FakeRemoteChatService({
+        partnerId: [
+          [
+            LocalChatMessage(
+              id: 'missed',
+              conversationId: partnerId,
+              senderId: 'other',
+              body: 'missed over WS',
+              createdAt: DateTime.utc(2026, 3, 2, 12),
+            ),
+          ],
+        ],
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+          remoteUserProfileServiceProvider.overrideWithValue(
+            _FakeRemoteUserProfileService(),
+          ),
+          messageE2eeServiceProvider.overrideWithValue(_FakeMessageE2eeService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(conversationMessagesProvider(partnerId).future);
+      await container
+          .read(conversationMessagesProvider(partnerId).notifier)
+          .sendMessage(
+            baseUrl: 'http://localhost:8080',
+            accessToken: 'token',
+            currentUserId: 'me',
+            body: 'hi',
+          );
+
+      expect(remote.plainCallCount, 1);
+      expect(remote.markReadCalls, 1);
+      final messages = container
+          .read(conversationMessagesProvider(partnerId))
+          .value!;
+      expect(messages.map((m) => m.id), containsAll(['missed', 'sent-1']));
+    },
+  );
+
+  group('room unread badge', () {
+    const baseUrl = 'http://localhost:8080';
+    const roomId = 'room-1';
+    final conversationId = roomConversationId(roomId);
+
+    Future<(ProviderContainer, _InMemoryChatRepository, _FakeRemoteChatService)>
+    setUpRoom({required bool open, bool plainThrows = false}) async {
+      SharedPreferences.setMockInitialValues(const <String, Object>{});
+      final repo = _InMemoryChatRepository();
+      final now = DateTime.utc(2026, 3, 2, 12);
+      await repo.replaceRooms([
+        ChatRoom(
+          id: roomId,
+          name: 'Room',
+          memberCount: 2,
+          unreadCount: 3,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ]);
+      final remote = _FakeRemoteChatService({conversationId: const []})
+        ..plainThrows = plainThrows;
+      final container = ProviderContainer(
+        overrides: [
+          activeServerUrlProvider.overrideWithValue(baseUrl),
+          chatRepositoryProvider.overrideWithValue(repo),
+          remoteChatServiceProvider.overrideWithValue(remote),
+          chatVisibilityProvider.overrideWith(
+            (ref) => ChatVisibilityState(
+              isChatsTabSelected: true,
+              activePartnerId: open ? conversationId : null,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(conversationMessagesProvider(conversationId).future);
+      return (container, repo, remote);
+    }
+
+    test('a background sync of a room that is not open keeps its count', () async {
+      final (container, repo, _) = await setUpRoom(open: false);
+
+      final synced = await container
+          .read(conversationMessagesProvider(conversationId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: 't', currentUserId: 'me');
+
+      expect(synced, isTrue);
+      expect((await repo.readRoom(roomId))!.unreadCount, 3);
+    });
+
+    test('a sync of the room the user has open clears its count', () async {
+      final (container, repo, _) = await setUpRoom(open: true);
+
+      await container
+          .read(conversationMessagesProvider(conversationId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: 't', currentUserId: 'me');
+
+      expect((await repo.readRoom(roomId))!.unreadCount, 0);
+    });
+
+    test('a failed sync of an open room keeps its count', () async {
+      final (container, repo, _) = await setUpRoom(open: true, plainThrows: true);
+
+      final synced = await container
+          .read(conversationMessagesProvider(conversationId).notifier)
+          .syncLatest(baseUrl: baseUrl, accessToken: 't', currentUserId: 'me');
+
+      expect(synced, isFalse);
+      expect((await repo.readRoom(roomId))!.unreadCount, 3);
+    });
+
+    test('a successful markRead clears the local count', () async {
+      final (container, repo, remote) = await setUpRoom(open: false);
+
+      await container
+          .read(conversationMessagesProvider(conversationId).notifier)
+          .markRead(baseUrl: baseUrl, accessToken: 't');
+
+      expect(remote.markRoomReadCalls, 1);
+      expect((await repo.readRoom(roomId))!.unreadCount, 0);
+    });
+  });
 }
 
 class _AlwaysThrowingRemoteChatService extends RemoteChatService {

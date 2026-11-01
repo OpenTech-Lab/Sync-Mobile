@@ -178,7 +178,10 @@ class RemoteChatService {
         .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
-      throw StateError('Failed to load conversation (${response.statusCode}).');
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to load conversation',
+      );
     }
 
     final json = jsonDecode(response.body) as List<dynamic>;
@@ -219,8 +222,9 @@ class RemoteChatService {
         .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
-      throw StateError(
-        'Failed to load room messages (${response.statusCode}).',
+      throw RemoteChatApiException.fromResponse(
+        response,
+        fallbackMessage: 'Failed to load room messages',
       );
     }
 

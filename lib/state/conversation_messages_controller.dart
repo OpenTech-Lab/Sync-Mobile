@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show TargetPlatform, debugPrint, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_controller.dart';
+import 'chat_visibility_controller.dart';
 import '../models/chat_room.dart';
 import '../models/local_chat_message.dart';
 import '../services/backup_preferences.dart';
@@ -247,9 +248,11 @@ class ConversationMessagesController
 
   /// Fetches messages newer than [BackupPreferences.readConversationSyncCursor]
   /// and merges them into local storage, falling back to the old "latest
-  /// page" fetch when there is no cursor yet or the incremental request
-  /// fails (e.g. an old server that doesn't understand `after`, or the
-  /// cursor message has since been deleted server-side).
+  /// page" fetch only when there is no cursor yet or the server says the
+  /// cursor is unknown (404). Any other failure fails the sync and leaves the
+  /// cursor where it is: the newest page would not cover what lies between
+  /// the cursor and that page, and advancing past it would lose those
+  /// messages for good.
   ///
   /// The cursor is a REST-sync watermark, not "the newest message we happen
   /// to have stored locally": a realtime WS event can insert a newer message
@@ -297,9 +300,9 @@ class ConversationMessagesController
             currentUserId: currentUserId,
             cursor: cursor,
           );
-        } catch (_) {
-          // Unknown cursor (404), an old server that rejects/ignores `after`,
-          // or a transient network error — fall back to the plain fetch.
+        } on RemoteChatApiException catch (error) {
+          if (error.statusCode != 404) rethrow;
+          // Unknown cursor: there is nothing left to page forward from.
           fetched = await _fetchLatestPage(
             baseUrl: baseUrl,
             accessToken: accessToken,
@@ -336,7 +339,10 @@ class ConversationMessagesController
       if (toUpsert.isNotEmpty) {
         await _unhideConversationIfNeeded();
       }
-      if (_isRoomConversation) {
+      // This also runs for rooms nobody is looking at (a live message syncs
+      // its room in the background), whose unread count must stand.
+      if (_isRoomConversation &&
+          ref.read(chatVisibilityProvider).isConversationOpen(arg)) {
         await ref
             .read(roomConversationsProvider.notifier)
             .markRoomReadLocal(_roomId);
@@ -344,8 +350,9 @@ class ConversationMessagesController
         ref.invalidate(conversationSummariesProvider);
       }
       success = true;
-    } catch (_) {
-      // Network unavailable — fall through to show local cache below.
+    } catch (error) {
+      // Show the local cache below; the result tells callers not to markRead.
+      debugPrint('syncLatest($arg) failed: $error');
     } finally {
       // Always resolve the provider with whatever is in local storage so the
       // UI shows cached history even when the server is unreachable.
@@ -540,29 +547,19 @@ class ConversationMessagesController
     // failure below must not be reported as a send failure (it previously
     // propagated out of sendMessage, which the UI treated as a failed send
     // and retried, duplicating the message on the server).
-    if (_isRoomConversation) {
-      try {
-        await _remoteChatService.markRoomRead(
-          baseUrl: baseUrl,
-          accessToken: accessToken,
-          roomId: _roomId,
-        );
-        await ref
-            .read(roomConversationsProvider.notifier)
-            .markRoomReadLocal(_roomId);
-      } catch (_) {
-        // Best-effort; see comment above.
+    try {
+      // Catch up first: marking read clears server-side unread for everything
+      // in the conversation, including what a dropped socket may have missed.
+      final synced = await syncLatest(
+        baseUrl: baseUrl,
+        accessToken: accessToken,
+        currentUserId: currentUserId,
+      );
+      if (synced) {
+        await markRead(baseUrl: baseUrl, accessToken: accessToken);
       }
-    } else {
-      try {
-        await _remoteChatService.markRead(
-          baseUrl: baseUrl,
-          accessToken: accessToken,
-          partnerId: arg,
-        );
-      } catch (_) {
-        // Best-effort; see comment above.
-      }
+    } catch (_) {
+      // Best-effort; see comment above.
     }
 
     final local = await _repository.listMessages(
@@ -603,13 +600,20 @@ class ConversationMessagesController
     return recipientPublicKey;
   }
 
-  Future<int> markRead({required String baseUrl, required String accessToken}) {
+  Future<int> markRead({
+    required String baseUrl,
+    required String accessToken,
+  }) async {
     if (_isRoomConversation) {
-      return _remoteChatService.markRoomRead(
+      final count = await _remoteChatService.markRoomRead(
         baseUrl: baseUrl,
         accessToken: accessToken,
         roomId: _roomId,
       );
+      await ref
+          .read(roomConversationsProvider.notifier)
+          .markRoomReadLocal(_roomId);
+      return count;
     }
     return _remoteChatService.markRead(
       baseUrl: baseUrl,

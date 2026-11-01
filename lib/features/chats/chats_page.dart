@@ -481,13 +481,16 @@ class _ChatsTabState extends ConsumerState<ChatsTab>
       await _syncUserProfile(partnerId, force: true);
     }
     final accessToken = await _effectiveAccessToken();
-    await ref
+    final synced = await ref
         .read(conversationMessagesProvider(partnerId).notifier)
         .syncLatest(
           baseUrl: widget.serverUrl,
           accessToken: accessToken,
           currentUserId: widget.currentUserId,
         );
+    // Marking read before catch-up succeeded would clear unread on the server
+    // for messages this device hasn't fetched.
+    if (!synced) return;
     try {
       await ref
           .read(conversationMessagesProvider(partnerId).notifier)

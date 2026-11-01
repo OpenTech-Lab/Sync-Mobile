@@ -7,7 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/chats/chat_target_profile_page.dart';
 import 'package:mobile/features/chats/chats_page.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+import 'package:mobile/models/local_chat_message.dart';
 import 'package:mobile/services/local_chat_repository.dart';
+import 'package:mobile/services/remote_chat_service.dart';
 import 'package:mobile/state/app_controller.dart';
 import 'package:mobile/state/conversation_messages_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,7 +51,79 @@ class _AutoPopProfileObserver extends NavigatorObserver {
   }
 }
 
+class _ReadTrackingRemoteChatService extends RemoteChatService {
+  _ReadTrackingRemoteChatService({required this.syncFails});
+
+  final bool syncFails;
+  int markReadCalls = 0;
+
+  @override
+  Future<List<LocalChatMessage>> getConversation({
+    required String baseUrl,
+    required String accessToken,
+    required String currentUserId,
+    required String partnerId,
+    String? before,
+    String? after,
+    int limit = 30,
+  }) async {
+    if (syncFails) {
+      throw const RemoteChatApiException(message: 'down', statusCode: 503);
+    }
+    return const [];
+  }
+
+  @override
+  Future<int> markRead({
+    required String baseUrl,
+    required String accessToken,
+    required String partnerId,
+  }) async {
+    markReadCalls++;
+    return 0;
+  }
+}
+
 void main() {
+  for (final syncFails in [true, false]) {
+    testWidgets(
+      'opening a chat ${syncFails ? 'does not mark it read when catch-up '
+                'fails' : 'marks it read once catch-up succeeded'}',
+      (tester) async {
+        SharedPreferences.setMockInitialValues(const <String, Object>{});
+        final remote = _ReadTrackingRemoteChatService(syncFails: syncFails);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appControllerProvider.overrideWith(_FakeAppController.new),
+              chatRepositoryProvider.overrideWithValue(
+                InMemoryChatRepository(),
+              ),
+              remoteChatServiceProvider.overrideWithValue(remote),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: ChatsTab(
+                  serverUrl: 'https://example.com',
+                  accessToken: 'token',
+                  currentUserId: 'owner-id',
+                  initialPartnerId: 'friend-a',
+                  onPartnerChanged: (_) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(remote.markReadCalls, syncFails ? 0 : 1);
+      },
+    );
+  }
+
   testWidgets('blocking from active chat clears the shell partner selection', (
     tester,
   ) async {
