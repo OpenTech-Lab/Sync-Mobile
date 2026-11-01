@@ -450,6 +450,9 @@ class RealtimeSyncController extends AsyncNotifier<RealtimeSyncState> {
   }
 
   Future<void> disconnect() async {
+    // That connect is about to bail out because of this disconnect; a connect()
+    // after this one must start afresh rather than await the doomed attempt.
+    _connectInFlight = null;
     await _subscription?.cancel();
     _subscription = null;
     await ref.read(realtimeSyncServiceProvider).disconnect();

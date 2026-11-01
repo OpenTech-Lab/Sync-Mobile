@@ -52,6 +52,50 @@ void main() {
     await Future.wait([first, second]);
   });
 
+  test(
+    'a connect after a disconnect starts afresh instead of awaiting the '
+    'connect attempt the disconnect killed',
+    () async {
+      final gate = Completer<void>();
+      final service = _FakeRealtimeSyncService(connectGate: gate);
+      final container = ProviderContainer(
+        overrides: [
+          realtimeSyncServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(() async {
+        container.dispose();
+        await service.close();
+      });
+      await container.read(realtimeSyncControllerProvider.future);
+      final controller = container.read(
+        realtimeSyncControllerProvider.notifier,
+      );
+
+      // Backgrounded while the socket is still connecting...
+      final doomed = controller.connect(
+        baseUrl: 'https://sync.example',
+        accessTokenProvider: _token,
+        currentUserId: 'user-1',
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(service.connectCount, 1);
+      await controller.disconnect();
+
+      // ...and resumed before that attempt has returned.
+      final fresh = controller.connect(
+        baseUrl: 'https://sync.example',
+        accessTokenProvider: _token,
+        currentUserId: 'user-1',
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.connectCount, 2);
+      gate.complete();
+      await Future.wait([doomed, fresh]);
+    },
+  );
+
   test('does not replace an already connected realtime socket', () async {
     final service = _FakeRealtimeSyncService();
     final container = ProviderContainer(
